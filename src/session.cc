@@ -1,7 +1,7 @@
-#include <boost/asio.hpp>
-#include <boost/bind/bind.hpp>
-#include <boost/log/trivial.hpp>
+#include <boost/asio.hpp> // io_service, tcp
+#include <boost/bind/bind.hpp> // bind
 
+#include "log.h"
 #include "session.h"
 
 session::session(io_service& io_service) : socket_(io_service){
@@ -13,7 +13,7 @@ tcp::socket& session::socket(){
 
 void session::start(){
   std::string client_addr = socket_.remote_endpoint().address().to_string();
-  BOOST_LOG_TRIVIAL(info) << "Connection started with client at IP: " + client_addr;
+  Log::info("Connection started with client at IP: " + client_addr);
   socket_.async_read_some(buffer(data_, max_length),
                           boost::bind(&session::handle_read, this,
                           placeholders::error,

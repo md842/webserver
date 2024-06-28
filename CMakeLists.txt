@@ -25,11 +25,17 @@ include_directories(include)
 
 # Add library for session.cc
 add_library(session_lib src/session.cc)
-target_link_libraries(session_lib Boost::log_setup Boost::log)
 
 # Add library for server.cc
 add_library(server_lib src/server.cc src/session.cc)
-target_link_libraries(server_lib Boost::log_setup Boost::log)
+
+# Add library for log.cc
+add_library(log_lib src/log.cc)
+target_link_libraries(log_lib Boost::log_setup Boost::log)
+
+# Link log library to other libraries
+target_link_libraries(server_lib log_lib)
+target_link_libraries(session_lib log_lib)
 
 # Compile and link server_main.cc with Boost::system, session, and server
 add_executable(server src/server_main.cc)

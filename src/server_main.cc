@@ -1,12 +1,12 @@
-#include <boost/asio.hpp>
-#include <boost/log/trivial.hpp>
+#include <boost/asio.hpp> // io_service
 
+#include "log.h"
 #include "server.h"
 
 int main(int argc, char* argv[]){
   try{
     if (argc != 2)
-      BOOST_LOG_TRIVIAL(fatal) << "Usage: server <port>";
+      Log::fatal("Usage: server <port>");
 
     boost::asio::io_service io_service;
 
@@ -15,8 +15,8 @@ int main(int argc, char* argv[]){
     io_service.run();
   }
   catch (std::exception& e){
-    BOOST_LOG_TRIVIAL(fatal) << "Exception: " + std::string(e.what());
+    Log::fatal("Exception: " + std::string(e.what()));
   }
-  BOOST_LOG_TRIVIAL(info) << "Server successfully shut down.";
+  Log::info("Server successfully shut down.");
   return 0;
 }
