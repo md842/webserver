@@ -23,20 +23,31 @@ message(STATUS "Boost version: ${Boost_VERSION}")
 
 include_directories(include)
 
-# Add library for session.cc
+# Add libraries for source files
 add_library(session_lib src/session.cc)
-
-# Add library for server.cc
 add_library(server_lib src/server.cc src/session.cc)
-
-# Add library for log.cc
 add_library(log_lib src/log.cc)
+add_library(request_handler_registry_lib src/request_handler_registry.cc)
+
+# Compile request handlers as object libraries to allow self-registration
+add_library(file_request_handler_lib OBJECT src/file_request_handler.cc)
+
+# Link Boost::log libraries to log_lib
 target_link_libraries(log_lib Boost::log_setup Boost::log)
 
-# Link log library to other libraries
+# Link log library to other libraries that use it
 target_link_libraries(server_lib log_lib)
 target_link_libraries(session_lib log_lib)
+target_link_libraries(file_request_handler_lib log_lib)
+target_link_libraries(request_handler_registry_lib log_lib)
 
-# Compile and link server_main.cc with Boost::system, session, and server
+# Compile server_main.cc and link with required libraries
 add_executable(server src/server_main.cc)
-target_link_libraries(server session_lib server_lib Boost::system Boost::log_setup Boost::log)
+
+target_link_libraries(server
+  $<TARGET_OBJECTS:file_request_handler_lib>
+  server_lib
+  session_lib
+  request_handler_registry_lib
+  Boost::system
+)

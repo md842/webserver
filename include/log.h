@@ -1,8 +1,8 @@
 #pragma once
 
-#include <iostream> // std::string
+#include <string>
 
-class Log {
+class Log{
 public:
   static void debug(const std::string& msg);
   static void error(const std::string& msg);

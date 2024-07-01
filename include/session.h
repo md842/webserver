@@ -1,19 +1,16 @@
 #pragma once
 
-using namespace boost::asio;
-using boost::asio::ip::tcp;
-using boost::system::error_code;
+#include <boost/asio.hpp> // io_service, tcp
 
 class session{
 public:
-  session(io_service& io_service);
-  tcp::socket& socket();
+  session(boost::asio::io_service& io_service);
+  boost::asio::ip::tcp::socket& socket();
   void start();
 
 private:
-  void handle_read(const error_code& error, size_t bytes);
-  void handle_write(const error_code& error);
-  tcp::socket socket_;
-  enum { max_length = 1024 };
+  void handle_read(const boost::system::error_code& error, size_t bytes);
+  boost::asio::ip::tcp::socket socket_;
+  enum{max_length = 1024};
   char data_[max_length];
 };

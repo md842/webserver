@@ -1,18 +1,17 @@
 #pragma once
 
-#include "session.h"
+#include <boost/asio.hpp> // io_service, tcp
 
-using namespace boost::asio;
-using boost::asio::ip::tcp;
-using boost::system::error_code;
+#include "session.h"
 
 class server{
 public:
-  server(io_service& io_service, short port);
+  server(boost::asio::io_service& io_service, short port);
 
 private:
   void start_accept();
-  void handle_accept(session* new_session, const error_code& error);
-  io_service& io_service_;
-  tcp::acceptor acceptor_;
+  void handle_accept(session* new_session,
+                     const boost::system::error_code& error);
+  boost::asio::io_service& io_service_;
+  boost::asio::ip::tcp::acceptor acceptor_;
 };
