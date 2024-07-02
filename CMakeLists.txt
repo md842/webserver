@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.10.0)
 project(webserver)
 
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 # Make sure developers do not run cmake in the main project directory, to keep
 # build artifacts from becoming clutter
 if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
@@ -9,11 +12,21 @@ if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
     You may need to remove CMakeCache.txt." )
 endif()
 
-# Turn on debug builds
-set(CMAKE_BUILD_TYPE Debug)
+# Turn on debug builds if not coverage build
+if (CMAKE_BUILD_TYPE STREQUAL "")
+  set(CMAKE_BUILD_TYPE Debug)
+endif()
 
 # Output binaries to a sub directory "bin"
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+# Enable cmake testing
+include(CTest)
+enable_testing()
+
+# Enable GoogleTest
+include(GoogleTest)
+add_subdirectory(/usr/src/googletest googletest)
 
 # Enable Boost
 # Use static libraries so binaries can be deployed without a full Boost install
@@ -51,3 +64,21 @@ target_link_libraries(server
   request_handler_registry_lib
   Boost::system
 )
+
+add_executable(file_request_handler_test tests/libs/file_request_handler_test.cc)
+target_link_libraries(file_request_handler_test
+  $<TARGET_OBJECTS:file_request_handler_lib>
+  request_handler_registry_lib
+  gtest_main
+  Boost::filesystem
+  Boost::system
+)
+
+# Discover unit tests within test executables compiled above
+gtest_discover_tests(file_request_handler_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/libs)
+
+# Add integration tests
+add_test(NAME integration_test COMMAND ./integration_tests.sh WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration)
+
+include(cmake/CodeCoverageReportConfig.cmake)
+generate_coverage_report(TARGETS server server_lib session_lib file_request_handler_lib request_handler_registry_lib log_lib TESTS file_request_handler_test)

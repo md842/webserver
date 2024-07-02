@@ -13,7 +13,7 @@ FileRequestHandler::FileRequestHandler(const std::string& path)
 
 Response* FileRequestHandler::handle_request(const Request& req){
   // Returns a pointer to an HTTP response object for the given HTTP request.
-  fs::path file_obj(path_);
+  fs::path file_obj(path_); // TODO: Use path_ as base, read rel path from req
   if (!exists(file_obj) || is_directory(file_obj)){ // Nonexistent or directory
     Log::error("File not found: " + path_);
     // TODO: Handle 404 Not Found
@@ -25,7 +25,7 @@ Response* FileRequestHandler::handle_request(const Request& req){
     // TODO: Handle 404 Not Found
   }
 
-  Log::info("Writing " + file_obj.filename().string());
+  Log::info("Writing " + path_);
   std::ostringstream file_contents;
   file_contents << fstream.rdbuf(); // Read file into string stream
 

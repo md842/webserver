@@ -8,7 +8,7 @@
 #define REGISTER_HANDLER(name, factory)\
   static struct Register##factory{\
     Register##factory(){\
-      RequestHandlerRegistry::inst()->register_handler(name, new factory);\
+      RequestHandlerRegistry::inst().register_handler(name, new factory);\
     }\
   }register##factory;
 
@@ -19,12 +19,11 @@ public:
   RequestHandlerRegistry& operator=(const RequestHandlerRegistry&) = delete;
 
   RequestHandlerFactory* get_handler(const std::string& name);
-  static RequestHandlerRegistry* inst();
+  static RequestHandlerRegistry& inst();
   void register_handler(const std::string& name, RequestHandlerFactory* factory);
 
 private:
   RequestHandlerRegistry(){}; // Singleton should have private constructor
-  static RequestHandlerRegistry* instPtr; // Static ptr to instance of registry
   std::map<std::string, RequestHandlerFactory*> registry =
     std::map<std::string, RequestHandlerFactory*>(); // map<URI, factory>
 };

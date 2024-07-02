@@ -1,2 +1,4 @@
 build
 build_*
+tests/integration/output
+tests/integration/results.txt

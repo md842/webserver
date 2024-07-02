@@ -10,7 +10,8 @@ using boost::asio::ip::tcp;
 using boost::system::error_code;
 namespace http = boost::beast::http;
 
-session::session(io_service& io_service) : socket_(io_service){}
+session::session(io_service& io_service, const std::string& root_dir)
+  : socket_(io_service), root_dir_(root_dir){}
 
 tcp::socket& session::socket(){
   return socket_;
@@ -31,7 +32,7 @@ void session::handle_read(const error_code& error, size_t bytes){
   if (!error){
     // Temporary hardcoded values for testing purposes
     std::string type = "FileRequestHandler";
-    std::string path = "./files_to_serve/index.html";
+    std::string path = "/files_to_serve/index.html";
 
     Request req;
     req.method(http::verb::get);
@@ -42,8 +43,8 @@ void session::handle_read(const error_code& error, size_t bytes){
 
     // Dispatch the correct request handler type using the handler registry
     Log::trace("Dispatched " + type);
-    RequestHandlerFactory* factory = RequestHandlerRegistry::inst()->get_handler(type);
-    RequestHandler* handler = factory->create(path);
+    RequestHandlerFactory* factory = RequestHandlerRegistry::inst().get_handler(type);
+    RequestHandler* handler = factory->create(root_dir_ + path);
     Response* res = handler->handle_request(req);
 
     // async_write returns immediately, so res must be kept alive.
