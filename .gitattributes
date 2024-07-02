@@ -1,0 +1,2 @@
+tests/inputs/* linguist-vendored
+tests/integration/outputs/* linguist-vendored
