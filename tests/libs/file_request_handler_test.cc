@@ -29,7 +29,6 @@ protected:
 };
 
 TEST_F(FileRequestHandlerTest, ServeHTML){ // Uses test fixture
-  req.target("/index.html");
   Response* res = file_request_handler->handle_request(req);
   EXPECT_EQ(res->version(), 11);
   EXPECT_EQ(res->result_int(), 200);
@@ -37,7 +36,6 @@ TEST_F(FileRequestHandlerTest, ServeHTML){ // Uses test fixture
                          "<html lang=\"en\">\n"
                          "  <head>\n"
                          "    <meta charset=\"utf-8\">\n"
-                         "    <link rel=\"stylesheet\" href=\"style.css\">\n"
                          "  </head>\n"
                          "  <body>\n"
                          "    <h1>This is a placeholder HTML file for testing purposes.</h1>\n"

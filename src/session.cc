@@ -40,14 +40,23 @@ void session::handle_read(const error_code& error, size_t bytes){
 
     // Temporary hardcoded values for testing purposes
     std::string type = "FileRequestHandler";
-    std::string path = "/files_to_serve";
-    std::string file_name = "/index.html";
-    // TODO: Extract path and filename from target
+    // TODO: Determine handler type from req.target()
+
+    // Temporary hardcoded relative path substitution for testing purposes
+    std::string target = std::string(req.target()); // Read request target
+    if (target == "/") // Special case: homepage requested
+      req.target("/files_to_serve/index.html");
+    else{ // Other page requested, perform relative path substitution
+      // Replace first "/" with directory "/files_to_serve"
+      target.replace(0, 1, "/files_to_serve/");
+      req.target(target); // Substitute path into request target
+    }
+    // TODO: Relative path substitution in dispatch function based on config
 
     // Dispatch the correct request handler type using the handler registry
     Log::trace("Dispatched " + type);
     RequestHandlerFactory* factory = RequestHandlerRegistry::inst().get_handler(type);
-    RequestHandler* handler = factory->create(root_dir_ + path + file_name);
+    RequestHandler* handler = factory->create(root_dir_);
     Response* res = handler->handle_request(req);
 
     Log::trace("Outgoing HTTP response:\n\n" + res_as_string(*res)); // Temp debug log
