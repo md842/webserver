@@ -1,8 +1,7 @@
 #include <boost/bind/bind.hpp> // bind
 
 #include "log.h"
-#include "request_handler_interface.h"
-#include "request_handler_registry.h"
+#include "registry.h"
 #include "session.h"
 
 using namespace boost::asio;
@@ -38,25 +37,7 @@ void session::handle_read(const error_code& error, size_t bytes){
 
     Log::trace("Incoming HTTP request:\n\n" + req_as_string(req)); // Temp debug log
 
-    // Temporary hardcoded values for testing purposes
-    std::string type = "FileRequestHandler";
-    // TODO: Determine handler type from req.target()
-
-    // Temporary hardcoded relative path substitution for testing purposes
-    std::string target = std::string(req.target()); // Read request target
-    if (target == "/") // Special case: homepage requested
-      req.target("/files_to_serve/index.html");
-    else{ // Other page requested, perform relative path substitution
-      // Replace first "/" with directory "/files_to_serve"
-      target.replace(0, 1, "/files_to_serve/");
-      req.target(target); // Substitute path into request target
-    }
-    // TODO: Relative path substitution in dispatch function based on config
-
-    // Dispatch the correct request handler type using the handler registry
-    Log::trace("Dispatched " + type);
-    RequestHandlerFactory* factory = RequestHandlerRegistry::inst().get_handler(type);
-    RequestHandler* handler = factory->create(root_dir_);
+    RequestHandler* handler = dispatch(req);
     Response* res = handler->handle_request(req);
 
     Log::trace("Outgoing HTTP response:\n\n" + res_as_string(*res)); // Temp debug log
@@ -74,6 +55,41 @@ void session::handle_read(const error_code& error, size_t bytes){
   else{
     delete this;
   }
+}
+
+RequestHandler* session::dispatch(Request& req){
+  // Returns a pointer to a dynamically dispatched RequestHandler based on the
+  // incoming request's target. Performs relative path substitution on the
+  // request target if dispatching a FileRequestHandler.
+
+  // Search for longest match between target and URI
+  int longest_match = 0;
+  std::string mapping = "";
+  std::string type = "";
+  std::string target = std::string(req.target());
+  // Search all handler types
+  for (const std::string& cur_type : Registry::inst().get_types()){
+    // Search the URI map for the current handler type
+    for (auto& pair : Registry::inst().get_map(cur_type)){
+      std::string key = pair.first;
+      // New longest match found, save information
+      if ((target.find(key) == 0) && key.length() > longest_match){
+        longest_match = key.length();
+        mapping = pair.second;
+        type = cur_type;
+      }
+    }
+  }
+  Log::trace("Dispatching " + type);
+  if (type == "FileRequestHandler"){ // Perform relative path substitution
+    if (target == "/") // Special case: homepage requested
+      req.target("/files_to_serve/index.html");
+    else{ // Other page requested
+      target.replace(0, longest_match, mapping); // Substitute path
+      req.target(target); // Set request target
+    }
+  }
+  return Registry::inst().get_factory(type)->create(root_dir_);
 }
 
 Request parse_req(char* data, int max_length){

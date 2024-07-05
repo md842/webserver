@@ -1,6 +1,9 @@
 #pragma once
 
 #include <boost/asio.hpp> // io_service, tcp
+#include <unordered_map> // unordered_map
+
+#include "request_handler_interface.h" // RequestHandler*
 
 class session{
 public:
@@ -9,6 +12,7 @@ public:
   void start();
 
 private:
+  RequestHandler* dispatch(Request& req);
   void handle_read(const boost::system::error_code& error, size_t bytes);
   boost::asio::ip::tcp::socket socket_;
   enum{max_length = 1024};

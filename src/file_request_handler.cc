@@ -3,7 +3,7 @@
 
 #include "file_request_handler.h"
 #include "log.h"
-#include "request_handler_registry.h" // Required for REGISTER_HANDLER macro
+#include "registry.h" // Required for REGISTER_HANDLER macro
 
 namespace fs = boost::filesystem;
 namespace http = boost::beast::http;

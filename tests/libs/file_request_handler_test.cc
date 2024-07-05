@@ -6,21 +6,17 @@
 
 class FileRequestHandlerTest : public ::testing::Test {
 protected:
-  std::unique_ptr<FileRequestHandler> file_request_handler;
   Request req;
+  std::string root_dir;
 
   void SetUp() override { // Setup test fixture
     // Find root dir from cwd, not ideal but no access to argv[0] here
     // OK since tests are only called from within a subdirectory of webserver
     std::string binary_path = boost::filesystem::current_path().string();
-    std::string root_dir = "";
     std::string target_dir = "webserver"; // Project directory name
     size_t found = binary_path.find(target_dir); // Search for substring
     if (found != std::string::npos) // Found, extract root dir
       root_dir = binary_path.substr(0, found + target_dir.length());
-
-    // Temporary hard coded value for testing
-    file_request_handler = std::make_unique<FileRequestHandler>(root_dir + "/tests/inputs/small.html");
 
     // GET / HTTP/1.1
     req.method(boost::beast::http::verb::get);
@@ -29,6 +25,8 @@ protected:
 };
 
 TEST_F(FileRequestHandlerTest, ServeHTML){ // Uses test fixture
+  std::unique_ptr<FileRequestHandler> file_request_handler =
+    std::make_unique<FileRequestHandler>(root_dir + "/tests/inputs/small.html");
   Response* res = file_request_handler->handle_request(req);
   EXPECT_EQ(res->version(), 11);
   EXPECT_EQ(res->result_int(), 200);
@@ -43,4 +41,5 @@ TEST_F(FileRequestHandlerTest, ServeHTML){ // Uses test fixture
                          "</html>"
   );
   free(res);
+  file_request_handler.reset();
 }
