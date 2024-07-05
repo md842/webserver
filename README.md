@@ -5,12 +5,12 @@ All console commands given in this document assume Arch Linux kernel 6.9.6-arch1
 
 ## Web Server Dependencies (required)
 
-#### cmake (version >= 3.10.0 required, cmake-3.29.6-1 used)
+#### cmake (version >= 3.30.0 required, cmake-3.30.0-1 used)
 ```console
 $ sudo pacman -S cmake
 ```
 
-#### Boost C++ libraries (version >= 1.50 required, boost-1.83.0-9 used)
+#### Boost C++ libraries (version >= 1.70 required, boost-1.83.0-9 used)
 ```console
 $ sudo pacman -S boost
 ```
