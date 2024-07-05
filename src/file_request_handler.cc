@@ -8,6 +8,8 @@
 namespace fs = boost::filesystem;
 namespace http = boost::beast::http;
 
+std::string mime_type(fs::path file_obj);
+
 FileRequestHandler::FileRequestHandler(const std::string& root_path)
   : RequestHandler(root_path){}
 
@@ -44,9 +46,7 @@ Response* FileRequestHandler::handle_request(const Request& req){
     }
     else{ // File opened successfully
       Log::info("Writing " + full_path);
-      // Temporary hardcoded value for testing purposes
-      content_type = "text/html";
-      // TODO: Implement MIME type parsing
+      content_type = mime_type(file_obj);
       file_contents << fstream.rdbuf(); // Read file into string stream
     }
   }
@@ -61,6 +61,31 @@ Response* FileRequestHandler::handle_request(const Request& req){
   //  response->set("Connection", "keep-alive");
   response->prepare_payload();
   return response;
+}
+
+std::string mime_type(fs::path file_obj){
+  std::string extension = file_obj.extension().string();
+  Log::trace("Extension: " + extension);
+  std::map<std::string, std::string> types = {
+    {".html", "text/html"},
+    {".htm", "text/html"},
+    {".css", "text/css"},
+    {".js", "text/javascript"},
+    {".json", "application/json"},
+    {".gif", "image/gif"},
+    {".ico", "image/vnd.microsoft.icon"},
+    {".jpeg", "image/jpeg"},
+    {".jpg", "image/jpeg"},
+    {".png", "image/png"},
+    {".svg", "image/svg+xml"},
+    {".webp", "image/webp"}, 
+    {".txt", "text/plain"}, 
+    {".xml", "application/xml"},
+    {".zip", "application/zip"}
+  };
+  if (types.count(extension)) // 1 if key in map, 0 otherwise
+    return types[extension];
+  return "application/octet-stream"; // Default case
 }
 
 RequestHandler* FileRequestHandlerFactory::create(const std::string& path){

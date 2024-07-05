@@ -82,8 +82,15 @@ RequestHandler* session::dispatch(Request& req){
   }
   Log::trace("Dispatching " + type);
   if (type == "FileRequestHandler"){ // Perform relative path substitution
-    if (target == "/") // Special case: homepage requested
+    // Configure server to serve index.html for paths handled by React Router
+    // https://create-react-app.dev/docs/deployment#serving-apps-with-client-side-routing
+    std::vector<std::string> react_router_pages = {"/"};
+    if (std::any_of(react_router_pages.begin(), react_router_pages.end(),
+      [target](std::string page){
+        return (target == page);
+      })){
       req.target("/files_to_serve/index.html");
+    }
     else{ // Other page requested
       target.replace(0, longest_match, mapping); // Substitute path
       req.target(target); // Set request target
