@@ -16,7 +16,8 @@ FileRequestHandler::FileRequestHandler(const std::string& root_path)
 Response* FileRequestHandler::handle_request(const Request& req){
   // Assumes dispatcher has performed relative path substitution on request
   // target; saves work because dispatcher must interpret request target anyway
-  std::string full_path = root_path_ + std::string(req.target());
+  std::string target = std::string(req.target());
+  std::string full_path = root_path_ + target;
   
   // Returns a pointer to an HTTP response object for the given HTTP request.
   http::status status = http::status::ok; // Default response status is 200 OK
@@ -26,11 +27,10 @@ Response* FileRequestHandler::handle_request(const Request& req){
 
   fs::path file_obj(full_path);
   if (!exists(file_obj) || is_directory(file_obj)){ // Nonexistent or directory
-    Log::error("File not found: " + full_path);
     status = http::status::not_found; // Set response status to 404 Not Found
     fs::path file_obj(root_path_ + "/files_to_serve/404.html"); // Open 404 page
     fs::ifstream fstream(file_obj);
-    Log::info("Writing 404 page (" + root_path_ + "/files_to_serve/404.html)");
+    Log::warn("FileRequestHandler: ." + target + " not found. Serving 404.");
     file_contents << fstream.rdbuf(); // Read 404 page into string stream
   }
   else{ // Non-directory file found
@@ -38,14 +38,14 @@ Response* FileRequestHandler::handle_request(const Request& req){
     if (!fstream){ // File exists, but failed to open it for some reason.
       // Since the server does not support client-side writes, this is unlikely
       // to occur with inadequate resources being the only failure condition.
-      Log::error("Could not open file: " + full_path);
+      Log::error("FileRequestHandler: Could not open file: ." + target);
       // Set response status to 500 Internal Server Error
       status = http::status::internal_server_error;
       content_type = "text/plain";
       file_contents << "500 Internal Server Error";
     }
     else{ // File opened successfully
-      Log::info("Writing " + full_path);
+      Log::info("FileRequestHandler: Writing ." + target);
       content_type = mime_type(file_obj);
       file_contents << fstream.rdbuf(); // Read file into string stream
     }
@@ -57,15 +57,16 @@ Response* FileRequestHandler::handle_request(const Request& req){
   response->version(11);
   response->set(http::field::content_type, content_type);
   response->body() = file_contents.str();
-  //if (req.keep_alive()) // If keep-alive requested, agree and set keep-alive
-  //  response->set("Connection", "keep-alive");
+  if (req.keep_alive()) // Use same keep-alive option as incoming request
+    response->set("Connection", "keep-alive");
+  else
+    response->set("Connection", "close");
   response->prepare_payload();
   return response;
 }
 
 std::string mime_type(fs::path file_obj){
   std::string extension = file_obj.extension().string();
-  Log::trace("Extension: " + extension);
   std::map<std::string, std::string> types = {
     {".html", "text/html"},
     {".htm", "text/html"},

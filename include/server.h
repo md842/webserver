@@ -16,4 +16,5 @@ private:
   boost::asio::io_service& io_service_;
   boost::asio::ip::tcp::acceptor acceptor_;
   std::string root_dir_;
+  int session_id;
 };

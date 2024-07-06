@@ -11,13 +11,15 @@ server::server(io_service& io_service, short port, const std::string& root_dir)
   : io_service_(io_service),
     acceptor_(io_service, tcp::endpoint(tcp::v4(), port)),
     root_dir_(root_dir){
-  Log::info("Server starting on port " + std::to_string(port));
+  Log::info("Server: Listening on port " + std::to_string(port));
+  session_id = 0;
   start_accept();
 }
 
 void server::start_accept(){
   // Listens for and accepts incoming connection, then calls accept handler.
-  session* new_session = new session(io_service_, root_dir_);
+  session_id++;
+  session* new_session = new session(io_service_, root_dir_, session_id);
   acceptor_.async_accept(new_session->socket(),
                          boost::bind(&server::handle_accept, this, new_session,
                          placeholders::error));
@@ -25,10 +27,12 @@ void server::start_accept(){
 
 void server::handle_accept(session* new_session, const error_code& error){
   // Accept handler, called after start_accept() accepts incoming connection.
-  if (!error)
+  if (!error){
+    Log::info("Server: Starting a new session (ID " + std::to_string(session_id) + ").");
     new_session->start();
+  }
   else{
-    Log::error("Error accepting connection: " + error.message());
+    Log::error("Server: Error accepting connection: " + error.message());
     delete new_session;
   }
   start_accept();

@@ -7,7 +7,8 @@
 
 class session{
 public:
-  session(boost::asio::io_service& io_service, const std::string& root_dir);
+  session(boost::asio::io_service& io_service, const std::string& root_dir, 
+          int id);
   boost::asio::ip::tcp::socket& socket();
   void start();
 
@@ -17,5 +18,6 @@ private:
   boost::asio::ip::tcp::socket socket_;
   enum{max_length = 1024};
   char data_[max_length];
+  std::string id_;
   std::string root_dir_;
 };

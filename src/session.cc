@@ -13,8 +13,10 @@ Request parse_req(char* data, int max_length);
 std::string req_as_string(Request req); // Temp helper for debug logging
 std::string res_as_string(Response res); // Temp helper for debug logging
 
-session::session(io_service& io_service, const std::string& root_dir)
-  : socket_(io_service), root_dir_(root_dir){}
+session::session(io_service& io_service, const std::string& root_dir, int id)
+  : socket_(io_service), root_dir_(root_dir){
+    id_ = std::to_string(id);
+  }
 
 tcp::socket& session::socket(){
   return socket_;
@@ -22,8 +24,6 @@ tcp::socket& session::socket(){
 
 void session::start(){
   // Reads an incoming request, then calls read handler.
-  std::string client_addr = socket_.remote_endpoint().address().to_string();
-  Log::info("Connection started with client " + client_addr);
   socket_.async_read_some(buffer(data_, max_length),
                           boost::bind(&session::handle_read, this,
                           placeholders::error,
@@ -33,26 +33,62 @@ void session::start(){
 void session::handle_read(const error_code& error, size_t bytes){
   // Read handler, called after start() reads incoming request.
   if (!error){
+    std::string client = socket_.remote_endpoint().address().to_string();
+    Log::info("Session (ID " + id_ + "): " +
+              "Received request from client " + client);
+
     Request req = parse_req(data_, max_length);
 
-    Log::trace("Incoming HTTP request:\n\n" + req_as_string(req)); // Temp debug log
+    // Log::trace("Incoming HTTP request:\n\n" + req_as_string(req)); // Temp debug log
 
     RequestHandler* handler = dispatch(req);
     Response* res = handler->handle_request(req);
 
-    Log::trace("Outgoing HTTP response:\n\n" + res_as_string(*res)); // Temp debug log
+    // Log::trace("Outgoing HTTP response:\n\n" + res_as_string(*res)); // Temp debug log
 
     // async_write returns immediately, so res must be kept alive.
     // Lambda write handler captures res and deletes it after write finishes.
     http::async_write(socket_, *res,
       [this, res](error_code ec, size_t bytes){
-        Log::info("Wrote " + std::to_string(bytes) + " bytes.");
-        free(res); // Free memory used by HTTP response object
-        socket_.shutdown(tcp::socket::shutdown_both); // Close connection
+        if (!ec){ // Successful write
+          Log::info("Session (ID " + id_ + "): " +
+                    "Wrote " + std::to_string(bytes) + " bytes.");
+          if (res->keep_alive()){ // Connection: keep-alive was requested
+            free(res); // Free memory used by HTTP response object
+            start(); // Continue listening for requests
+          }
+          else{ // Connection: close was requested
+            Log::info("Session (ID " + id_ + "): " +
+                      "Connection: close specified, shutting down.");
+            socket_.shutdown(tcp::socket::shutdown_both, ec); // Close connection
+            free(res); // Free memory used by HTTP response object
+            delete this;
+          }
+        }
+        else{ // Error during write
+          Log::error("Session (ID " + id_ + "): " +
+                     ec.message() + " error while writing response, shutting down.");
+          socket_.shutdown(tcp::socket::shutdown_both, ec); // Close connection
+          free(res); // Free memory used by HTTP response object
+          delete this;
+        }
       });
 
   }
-  else{
+  else if (error == error::eof){
+    // Client sends EOF when closed or keep-alive times out.
+    // Expected behavior, log as info rather than error, and shut down.
+    Log::info("Session (ID " + id_ + "): " +
+              "Keep-alive connection closed by client, shutting down.");
+    error_code ec;
+    socket_.shutdown(tcp::socket::shutdown_both, ec); // Close connection
+    delete this;
+  }
+  else{ // Unknown read error, log as error and shut down
+    Log::error("Session (ID " + id_ + "): " +
+               error.message() + "while reading request, shutting down.");
+    error_code ec;
+    socket_.shutdown(tcp::socket::shutdown_both, ec); // Close connection
     delete this;
   }
 }
@@ -80,7 +116,6 @@ RequestHandler* session::dispatch(Request& req){
       }
     }
   }
-  Log::trace("Dispatching " + type);
   if (type == "FileRequestHandler"){ // Perform relative path substitution
     // Configure server to serve index.html for paths handled by React Router
     // https://create-react-app.dev/docs/deployment#serving-apps-with-client-side-routing
