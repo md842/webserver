@@ -2,6 +2,12 @@
 
 #include "log.h"
 
+static bool trace_enabled = false;
+
+void Log::enable_trace(){
+  trace_enabled = true;
+}
+
 // Convenience wrappers for BOOST_LOG_TRIVIAL macros.
 
 void Log::debug(const std::string& msg){
@@ -21,7 +27,8 @@ void Log::info(const std::string& msg){
 }
 
 void Log::trace(const std::string& msg){
-  BOOST_LOG_TRIVIAL(trace) << msg;
+  if (trace_enabled)
+    BOOST_LOG_TRIVIAL(trace) << msg;
 }
 
 void Log::warn(const std::string& msg){

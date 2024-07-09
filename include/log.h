@@ -4,6 +4,7 @@
 
 class Log{
 public:
+  static void enable_trace();
   static void debug(const std::string& msg);
   static void error(const std::string& msg);
   static void fatal(const std::string& msg);

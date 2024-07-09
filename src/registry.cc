@@ -33,7 +33,6 @@ void Registry::register_handler(const std::string& name,
   entry.factory_ptr = factory;
   entry.uri_map = std::map<std::string, std::string>();
   registry[name] = entry;
-  Log::trace("Registry: " + name + " successfully registered");
 }
 
 void Registry::register_mapping(const std::string& name,
