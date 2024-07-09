@@ -2,6 +2,7 @@
 #include <boost/filesystem.hpp> // system_complete
 
 #include "log.h"
+#include "nginx_config_parser.h"
 #include "registry.h"
 #include "server.h"
 
@@ -24,6 +25,7 @@ int main(int argc, char* argv[]){
       Log::fatal("Usage: server <config>");
 
     Log::enable_trace(); // Remove to suppress trace logs
+    // TODO: Make this configurable rather than hardcoded
 
     // Find root directory from binary path argv[0], works regardless of cwd
     std::string binary_path = fs::system_complete(argv[0]).string();
@@ -34,6 +36,11 @@ int main(int argc, char* argv[]){
       root_dir = binary_path.substr(0, found + target_dir.length());
       Log::info("Main: Found root directory " + root_dir);
     }
+
+    Parser cfg_parser; // Parse the config passed as an argument in argv[1]
+    bool parse_result = cfg_parser.parse(root_dir + "/" + argv[1]);
+    if (!parse_result)
+      Log::fatal("Main: Failed to parse config");
 
     // Temporary hardcoded values for testing purposes
     short port = 8080;

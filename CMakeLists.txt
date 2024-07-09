@@ -41,6 +41,7 @@ add_library(session_lib src/session.cc)
 add_library(server_lib src/server.cc src/session.cc)
 add_library(log_lib src/log.cc)
 add_library(registry_lib src/registry.cc)
+add_library(nginx_config_parser_lib src/nginx_config_parser.cc)
 
 # Compile request handlers as object libraries to allow self-registration
 add_library(file_request_handler_lib OBJECT src/file_request_handler.cc)
@@ -52,6 +53,7 @@ target_link_libraries(log_lib Boost::log_setup Boost::log)
 target_link_libraries(server_lib log_lib)
 target_link_libraries(session_lib log_lib)
 target_link_libraries(file_request_handler_lib log_lib)
+target_link_libraries(nginx_config_parser_lib log_lib)
 target_link_libraries(registry_lib log_lib)
 
 # Compile server_main.cc and link with required libraries
@@ -60,6 +62,7 @@ target_link_libraries(server
   $<TARGET_OBJECTS:file_request_handler_lib>
   server_lib
   session_lib
+  nginx_config_parser_lib
   registry_lib
   Boost::system
 )
@@ -97,4 +100,4 @@ gtest_discover_tests(registry_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 add_test(NAME integration_test COMMAND ./integration_tests.sh WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration)
 
 include(cmake/CodeCoverageReportConfig.cmake)
-generate_coverage_report(TARGETS file_request_handler_lib registry_lib log_lib TESTS file_request_handler_test log_test registry_test)
+generate_coverage_report(TARGETS file_request_handler_lib log_lib nginx_config_parser_lib registry_lib TESTS file_request_handler_test log_test registry_test)

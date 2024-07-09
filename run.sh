@@ -1,3 +1,3 @@
 #! /bin/bash
 # A script that automates run commands for convenience while testing.
-./build/bin/server 8080
+./build/bin/server configs/local_config.conf

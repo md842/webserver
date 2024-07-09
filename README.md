@@ -61,7 +61,7 @@ webserver$ ./run.sh
 
 The server can be started manually with the following command. Any config file may be used, this is just an example:
 ```console
-webserver$ ./build/bin/server ./configs/local_config.conf
+webserver$ ./build/bin/server configs/local_config.conf
 ```
 
 The server will now serve requests from a local browser. For example, if the config specifies port 8080, `http://localhost:8080/` will display the home page. 
