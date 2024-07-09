@@ -7,8 +7,20 @@
 
 namespace fs = boost::filesystem;
 
+void signal_handler(int signum){
+  if (signum == SIGINT)
+    Log::info("Interrupt received, shutting down gracefully.");
+  else if (signum == SIGTERM)
+    Log::info("SIGTERM received, shutting down gracefully.");
+  exit(signum);
+}
+
 int main(int argc, char* argv[]){
   try{
+    // Register signal handlers
+    std::signal(SIGINT, signal_handler); // Ctrl+C in console
+    std::signal(SIGTERM, signal_handler); // Used by integration test
+
     if (argc != 2)
       Log::fatal("Usage: server <port>");
 
