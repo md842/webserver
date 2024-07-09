@@ -56,7 +56,6 @@ target_link_libraries(registry_lib log_lib)
 
 # Compile server_main.cc and link with required libraries
 add_executable(server src/server_main.cc)
-
 target_link_libraries(server
   $<TARGET_OBJECTS:file_request_handler_lib>
   server_lib
@@ -65,6 +64,7 @@ target_link_libraries(server
   Boost::system
 )
 
+# Add and link executables for test libraries
 add_executable(file_request_handler_test tests/libs/file_request_handler_test.cc)
 target_link_libraries(file_request_handler_test
   $<TARGET_OBJECTS:file_request_handler_lib>
@@ -74,11 +74,27 @@ target_link_libraries(file_request_handler_test
   Boost::system
 )
 
+add_executable(log_test tests/libs/log_test.cc)
+target_link_libraries(log_test
+  log_lib
+  gtest_main
+  Boost::system
+)
+
+add_executable(registry_test tests/libs/registry_test.cc)
+target_link_libraries(registry_test
+  registry_lib
+  gtest_main
+  Boost::system
+)
+
 # Discover unit tests within test executables compiled above
 gtest_discover_tests(file_request_handler_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/libs)
+gtest_discover_tests(log_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/libs)
+gtest_discover_tests(registry_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/libs)
 
 # Add integration tests
 add_test(NAME integration_test COMMAND ./integration_tests.sh WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration)
 
 include(cmake/CodeCoverageReportConfig.cmake)
-generate_coverage_report(TARGETS server server_lib session_lib file_request_handler_lib registry_lib log_lib TESTS file_request_handler_test)
+generate_coverage_report(TARGETS file_request_handler_lib registry_lib log_lib TESTS file_request_handler_test log_test registry_test)
