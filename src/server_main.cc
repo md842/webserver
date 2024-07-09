@@ -7,25 +7,23 @@
 
 namespace fs = boost::filesystem;
 
-void signal_handler(int signum){
-  if (signum == SIGINT)
-    Log::info("Interrupt received, shutting down gracefully.");
-  else if (signum == SIGTERM)
-    Log::info("SIGTERM received, shutting down gracefully.");
-  exit(signum);
+// Global so it can be stopped gracefully by signal_handler
+boost::asio::io_service io_service_;
+
+void signal_handler(const boost::system::error_code& ec, int sig){
+  if (sig == SIGINT)
+    Log::info("Main: SIGINT received, shutting down gracefully.");
+  else
+    Log::info("Main: SIGTERM received, shutting down gracefully.");
+  io_service_.stop(); // Causes io_service_.run() to stop blocking main
 }
 
 int main(int argc, char* argv[]){
   try{
-    // Register signal handlers
-    std::signal(SIGINT, signal_handler); // Ctrl+C in console
-    std::signal(SIGTERM, signal_handler); // Used by integration test
+    if (argc != 2) // Check args
+      Log::fatal("Usage: server <config>");
 
-    if (argc != 2)
-      Log::fatal("Usage: server <port>");
-
-    boost::asio::io_service io_service;
-    short port = std::atoi(argv[1]); // TODO: Get from config parse
+    Log::enable_trace(); // Remove to suppress trace logs
 
     // Find root directory from binary path argv[0], works regardless of cwd
     std::string binary_path = fs::system_complete(argv[0]).string();
@@ -38,22 +36,27 @@ int main(int argc, char* argv[]){
     }
 
     // Temporary hardcoded values for testing purposes
+    short port = 8080;
     Registry::inst().register_mapping("FileRequestHandler", "/", "/files_to_serve/");
-    // TODO: Get mapping by reading config
+    // TODO: Get port, mapping by reading config
     
     // Log mapping that was extracted from the config
     for (const std::string& type : Registry::inst().get_types()){
       for (auto& pair : Registry::inst().get_map(type))
-        Log::info(type + ": Mapping URI path " + pair.first +
+        Log::info(type + ": Mapping URI prefix " + pair.first +
                   " to relative path " + pair.second);
     }
 
-    server s(io_service, port, root_dir);
-    io_service.run();
+    // Register signal_handler to handle SIGINT and SIGTERM.
+    boost::asio::signal_set signals(io_service_, SIGINT, SIGTERM);
+    signals.async_wait(signal_handler);
+
+    server s(io_service_, port, root_dir);
+    io_service_.run(); // Blocks until signal_handler calls io_service_.stop()
   }
   catch (std::exception& e){
     Log::fatal("Main: Exception " + std::string(e.what()));
   }
-  Log::info("Server successfully shut down.");
+  Log::info("Main: Server successfully shut down.");
   return 0;
 }
