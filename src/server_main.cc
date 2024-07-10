@@ -21,8 +21,10 @@ void signal_handler(const boost::system::error_code& ec, int sig){
 
 int main(int argc, char* argv[]){
   try{
-    if (argc != 2) // Check args
+    if (argc != 2){ // Check args
       Log::fatal("Usage: server <config>");
+      return 1; // Exit with non-zero exit code
+    }
 
     Log::enable_trace(); // Remove to suppress trace logs
     // TODO: Make this configurable rather than hardcoded
@@ -38,9 +40,9 @@ int main(int argc, char* argv[]){
     }
 
     Parser cfg_parser; // Parse the config passed as an argument in argv[1]
-    bool parse_result = cfg_parser.parse(root_dir + "/" + argv[1]);
-    if (!parse_result)
-      Log::fatal("Main: Failed to parse config");
+    // If parse unsuccessful, cfg_parser handles fatal log, so just exit
+    if (!cfg_parser.parse(root_dir + "/" + argv[1]))
+      return 1; // Exit with non-zero exit code
 
     // Temporary hardcoded values for testing purposes
     short port = 8080;
@@ -63,6 +65,7 @@ int main(int argc, char* argv[]){
   }
   catch (std::exception& e){
     Log::fatal("Main: Exception " + std::string(e.what()));
+    return 1; // Exit with non-zero exit code
   }
   Log::info("Main: Server successfully shut down.");
   return 0;

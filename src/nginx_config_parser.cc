@@ -23,15 +23,15 @@ bool Parser::parse(fs::ifstream& cfg_in){
     // TODO: Check config file validity, extract necessary information
 
     if (token_type == INVALID){ // Encountered error while parsing token
-      Log::error("ConfigParser: Invalid token " + token);
+      Log::fatal("ConfigParser: Invalid token \"" + token + "\", aborting.");
       return false;
     }
 
     prev_type = token_type;
   }
 
-  Log::error("ConfigParser: Invalid transition from " + type_str(prev_type) +
-             " to " + type_str(token_type));
+  Log::fatal("ConfigParser: Invalid transition from " + type_str(prev_type) +
+             " to " + type_str(token_type) + ", aborting.");
   return false;
 }
 
@@ -42,13 +42,13 @@ bool Parser::parse(const std::string& file_path){
   fs::path file_obj(file_path);
 
   if (!exists(file_obj) || is_directory(file_obj)){ // Nonexistent or directory
-    Log::error("ConfigParser: " + file_path + " not found.");
+    Log::fatal("ConfigParser: " + file_path + " not found, aborting.");
     return false;
   }
   else{ // Non-directory file found
     fs::ifstream fstream(file_obj); // Attempt to open the file
     if (!fstream){ // File exists, but failed to open it for some reason.
-      Log::error("ConfigParser: " + file_path + " not found.");
+      Log::fatal("ConfigParser: " + file_path + " not found, aborting.");
       return false;
     }
     else{ // File opened successfully
