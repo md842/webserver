@@ -6,8 +6,7 @@
 
 class server{
 public:
-  server(boost::asio::io_service& io_service, short port,
-         const std::string& root_dir);
+  server(boost::asio::io_service& io_service, NginxConfig config);
 
 private:
   void start_accept();
@@ -15,6 +14,6 @@ private:
                      const boost::system::error_code& error);
   boost::asio::io_service& io_service_;
   boost::asio::ip::tcp::acceptor acceptor_;
-  std::string root_dir_;
+  NginxConfig config_;
   int session_id;
 };

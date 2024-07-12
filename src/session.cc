@@ -13,8 +13,8 @@ Request parse_req(char* data, int max_length);
 std::string req_as_string(Request req); // Temp helper for debug logging
 std::string res_as_string(Response res); // Temp helper for debug logging
 
-session::session(io_service& io_service, const std::string& root_dir, int id)
-  : socket_(io_service), root_dir_(root_dir){
+session::session(io_service& io_service, NginxConfig config, int id)
+  : socket_(io_service), config_(config){
     id_ = std::to_string(id);
   }
 
@@ -124,14 +124,14 @@ RequestHandler* session::dispatch(Request& req){
       [target](std::string page){
         return (target == page);
       })){
-      req.target("/files_to_serve/index.html");
+      req.target(config_.index); // Serve index page
     }
     else{ // Other page requested
       target.replace(0, longest_match, mapping); // Substitute path
       req.target(target); // Set request target
     }
   }
-  return Registry::inst().get_factory(type)->create(root_dir_);
+  return Registry::inst().get_factory(type)->create(config_.root);
 }
 
 Request parse_req(char* data, int max_length){

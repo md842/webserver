@@ -1,12 +1,15 @@
 #include <boost/asio.hpp> // io_service
 #include <boost/filesystem.hpp> // system_complete
+#include <regex>
 
 #include "log.h"
-#include "nginx_config_parser.h"
+#include "nginx_config_parser.h" // NginxConfig
 #include "registry.h"
 #include "server.h"
 
 namespace fs = boost::filesystem;
+
+std::string clean_path(const std::string& path);
 
 // Global so it can be stopped gracefully by signal_handler
 boost::asio::io_service io_service_;
@@ -34,20 +37,17 @@ int main(int argc, char* argv[]){
     std::string root_dir = "";
     std::string target_dir = "webserver"; // Project directory name
     size_t found = binary_path.find(target_dir); // Search for substring
-    if (found != std::string::npos){ // Found, extract root dir
+    if (found != std::string::npos) // Found, extract root dir
       root_dir = binary_path.substr(0, found + target_dir.length());
-      Log::info("Main: Found root directory " + root_dir);
-    }
 
     Parser cfg_parser; // Parse the config passed as an argument in argv[1]
     // If parse unsuccessful, cfg_parser handles fatal log, so just exit
     if (!cfg_parser.parse(root_dir + "/" + argv[1]))
       return 1; // Exit with non-zero exit code
-
-    // Temporary hardcoded values for testing purposes
-    short port = 8080;
-    Registry::inst().register_mapping("FileRequestHandler", "/", "/files_to_serve/");
-    // TODO: Get port, mapping by reading config
+    NginxConfig config = cfg_parser.get_config();
+    // Config's root dir is relative, so add the absolute root_dir found above.
+    config.root = clean_path(root_dir + config.root);
+    Log::info("Main: Found root directory: " + config.root);
     
     // Log mapping that was extracted from the config
     for (const std::string& type : Registry::inst().get_types()){
@@ -60,7 +60,7 @@ int main(int argc, char* argv[]){
     boost::asio::signal_set signals(io_service_, SIGINT, SIGTERM);
     signals.async_wait(signal_handler);
 
-    server s(io_service_, port, root_dir);
+    server s(io_service_, config);
     io_service_.run(); // Blocks until signal_handler calls io_service_.stop()
   }
   catch (std::exception& e){
@@ -69,4 +69,11 @@ int main(int argc, char* argv[]){
   }
   Log::info("Main: Server successfully shut down.");
   return 0;
+}
+
+std::string clean_path(const std::string& path){
+  // Returns a cleaned up version of path with proper '/'s.
+  std::string out = "/" + path + "/";
+  out = std::regex_replace(out, std::regex("/+"), "/"); // Remove duplicate '/'s
+  return out;
 }

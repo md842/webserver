@@ -1,3 +1,5 @@
+#pragma once
+
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <string>
@@ -10,10 +12,18 @@ struct NginxConfig{
 
 class Parser{
  public:
+  NginxConfig get_config();
   bool parse(const std::string& file_name);
 
  private:
-  enum TokenType {
+  enum Context{
+    MAIN_CONTEXT = 0,
+    HTTP_CONTEXT = 1,
+    SERVER_CONTEXT = 2,
+    LOCATION_CONTEXT = 3
+  };
+
+  enum TokenType{
     INVALID = -1,
     INIT = 0,
     BLOCK_START = 1,
@@ -25,7 +35,7 @@ class Parser{
     EOF_ = 7
   };
 
-  enum ParserState {
+  enum TokenParserState{
     INIT_STATE = 0,
     COMMENT_STATE = 1,
     SINGLE_QUOTE_STATE = 2,
@@ -34,9 +44,18 @@ class Parser{
     WORD_STATE = 5
   };
 
+  Context context = MAIN_CONTEXT;
   NginxConfig config;
+  std::string mapping;
+  std::string name;
+  std::string uri;
 
   TokenType get_token(boost::filesystem::ifstream& cfg_in, std::string& token);
   bool parse(boost::filesystem::ifstream& cfg_in);
+  bool parse_block_start(std::vector<std::string>& statement);
+  bool parse_block_end(std::vector<std::string>& statement);
+  bool parse_statement(std::vector<std::string>& statement);
+  void process_mapping(const std::string& try_files_arg);
   std::string type_str(TokenType type);
+  bool validate_config();
 };

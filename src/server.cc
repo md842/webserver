@@ -7,11 +7,11 @@ using namespace boost::asio;
 using boost::asio::ip::tcp;
 using boost::system::error_code;
 
-server::server(io_service& io_service, short port, const std::string& root_dir)
+server::server(io_service& io_service, NginxConfig config)
   : io_service_(io_service),
-    acceptor_(io_service, tcp::endpoint(tcp::v4(), port)),
-    root_dir_(root_dir){
-  Log::info("Server: Listening on port " + std::to_string(port));
+    acceptor_(io_service, tcp::endpoint(tcp::v4(), config.port)),
+    config_(config){
+  Log::info("Server: Listening on port " + std::to_string(config.port));
   session_id = 0;
   start_accept();
 }
@@ -19,7 +19,7 @@ server::server(io_service& io_service, short port, const std::string& root_dir)
 void server::start_accept(){
   // Listens for and accepts incoming connection, then calls accept handler.
   session_id++;
-  session* new_session = new session(io_service_, root_dir_, session_id);
+  session* new_session = new session(io_service_, config_, session_id);
   acceptor_.async_accept(new_session->socket(),
                          boost::bind(&server::handle_accept, this, new_session,
                          placeholders::error));

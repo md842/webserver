@@ -43,7 +43,7 @@ integration_test (){
 }
 
 NUM=0 # Initialize test number counter
-../../build/bin/server 8080 &>/dev/null & # Ending with & runs command as background process
+../../build/bin/server configs/local_config.conf & # Ending with & runs command as background process
 WEBSERVER_PID=$! # Save PID of web server to shut it down after tests are done
 sleep 0.1 # Give the server time to start up
 
