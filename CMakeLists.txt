@@ -72,6 +72,7 @@ add_executable(file_request_handler_test tests/libs/file_request_handler_test.cc
 target_link_libraries(file_request_handler_test
   $<TARGET_OBJECTS:file_request_handler_lib>
   registry_lib
+  nginx_config_parser_lib
   gtest_main
   Boost::system
 )

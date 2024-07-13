@@ -3,6 +3,7 @@
 
 #include "file_request_handler.h"
 #include "log.h"
+#include "nginx_config_parser.h" // Config::inst()
 #include "registry.h" // Required for REGISTER_HANDLER macro
 
 namespace fs = boost::filesystem;
@@ -10,14 +11,11 @@ namespace http = boost::beast::http;
 
 std::string mime_type(fs::path file_obj);
 
-FileRequestHandler::FileRequestHandler(const std::string& root_path)
-  : RequestHandler(root_path){}
-
 Response* FileRequestHandler::handle_request(const Request& req){
   // Assumes dispatcher has performed relative path substitution on request
   // target; saves work because dispatcher must interpret request target anyway
   std::string target = std::string(req.target());
-  std::string full_path = root_path_ + target;
+  std::string full_path = Config::inst().root() + target;
   
   // Returns a pointer to an HTTP response object for the given HTTP request.
   http::status status = http::status::ok; // Default response status is 200 OK
@@ -28,7 +26,7 @@ Response* FileRequestHandler::handle_request(const Request& req){
   fs::path file_obj(full_path);
   if (!exists(file_obj) || is_directory(file_obj)){ // Nonexistent or directory
     status = http::status::not_found; // Set response status to 404 Not Found
-    fs::path file_obj(root_path_ + "/files_to_serve/404.html"); // Open 404 page
+    fs::path file_obj(Config::inst().root() + "/files_to_serve/404.html");
     fs::ifstream fstream(file_obj);
     Log::warn("FileRequestHandler: ." + target + " not found. Serving 404.");
     file_contents << fstream.rdbuf(); // Read 404 page into string stream
@@ -38,14 +36,14 @@ Response* FileRequestHandler::handle_request(const Request& req){
     if (!fstream){ // File exists, but failed to open it for some reason.
       // Since the server does not support client-side writes, this is unlikely
       // to occur with inadequate resources being the only failure condition.
-      Log::error("FileRequestHandler: Could not open file: ." + target);
+      Log::error("FileRequestHandler: Could not open file: ./" + target);
       // Set response status to 500 Internal Server Error
       status = http::status::internal_server_error;
       content_type = "text/plain";
       file_contents << "500 Internal Server Error";
     }
     else{ // File opened successfully
-      Log::info("FileRequestHandler: Writing ." + target);
+      Log::info("FileRequestHandler: Writing ./" + target);
       content_type = mime_type(file_obj);
       file_contents << fstream.rdbuf(); // Read file into string stream
     }
@@ -89,9 +87,9 @@ std::string mime_type(fs::path file_obj){
   return "application/octet-stream"; // Default case
 }
 
-RequestHandler* FileRequestHandlerFactory::create(const std::string& path){
+RequestHandler* FileRequestHandlerFactory::create(){
   // Returns a pointer to a new file request handler for the given path.
-  return new FileRequestHandler(path);
+  return new FileRequestHandler;
 }
 
 // Register FileRequestHandler and corresponding factory. Runs before main().

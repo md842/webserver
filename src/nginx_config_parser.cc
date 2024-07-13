@@ -3,32 +3,80 @@
 
 #include "log.h"
 #include "nginx_config_parser.h"
-#include "registry.h"
+#include "registry.h" // Registry::inst()
 
 namespace fs = boost::filesystem;
 
-NginxConfig Parser::get_config(){
-  // Returns the parsed config object. Should not be called before parse().
-  return config;
+std::string clean(const std::string& path);
+
+Config& Config::inst(){
+  // Returns a reference to the static instance of the config.
+  static Config instRef;
+  return instRef;
 }
 
-bool Parser::parse(fs::ifstream& cfg_in){
+std::string Config::index(){
+  // Returns index from the parsed config object.
+  // Should not be called before parse().
+  return config.index;
+}
+
+short Config::port(){
+  // Returns port from the parsed config object.
+  // Should not be called before parse().
+  return config.port;
+}
+
+std::string Config::root(){
+  // Returns root from the parsed config object.
+  // Should not be called before parse().
+  return config.root;
+}
+
+void Config::set_absolute_root(const std::string& absolute_root){
+  // Prepends the absolute root to config.root (relative) and cleans the path.
+  // Should be called by main after parse().
+  config.root = clean(absolute_root + config.root);
+}
+
+bool Config::parse(const std::string& file_path){
+  // Sets up a file stream for a given file path, then calls the config parser.
+  // Returns true if parsing was successful, false otherwise.
+  fs::path file_obj(file_path);
+
+  if (!exists(file_obj) || is_directory(file_obj)){ // Nonexistent or directory
+    Log::fatal("Config: " + file_path + " not found, aborting.");
+    return false;
+  }
+  else{ // Non-directory file found
+    fs::ifstream fstream(file_obj); // Attempt to open the file
+    if (!fstream){ // File exists, but failed to open it for some reason.
+      Log::fatal("Config: " + file_path + " not found, aborting.");
+      return false;
+    }
+    else{ // File opened successfully
+      Log::info("Config: Parsing " + file_path);
+      return parse(fstream);
+    }
+  }
+}
+
+bool Config::parse(fs::ifstream& cfg_in){
   // Parses the config file given by the file stream cfg_in.
   // Returns true if parsing was successful, false otherwise.
   TokenType prev_type = INIT;
   TokenType token_type = INIT;
   std::vector<std::string> statement;
+  std::string token;
 
   while (true){
-    std::string token;
+    token = "";
     token_type = get_token(cfg_in, token); // Populates token string
 
     if (token_type == INVALID){ // Encountered error while parsing token
-      Log::fatal("ConfigParser: Invalid token \"" + token + "\", aborting.");
+      Log::fatal("Config: Invalid token \"" + token + "\", aborting.");
       return false;
     }
-
-    // Log::trace("ConfigParser: " + type_str(token_type) + " \"" + token + "\"");
 
     if (token_type == QUOTE_WORD){
       token = token.substr(1, token.length() - 2); // Trim quotes
@@ -83,34 +131,11 @@ bool Parser::parse(fs::ifstream& cfg_in){
     }
   }
 
-  Log::fatal("ConfigParser: Invalid transition from " + type_str(prev_type) +
-             " to " + type_str(token_type) + ", aborting.");
+  Log::fatal("Config: Invalid transition to token \"" + token + "\".");
   return false;
 }
 
-bool Parser::parse(const std::string& file_path){
-  // Sets up a file stream for a given file path, then calls the config parser.
-  // Returns true if parsing was successful, false otherwise.
-  fs::path file_obj(file_path);
-
-  if (!exists(file_obj) || is_directory(file_obj)){ // Nonexistent or directory
-    Log::fatal("ConfigParser: " + file_path + " not found, aborting.");
-    return false;
-  }
-  else{ // Non-directory file found
-    fs::ifstream fstream(file_obj); // Attempt to open the file
-    if (!fstream){ // File exists, but failed to open it for some reason.
-      Log::fatal("ConfigParser: " + file_path + " not found, aborting.");
-      return false;
-    }
-    else{ // File opened successfully
-      Log::info("ConfigParser: Parsing " + file_path);
-      return parse(fstream);
-    }
-  }
-}
-
-bool Parser::parse_block_start(std::vector<std::string>& statement){
+bool Config::parse_block_start(std::vector<std::string>& statement){
   // Parses a block start statement within the config.
   // Returns true if parsing was successful, false otherwise.
   std::string new_context = statement.at(0); // First token is target context
@@ -118,20 +143,20 @@ bool Parser::parse_block_start(std::vector<std::string>& statement){
   // Verify statement size; 2 tokens for http/server, 4 tokens for location
   if (new_context == "http" || new_context == "server"){
     if (statement.size() != 2){
-      Log::fatal("ConfigParser: Malformed " + new_context + " block (size " +
+      Log::fatal("Config: Malformed " + new_context + " block (size " +
                  std::to_string(statement.size()) + ", expected size 2)");
       return false;
     }
   }
   else if (new_context == "location"){
     if (statement.size() != 4){
-      Log::fatal("ConfigParser: Malformed location block (size " +
+      Log::fatal("Config: Malformed location block (size " +
                  std::to_string(statement.size()) + ", expected size 4)");
       return false;
     }
   }
   else{
-    Log::fatal("ConfigParser: Unknown target context " + new_context);
+    Log::fatal("Config: Unknown target context " + new_context);
     return false;
   }
 
@@ -146,7 +171,7 @@ bool Parser::parse_block_start(std::vector<std::string>& statement){
     name = statement.at(2); // Get handler name
   }
   else{
-    Log::fatal("ConfigParser: Invalid context transition to " + new_context);
+    Log::fatal("Config: Invalid context transition to " + new_context);
     return false;
   }
 
@@ -154,11 +179,11 @@ bool Parser::parse_block_start(std::vector<std::string>& statement){
   return true;
 }
 
-bool Parser::parse_block_end(std::vector<std::string>& statement){
+bool Config::parse_block_end(std::vector<std::string>& statement){
   // Parses a block end statement within the config.
   // Returns true if parsing was successful, false otherwise.
   if (statement.size() != 1){ // Verify statement size; 1 token "}"
-    Log::fatal("ConfigParser: Malformed block end (size " +
+    Log::fatal("Config: Malformed block end (size " +
                 std::to_string(statement.size()) + ", expected size 1)");
     return false;
   }
@@ -171,7 +196,7 @@ bool Parser::parse_block_end(std::vector<std::string>& statement){
   else if (context == HTTP_CONTEXT)
     context = MAIN_CONTEXT;
   else{
-    Log::fatal("ConfigParser: Invalid context exit from main; "
+    Log::fatal("Config: Invalid context exit from main; "
                "check number of closing brackets");
     return false;
   }
@@ -180,7 +205,7 @@ bool Parser::parse_block_end(std::vector<std::string>& statement){
   return true;
 }
 
-bool Parser::parse_statement(std::vector<std::string>& statement){
+bool Config::parse_statement(std::vector<std::string>& statement){
   // Parses a general statement within the config.
   // Returns true if parsing was successful, false otherwise.
   std::string arg = statement.at(0); // First token is argument type
@@ -190,50 +215,50 @@ bool Parser::parse_statement(std::vector<std::string>& statement){
     if (arg == "listen"){
       try{
         config.port = boost::lexical_cast<short>(statement.at(1));
-        Log::trace("ConfigParser: Got port " + std::to_string(config.port));
+        Log::trace("Config: Got port " + std::to_string(config.port));
       }
       catch(boost::bad_lexical_cast&){ // Out of range, not a number, etc.
-        Log::fatal("ConfigParser: Invalid port \"" + statement.at(1) + "\"");
+        Log::fatal("Config: Invalid port \"" + statement.at(1) + "\"");
         return false;
       }
     }
     else if (arg == "index"){
       config.index = statement.at(1);
-      Log::trace("ConfigParser: Got relative index \"" + config.index + "\"");
+      Log::trace("Config: Got relative index \"" + config.index + "\"");
     }
     else if (arg == "root"){
       config.root = statement.at(1);
-      Log::trace("ConfigParser: Got relative root \"" + config.root + "\"");
+      Log::trace("Config: Got relative root \"" + config.root + "\"");
     }
     else if (arg == "server_name"){
       // Not implemented - don't do anything with it, but don't error
-      Log::trace("ConfigParser: Got server name (not implemented)");
+      Log::trace("Config: Got server name (not implemented)");
     }
     else if (arg == "return"){
       // Not implemented - don't do anything with it, but don't error
-      Log::trace("ConfigParser: Got return (not implemented)");
+      Log::trace("Config: Got return (not implemented)");
     }
     else{
-      Log::fatal("ConfigParser: Unknown server argument: \"" + arg + "\"");
+      Log::fatal("Config: Unknown server argument: \"" + arg + "\"");
       return false;
     }
   }
   // Valid in location context: try_files
   else if (context == LOCATION_CONTEXT){
     if (arg == "try_files"){
-      Log::trace("ConfigParser: Got " + name + " with URI \"" + uri + "\"");
+      Log::trace("Config: Got " + name + " with URI \"" + uri + "\"");
       for (int i = 1; i < statement.size() - 1; i++){
         if (statement.at(i) != "=404") // Don't add 404 fallback as a mapping
           process_mapping(statement.at(i));
       }
     }
     else{
-      Log::fatal("ConfigParser: Unknown location argument: \"" + arg + "\"");
+      Log::fatal("Config: Unknown location argument: \"" + arg + "\"");
       return false;
     }
   }
   else{ // No valid arguments in http or main context
-    Log::fatal("ConfigParser: Unexpected argument: \"" + arg +
+    Log::fatal("Config: Unexpected argument: \"" + arg +
                "\" in http or main context (expected block)");
     return false;
   }
@@ -242,7 +267,29 @@ bool Parser::parse_statement(std::vector<std::string>& statement){
   return true;
 }
 
-Parser::TokenType Parser::get_token(fs::ifstream& cfg_in, std::string& token){
+void Config::process_mapping(const std::string& arg){
+  // Processes a try_files arg into a mapping, then registers the mapping.
+
+  // Match "$uri" in token and replace with URI for this location, then clean.
+  mapping = clean(std::regex_replace(arg, std::regex("\\$uri"), uri));
+
+  Registry::inst().register_mapping(name, uri, mapping);
+}
+
+bool Config::validate_config(){
+  // Returns true if the config is valid. Called at the end of parse().
+  if (config.port == 0)
+    return false;
+  if (config.index == "")
+    return false;
+  if (config.root == "")
+    return false;
+  if (context != MAIN_CONTEXT)
+    return false;
+  return true; // No errors
+}
+
+Config::TokenType Config::get_token(fs::ifstream& cfg_in, std::string& token){
   // Returns next token type, puts contents in token (passed by reference).
   TokenParserState state = INIT_STATE; // DFA state of the token parser
   bool escaped = false; // If true, previous character was escape character
@@ -389,46 +436,10 @@ Parser::TokenType Parser::get_token(fs::ifstream& cfg_in, std::string& token){
   return EOF_;
 }
 
-void Parser::process_mapping(const std::string& try_files_arg){
-  // Processes a try_files arg into a mapping, then registers the mapping.
-  mapping = try_files_arg;
-
-  // Match "$uri" in token and replace with URI for this location
-  mapping = std::regex_replace(mapping, std::regex("\\$uri"), uri);
-
-  mapping = "/" + config.root + mapping + "/";
-
+std::string clean(const std::string& path){
+  // Returns a cleaned up version of path with proper '/'s.
+  std::string out = "/" + path + "/";
   // Remove duplicate slashes
-  mapping = std::regex_replace(mapping, std::regex("/+"), "/");
-
-  Registry::inst().register_mapping(name, uri, mapping);
-}
-
-std::string Parser::type_str(TokenType type){
-  // Returns a string name of a TokenType enum value.
-  switch (type){
-    case INVALID:     return "INVALID";
-    case INIT:        return "INIT";
-    case BLOCK_START: return "BLOCK_START";
-    case BLOCK_END:   return "BLOCK_END";
-    case SEMICOLON:   return "SEMICOLON";
-    case COMMENT:     return "COMMENT";
-    case WORD:        return "WORD";
-    case QUOTE_WORD:  return "QUOTE_WORD";
-    case EOF_:        return "EOF";
-    default:          return "UNKNOWN";
-  }
-}
-
-bool Parser::validate_config(){
-  // Returns true if the config is valid. Called at the end of parse().
-  if (config.port == 0)
-    return false;
-  if (config.index == "")
-    return false;
-  if (config.root == "")
-    return false;
-  if (context != MAIN_CONTEXT)
-    return false;
-  return true; // No errors
+  out = std::regex_replace(out, std::regex("/+"), "/");
+  return out;
 }

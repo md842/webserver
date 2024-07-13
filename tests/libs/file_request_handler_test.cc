@@ -4,16 +4,20 @@
 
 #include "file_request_handler.h"
 #include "gtest/gtest.h"
+#include "nginx_config_parser.h" // Config::inst()
 
 std::string get_content_length(Response res); // Helper
 std::string get_content_type(Response res); // Helper
 
 class FileRequestHandlerTest : public ::testing::Test {
 protected:
+  std::unique_ptr<FileRequestHandler> file_request_handler;
   Request req;
   std::string root_dir;
 
   void SetUp() override { // Setup test fixture
+    file_request_handler = std::make_unique<FileRequestHandler>();
+
     // Find root dir from cwd, not ideal but no access to argv[0] here
     // OK since tests are only called from within a subdirectory of webserver
     std::string binary_path = boost::filesystem::current_path().string();
@@ -22,6 +26,8 @@ protected:
     if (found != std::string::npos) // Found, extract root dir
       root_dir = binary_path.substr(0, found + target_dir.length());
 
+    Config::inst().set_absolute_root(root_dir);
+
     // GET / HTTP/1.1
     req.method(boost::beast::http::verb::get);
     req.version(11);
@@ -29,10 +35,7 @@ protected:
 };
 
 TEST_F(FileRequestHandlerTest, ConnectionClose){ // Uses test fixture
-  std::string full_path = root_dir + "/tests/inputs/small.html";
-  std::unique_ptr<FileRequestHandler> file_request_handler =
-    std::make_unique<FileRequestHandler>(full_path);
-
+  req.target("/tests/inputs/small.html");
   req.set("Connection", "close");
 
   Response* res = file_request_handler->handle_request(req);
@@ -42,14 +45,13 @@ TEST_F(FileRequestHandlerTest, ConnectionClose){ // Uses test fixture
   EXPECT_EQ(get_content_type(*res), "text/html");
 
   free(res);
-  file_request_handler.reset();
 }
 
 TEST_F(FileRequestHandlerTest, Create){
-  std::string full_path = root_dir + "/tests/inputs/small.html";
+  req.target("/tests/inputs/small.html");
   std::unique_ptr<FileRequestHandlerFactory> factory =
     std::make_unique<FileRequestHandlerFactory>();
-  RequestHandler* file_request_handler = factory->create(full_path);
+  RequestHandler* file_request_handler = factory->create();
 
   Response* res = file_request_handler->handle_request(req);
   EXPECT_EQ(res->result_int(), 200);
@@ -60,9 +62,7 @@ TEST_F(FileRequestHandlerTest, Create){
 }
 
 TEST_F(FileRequestHandlerTest, ServeDir){ // Uses test fixture
-  std::string full_path = root_dir + "/tests/inputs";
-  std::unique_ptr<FileRequestHandler> file_request_handler =
-    std::make_unique<FileRequestHandler>(full_path);
+  req.target("/tests/inputs");
 
   Response* res = file_request_handler->handle_request(req);
   EXPECT_EQ(res->version(), 11);
@@ -71,13 +71,11 @@ TEST_F(FileRequestHandlerTest, ServeDir){ // Uses test fixture
   EXPECT_EQ(get_content_type(*res), "text/html");
 
   free(res);
-  file_request_handler.reset();
 }
 
 TEST_F(FileRequestHandlerTest, ServeHTML){ // Uses test fixture
-  std::unique_ptr<FileRequestHandler> file_request_handler =
-    std::make_unique<FileRequestHandler>(root_dir +
-      "/tests/inputs/small.html");
+  req.target("/tests/inputs/small.html");
+
   Response* res = file_request_handler->handle_request(req);
   EXPECT_EQ(res->version(), 11);
   EXPECT_EQ(res->result_int(), 200);
@@ -95,16 +93,14 @@ TEST_F(FileRequestHandlerTest, ServeHTML){ // Uses test fixture
   EXPECT_EQ(get_content_type(*res), "text/html");
 
   free(res);
-  file_request_handler.reset();
 }
 
 TEST_F(FileRequestHandlerTest, ServeInaccessible){ // Uses test fixture
-  std::string full_path = root_dir + "/tests/inputs/no_permission.html";
-  std::unique_ptr<FileRequestHandler> file_request_handler =
-    std::make_unique<FileRequestHandler>(full_path);
+  req.target("/tests/inputs/no_permission.html");
 
   // Make the file inaccessible by changing its permissions
-  chmod(full_path.c_str(), 0000);
+  std::string file_path = Config::inst().root() + std::string(req.target());
+  chmod(file_path.c_str(), 0000);
   
   Response* res = file_request_handler->handle_request(req);
   EXPECT_EQ(res->version(), 11);
@@ -112,15 +108,13 @@ TEST_F(FileRequestHandlerTest, ServeInaccessible){ // Uses test fixture
   EXPECT_TRUE(res->keep_alive());
   EXPECT_EQ(get_content_type(*res), "text/plain");
 
-  chmod(full_path.c_str(), 0755); // Make the file accessible again
+  chmod(file_path.c_str(), 0755); // Make the file accessible again
   free(res);
-  file_request_handler.reset();
 }
 
 TEST_F(FileRequestHandlerTest, ServeLarge){ // Uses test fixture
-  std::unique_ptr<FileRequestHandler> file_request_handler =
-    std::make_unique<FileRequestHandler>(root_dir +
-      "/tests/inputs/large.html");
+  req.target("/tests/inputs/large.html");
+
   Response* res = file_request_handler->handle_request(req);
   EXPECT_EQ(res->version(), 11);
   EXPECT_EQ(res->result_int(), 200);
@@ -129,13 +123,10 @@ TEST_F(FileRequestHandlerTest, ServeLarge){ // Uses test fixture
   EXPECT_EQ(get_content_type(*res), "text/html");
 
   free(res);
-  file_request_handler.reset();
 }
 
 TEST_F(FileRequestHandlerTest, ServeNonexistent){ // Uses test fixture
-  std::string full_path = root_dir + "/tests/inputs/thisdoesnotexist.html";
-  std::unique_ptr<FileRequestHandler> file_request_handler =
-    std::make_unique<FileRequestHandler>(full_path);
+  req.target("/tests/inputs/thisdoesnotexist.html");
 
   Response* res = file_request_handler->handle_request(req);
   EXPECT_EQ(res->version(), 11);
@@ -144,13 +135,10 @@ TEST_F(FileRequestHandlerTest, ServeNonexistent){ // Uses test fixture
   EXPECT_EQ(get_content_type(*res), "text/html");
 
   free(res);
-  file_request_handler.reset();
 }
 
 TEST_F(FileRequestHandlerTest, ServeOctetStream){ // Uses test fixture
-  std::string full_path = root_dir + "/tests/inputs/octet_stream";
-  std::unique_ptr<FileRequestHandler> file_request_handler =
-    std::make_unique<FileRequestHandler>(full_path);
+  req.target("/tests/inputs/octet_stream");
 
   Response* res = file_request_handler->handle_request(req);
   EXPECT_EQ(res->version(), 11);
@@ -160,7 +148,6 @@ TEST_F(FileRequestHandlerTest, ServeOctetStream){ // Uses test fixture
   EXPECT_EQ(get_content_type(*res), "application/octet-stream");
 
   free(res);
-  file_request_handler.reset();
 }
 
 // Helper function to extract Content-Type header

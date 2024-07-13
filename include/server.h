@@ -1,12 +1,10 @@
 #pragma once
 
-#include <boost/asio.hpp> // io_service, tcp
-
 #include "session.h"
 
 class server{
 public:
-  server(boost::asio::io_service& io_service, NginxConfig config);
+  server(boost::asio::io_service& io_service);
 
 private:
   void start_accept();
@@ -14,6 +12,5 @@ private:
                      const boost::system::error_code& error);
   boost::asio::io_service& io_service_;
   boost::asio::ip::tcp::acceptor acceptor_;
-  NginxConfig config_;
   int session_id;
 };

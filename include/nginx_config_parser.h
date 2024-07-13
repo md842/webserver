@@ -10,12 +10,24 @@ struct NginxConfig{
   std::string root;
 };
 
-class Parser{
+class Config final{ // Singleton class (only one instance)
  public:
-  NginxConfig get_config();
+  // Singleton should delete copy and assignment operators
+  Config(const Config&) = delete;
+  Config& operator=(const Config&) = delete;
+
+  static Config& inst(); // Get static instance
+
+  std::string index();
+  short port();
+  std::string root();
+  void set_absolute_root(const std::string& absolute_root);
+  
   bool parse(const std::string& file_name);
 
  private:
+  Config(){}; // Singleton should have private constructor
+
   enum Context{
     MAIN_CONTEXT = 0,
     HTTP_CONTEXT = 1,
@@ -50,12 +62,12 @@ class Parser{
   std::string name;
   std::string uri;
 
-  TokenType get_token(boost::filesystem::ifstream& cfg_in, std::string& token);
   bool parse(boost::filesystem::ifstream& cfg_in);
   bool parse_block_start(std::vector<std::string>& statement);
   bool parse_block_end(std::vector<std::string>& statement);
   bool parse_statement(std::vector<std::string>& statement);
-  void process_mapping(const std::string& try_files_arg);
-  std::string type_str(TokenType type);
+  void process_mapping(const std::string& arg);
   bool validate_config();
+
+  TokenType get_token(boost::filesystem::ifstream& cfg_in, std::string& token);
 };

@@ -1,7 +1,9 @@
+#include <boost/asio.hpp> // io_service, tcp
 #include <boost/bind/bind.hpp> // bind
 
 #include "log.h"
-#include "registry.h"
+#include "nginx_config_parser.h" // Config::inst()
+#include "registry.h" // Registry::inst()
 #include "session.h"
 
 using namespace boost::asio;
@@ -10,13 +12,14 @@ using boost::system::error_code;
 namespace http = boost::beast::http;
 
 Request parse_req(char* data, int max_length);
+/*
 std::string req_as_string(Request req); // Temp helper for debug logging
 std::string res_as_string(Response res); // Temp helper for debug logging
+*/
 
-session::session(io_service& io_service, NginxConfig config, int id)
-  : socket_(io_service), config_(config){
-    id_ = std::to_string(id);
-  }
+session::session(io_service& io_service, int id) : socket_(io_service){
+  id_ = std::to_string(id);
+}
 
 tcp::socket& session::socket(){
   return socket_;
@@ -124,14 +127,14 @@ RequestHandler* session::dispatch(Request& req){
       [target](std::string page){
         return (target == page);
       })){
-      req.target(config_.index); // Serve index page
+      req.target(Config::inst().index()); // Serve index page
     }
     else{ // Other page requested
       target.replace(0, longest_match, mapping); // Substitute path
       req.target(target); // Set request target
     }
   }
-  return Registry::inst().get_factory(type)->create(config_.root);
+  return Registry::inst().get_factory(type)->create();
 }
 
 Request parse_req(char* data, int max_length){
@@ -143,6 +146,7 @@ Request parse_req(char* data, int max_length){
   return req;
 }
 
+/*
 std::string req_as_string(Request req){ // Temp helper for debug logging
   std::string method = std::string(http::to_string(req.method()));
   std::string target = std::string(req.target());
@@ -164,3 +168,4 @@ std::string res_as_string(Response res){ // Temp helper for debug logging
   }
   return out;
 }
+*/

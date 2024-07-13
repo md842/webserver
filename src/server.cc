@@ -1,17 +1,19 @@
+#include <boost/asio.hpp> // io_service, tcp
 #include <boost/bind/bind.hpp> // bind
 
 #include "log.h"
+#include "nginx_config_parser.h" // Config::inst()
 #include "server.h"
 
 using namespace boost::asio;
 using boost::asio::ip::tcp;
 using boost::system::error_code;
 
-server::server(io_service& io_service, NginxConfig config)
+server::server(io_service& io_service)
   : io_service_(io_service),
-    acceptor_(io_service, tcp::endpoint(tcp::v4(), config.port)),
-    config_(config){
-  Log::info("Server: Listening on port " + std::to_string(config.port));
+    acceptor_(io_service, tcp::endpoint(tcp::v4(), Config::inst().port())){
+  Log::info("Server: Listening on port " +
+            std::to_string(Config::inst().port()));
   session_id = 0;
   start_accept();
 }
@@ -19,7 +21,7 @@ server::server(io_service& io_service, NginxConfig config)
 void server::start_accept(){
   // Listens for and accepts incoming connection, then calls accept handler.
   session_id++;
-  session* new_session = new session(io_service_, config_, session_id);
+  session* new_session = new session(io_service_, session_id);
   acceptor_.async_accept(new_session->socket(),
                          boost::bind(&server::handle_accept, this, new_session,
                          placeholders::error));
