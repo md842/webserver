@@ -4,18 +4,17 @@
 #include "file_request_handler.h"
 #include "log.h"
 #include "nginx_config_parser.h" // Config::inst()
-#include "registry.h" // Required for REGISTER_HANDLER macro
+#include "registry.h" // Registry::inst(), REGISTER_HANDLER macro
 
 namespace fs = boost::filesystem;
 namespace http = boost::beast::http;
 
 std::string mime_type(fs::path file_obj);
+std::string resolve_path(const std::string& req_target);
 
 Response* FileRequestHandler::handle_request(const Request& req){
-  // Assumes dispatcher has performed relative path substitution on request
-  // target; saves work because dispatcher must interpret request target anyway
-  std::string target = std::string(req.target());
-  std::string full_path = Config::inst().root() + target;
+  std::string target = resolve_path(std::string(req.target()));
+  std::string full_path = Config::inst().root() + target; // Add root
   
   // Returns a pointer to an HTTP response object for the given HTTP request.
   http::status status = http::status::ok; // Default response status is 200 OK
@@ -85,6 +84,35 @@ std::string mime_type(fs::path file_obj){
   if (types.count(extension)) // 1 if key in map, 0 otherwise
     return types[extension];
   return "application/octet-stream"; // Default case
+}
+
+std::string resolve_path(const std::string& req_target){
+  // Performs relative path substitution on req_target using config mapping.
+  std::string target = req_target;
+
+  // Configure server to serve index.html for paths handled by React Router
+  // https://create-react-app.dev/docs/deployment#serving-apps-with-client-side-routing
+  std::vector<std::string> react_router_pages = {"/"};
+  if (std::any_of(react_router_pages.begin(), react_router_pages.end(),
+    [target](std::string page){
+      return (target == page);
+    })){
+    target = Config::inst().index(); // Serve index page
+  }
+  else{ // Request is for a path not handled by React Router
+    int longest_match = 0;
+    std::string mapping = "";
+    for (auto& pair : Registry::inst().get_map("FileRequestHandler")){
+      std::string key = pair.first;
+      // New longest match found, save information
+      if ((target.find(key) == 0) && key.length() > longest_match){
+        longest_match = key.length();
+        mapping = pair.second;
+      }
+    }
+    target.replace(0, longest_match, mapping); // Substitute path
+  }
+  return target;
 }
 
 RequestHandler* FileRequestHandlerFactory::create(){

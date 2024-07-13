@@ -11,6 +11,7 @@ using boost::asio::ip::tcp;
 using boost::system::error_code;
 namespace http = boost::beast::http;
 
+RequestHandler* dispatch(Request& req);
 Request parse_req(char* data, int max_length);
 /*
 std::string req_as_string(Request req); // Temp helper for debug logging
@@ -96,14 +97,12 @@ void session::handle_read(const error_code& error, size_t bytes){
   }
 }
 
-RequestHandler* session::dispatch(Request& req){
+RequestHandler* dispatch(Request& req){
   // Returns a pointer to a dynamically dispatched RequestHandler based on the
-  // incoming request's target. Performs relative path substitution on the
-  // request target if dispatching a FileRequestHandler.
+  // incoming request's target. 
 
   // Search for longest match between target and URI
   int longest_match = 0;
-  std::string mapping = "";
   std::string type = "";
   std::string target = std::string(req.target());
   // Search all handler types
@@ -114,24 +113,8 @@ RequestHandler* session::dispatch(Request& req){
       // New longest match found, save information
       if ((target.find(key) == 0) && key.length() > longest_match){
         longest_match = key.length();
-        mapping = pair.second;
         type = cur_type;
       }
-    }
-  }
-  if (type == "FileRequestHandler"){ // Perform relative path substitution
-    // Configure server to serve index.html for paths handled by React Router
-    // https://create-react-app.dev/docs/deployment#serving-apps-with-client-side-routing
-    std::vector<std::string> react_router_pages = {"/"};
-    if (std::any_of(react_router_pages.begin(), react_router_pages.end(),
-      [target](std::string page){
-        return (target == page);
-      })){
-      req.target(Config::inst().index()); // Serve index page
-    }
-    else{ // Other page requested
-      target.replace(0, longest_match, mapping); // Substitute path
-      req.target(target); // Set request target
     }
   }
   return Registry::inst().get_factory(type)->create();

@@ -9,7 +9,6 @@ public:
   void start();
 
 private:
-  RequestHandler* dispatch(Request& req);
   void handle_read(const boost::system::error_code& error, size_t bytes);
   boost::asio::ip::tcp::socket socket_;
   enum{max_length = 1024};
