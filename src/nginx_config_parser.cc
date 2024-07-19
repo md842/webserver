@@ -182,11 +182,9 @@ bool Config::parse_block_start(std::vector<std::string>& statement){
 bool Config::parse_block_end(std::vector<std::string>& statement){
   // Parses a block end statement within the config.
   // Returns true if parsing was successful, false otherwise.
-  if (statement.size() != 1){ // Verify statement size; 1 token "}"
-    Log::fatal("Config: Malformed block end (size " +
-                std::to_string(statement.size()) + ", expected size 1)");
-    return false;
-  }
+
+  // No need to check size, the valid preceding tokens also call parse routines
+  // so it is impossible for statement to have size > 1.
 
   // Verify and perform context transition
   if (context == LOCATION_CONTEXT)
@@ -294,7 +292,7 @@ Config::TokenType Config::get_token(fs::ifstream& cfg_in, std::string& token){
   TokenParserState state = INIT_STATE; // DFA state of the token parser
   bool escaped = false; // If true, previous character was escape character
 
-  while (cfg_in.good()){ // While not at end of file
+  while (true){ // While not at end of file
     const char c = cfg_in.get(); // Get next single character from config
     if (!cfg_in.good()){ // End of file reached
       // Reject state: End of file, unterminated quotation
@@ -433,7 +431,6 @@ Config::TokenType Config::get_token(fs::ifstream& cfg_in, std::string& token){
         continue;
     }
   }
-  return EOF_;
 }
 
 std::string clean(const std::string& path){

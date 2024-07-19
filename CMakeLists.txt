@@ -77,6 +77,14 @@ target_link_libraries(file_request_handler_test
   Boost::system
 )
 
+add_executable(nginx_config_parser_test tests/libs/nginx_config_parser_test.cc)
+target_link_libraries(nginx_config_parser_test
+  nginx_config_parser_lib
+  registry_lib
+  gtest_main
+  Boost::system
+)
+
 add_executable(log_test tests/libs/log_test.cc)
 target_link_libraries(log_test
   log_lib
@@ -93,11 +101,28 @@ target_link_libraries(registry_test
 
 # Discover unit tests within test executables compiled above
 gtest_discover_tests(file_request_handler_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/libs)
+gtest_discover_tests(nginx_config_parser_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/libs)
 gtest_discover_tests(log_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/libs)
 gtest_discover_tests(registry_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/libs)
 
 # Add integration tests
-add_test(NAME integration_test COMMAND ./integration_tests.sh WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration)
+add_test(
+  NAME
+    integration_test
+  COMMAND
+    ./integration_tests.sh
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration)
 
 include(cmake/CodeCoverageReportConfig.cmake)
-generate_coverage_report(TARGETS file_request_handler_lib log_lib nginx_config_parser_lib registry_lib TESTS file_request_handler_test log_test registry_test)
+generate_coverage_report(
+  TARGETS
+    file_request_handler_lib
+    log_lib
+    nginx_config_parser_lib
+    registry_lib
+  TESTS
+    file_request_handler_test
+    nginx_config_parser_test
+    log_test
+    registry_test
+)
