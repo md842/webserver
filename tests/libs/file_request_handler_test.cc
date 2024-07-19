@@ -26,6 +26,8 @@ protected:
     if (found != std::string::npos) // Found, extract root dir
       root_dir = binary_path.substr(0, found + target_dir.length());
 
+    // Parse the test config and set absolute root
+    Config::inst().parse(root_dir + "/tests/inputs/configs/test_config.conf");
     Config::inst().set_absolute_root(root_dir);
 
     // GET / HTTP/1.1
@@ -35,7 +37,7 @@ protected:
 };
 
 TEST_F(FileRequestHandlerTest, ConnectionClose){ // Uses test fixture
-  req.target("/tests/inputs/small.html");
+  req.target("/small.html");
   req.set("Connection", "close");
 
   Response* res = file_request_handler->handle_request(req);
@@ -48,7 +50,7 @@ TEST_F(FileRequestHandlerTest, ConnectionClose){ // Uses test fixture
 }
 
 TEST_F(FileRequestHandlerTest, Create){
-  req.target("/tests/inputs/small.html");
+  req.target("/small.html");
   std::unique_ptr<FileRequestHandlerFactory> factory =
     std::make_unique<FileRequestHandlerFactory>();
   RequestHandler* file_request_handler = factory->create();
@@ -62,7 +64,7 @@ TEST_F(FileRequestHandlerTest, Create){
 }
 
 TEST_F(FileRequestHandlerTest, ServeDir){ // Uses test fixture
-  req.target("/tests/inputs");
+  req.target("/configs");
 
   Response* res = file_request_handler->handle_request(req);
   EXPECT_EQ(res->version(), 11);
@@ -74,7 +76,7 @@ TEST_F(FileRequestHandlerTest, ServeDir){ // Uses test fixture
 }
 
 TEST_F(FileRequestHandlerTest, ServeHTML){ // Uses test fixture
-  req.target("/tests/inputs/small.html");
+  req.target("/small.html");
 
   Response* res = file_request_handler->handle_request(req);
   EXPECT_EQ(res->version(), 11);
@@ -96,7 +98,7 @@ TEST_F(FileRequestHandlerTest, ServeHTML){ // Uses test fixture
 }
 
 TEST_F(FileRequestHandlerTest, ServeInaccessible){ // Uses test fixture
-  req.target("/tests/inputs/no_permission.html");
+  req.target("/small.html");
 
   // Make the file inaccessible by changing its permissions
   std::string file_path = Config::inst().root() + std::string(req.target());
@@ -108,12 +110,34 @@ TEST_F(FileRequestHandlerTest, ServeInaccessible){ // Uses test fixture
   EXPECT_TRUE(res->keep_alive());
   EXPECT_EQ(get_content_type(*res), "text/plain");
 
-  chmod(file_path.c_str(), 0755); // Make the file accessible again
+  chmod(file_path.c_str(), 0644); // Make the file accessible again
+  free(res);
+}
+
+TEST_F(FileRequestHandlerTest, ServeIndex){ // Uses test fixture
+  req.target("/");
+
+  Response* res = file_request_handler->handle_request(req);
+  EXPECT_EQ(res->version(), 11);
+  EXPECT_EQ(res->result_int(), 200);
+  EXPECT_TRUE(res->keep_alive());
+  EXPECT_EQ(res->body(), "<!DOCTYPE html>\n"
+                         "<html lang=\"en\">\n"
+                         "  <head>\n"
+                         "    <meta charset=\"utf-8\">\n"
+                         "  </head>\n"
+                         "  <body>\n"
+                         "    <h1>This is a placeholder HTML file for testing purposes.</h1>\n"
+                         "  </body>\n"
+                         "</html>"
+  );
+  EXPECT_EQ(get_content_type(*res), "text/html");
+
   free(res);
 }
 
 TEST_F(FileRequestHandlerTest, ServeLarge){ // Uses test fixture
-  req.target("/tests/inputs/large.html");
+  req.target("/large.html");
 
   Response* res = file_request_handler->handle_request(req);
   EXPECT_EQ(res->version(), 11);
@@ -126,7 +150,7 @@ TEST_F(FileRequestHandlerTest, ServeLarge){ // Uses test fixture
 }
 
 TEST_F(FileRequestHandlerTest, ServeNonexistent){ // Uses test fixture
-  req.target("/tests/inputs/thisdoesnotexist.html");
+  req.target("/thisdoesnotexist.html");
 
   Response* res = file_request_handler->handle_request(req);
   EXPECT_EQ(res->version(), 11);
@@ -138,7 +162,7 @@ TEST_F(FileRequestHandlerTest, ServeNonexistent){ // Uses test fixture
 }
 
 TEST_F(FileRequestHandlerTest, ServeOctetStream){ // Uses test fixture
-  req.target("/tests/inputs/octet_stream");
+  req.target("/octet_stream");
 
   Response* res = file_request_handler->handle_request(req);
   EXPECT_EQ(res->version(), 11);
