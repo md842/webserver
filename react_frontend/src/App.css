@@ -1,0 +1,7 @@
+a{
+  color: var(--bs-body-color); /* Set link color to text color */
+}
+
+main{
+  margin: 0% 10% 0% 10%; /* top, right, bottom, left */
+}

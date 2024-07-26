@@ -1,4 +1,5 @@
 build
 build_*
+react_frontend/production_build
 tests/integration/output
 tests/integration/results.txt
