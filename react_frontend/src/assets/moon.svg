@@ -1,0 +1,8 @@
+<svg width="64" height="64" xmlns="http://www.w3.org/2000/svg" version="1.1">
+<!-- Arc 1: Outer arc, Arc 2: Inner arc -->
+<path d=
+  "M 44 4
+  A 8 8, 0, 0, 1, 8 52
+  A 36 36, 0, 0, 0, 44 4"
+  fill="black"/>
+</svg>

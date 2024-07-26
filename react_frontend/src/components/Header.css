@@ -1,0 +1,12 @@
+.navbar{
+  margin-bottom: 1em;
+}
+
+.dark-mode-svg{
+  max-height: 2em; /* Shrink svg to match navbar */
+  filter: invert(100%); /* Default state is white */
+}
+
+.dark-mode-svg:hover{
+  filter: invert(80%); /* Turns light-gray when hovered */
+}
