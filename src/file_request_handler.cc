@@ -14,7 +14,7 @@ std::string resolve_path(const std::string& req_target);
 
 Response* FileRequestHandler::handle_request(const Request& req){
   std::string target = resolve_path(std::string(req.target()));
-  std::string full_path = Config::inst().root() + target; // Add root
+  std::string full_path = Config::inst().root() + target; // Add root to target
   
   // Returns a pointer to an HTTP response object for the given HTTP request.
   http::status status = http::status::ok; // Default response status is 200 OK
@@ -25,9 +25,9 @@ Response* FileRequestHandler::handle_request(const Request& req){
   fs::path file_obj(full_path);
   if (!exists(file_obj) || is_directory(file_obj)){ // Nonexistent or directory
     status = http::status::not_found; // Set response status to 404 Not Found
-    fs::path file_obj(Config::inst().root() + "/files_to_serve/404.html");
+    fs::path file_obj(Config::inst().root() + Config::inst().index());
     fs::ifstream fstream(file_obj);
-    Log::warn("FileRequestHandler: ." + target + " not found. Serving 404.");
+    Log::info("FileRequestHandler: ." + target + " not found. Serving index page.");
     file_contents << fstream.rdbuf(); // Read 404 page into string stream
   }
   else{ // Non-directory file found
@@ -92,7 +92,7 @@ std::string resolve_path(const std::string& req_target){
 
   // Configure server to serve index.html for paths handled by React Router
   // https://create-react-app.dev/docs/deployment#serving-apps-with-client-side-routing
-  std::vector<std::string> react_router_pages = {"/"};
+  std::vector<std::string> react_router_pages = {"/", "/projects", "/resume"};
   if (std::any_of(react_router_pages.begin(), react_router_pages.end(),
     [target](std::string page){
       return (target == page);
