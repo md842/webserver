@@ -1,11 +1,10 @@
-import '../App.css';
 import './Footer.css';
 
 export default function Footer(){
 	return(
 		<>
 			<footer>
-				<p>© 2024 Max Deng</p>
+				Powered by my <a href="https://github.com/md842/webserver">custom web server project</a>.
 			</footer>
 		</>
 	);
