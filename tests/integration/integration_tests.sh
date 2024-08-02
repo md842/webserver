@@ -47,8 +47,8 @@ NUM=0 # Initialize test number counter
 WEBSERVER_PID=$! # Save PID of web server to shut it down after tests are done
 sleep 0.1 # Give the server time to start up
 
-# Function call  $1: Expected output file                         $2: Command   $3: Options                                                   $4 Netcat input file (omit for curl)
-integration_test "../../frontend/production_build/index.html"     "curl"        "-o output -s http://localhost:8080/"
-# Function call  $1: Expected output file                         $2: Command   $3: Options                                                   $4 Netcat input file (omit for curl)
+# Function call  $1: Expected output file               $2: Command   $3: Options                                                   $4 Netcat input file (omit for curl)
+integration_test "../../frontend/build/index.html"      "curl"        "-o output -s http://localhost:8080/"
+# Function call  $1: Expected output file               $2: Command   $3: Options                                                   $4 Netcat input file (omit for curl)
 
 kill $WEBSERVER_PID # Shut down web server after all tests have finished. Also ends any netcat background processes that are still alive.
