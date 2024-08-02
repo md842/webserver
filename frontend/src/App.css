@@ -5,3 +5,18 @@ a{
 main{
   margin: 0% 10% 0% 10%; /* top, right, bottom, left */
 }
+
+.card{
+  margin: 1em 0em; /* top/bottom, left/right */
+}
+
+.card img{
+  object-fit: contain; /* Maintain aspect ratio while scaling */
+  max-height: 600px;
+  height: auto;
+  width: auto;
+}
+
+.btn{
+  margin-right: 0.5em;
+}

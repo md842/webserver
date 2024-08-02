@@ -1,0 +1,81 @@
+@media (orientation: landscape){
+  #main-canvas{
+    /* Display controls beside the simulation in landscape mode rather than
+       below the simulation in portrait mode */
+    display: flex;
+  }
+  .controls-widget{
+    margin-left: 1%; /* Spacing for landscape mode only */
+  }
+}
+
+.description{
+  margin: 1em 0em; /* top/bottom, left/right */
+}
+
+canvas{
+  object-fit: cover; /* Maintain aspect ratio when scaling */
+  width: 100% !important; /* Override inline values for responsive scaling */
+  height: auto !important; /* Override inline values for responsive scaling */
+}
+
+.control-box{
+  width: 100%; /* Relative to body width */
+  height: 100%; /* Relative to controls-widget */
+}
+
+.control-box tbody{
+  height: 100%; /* Relative to control-box */
+}
+
+.control-box tr{
+  display: flex; /* Put panels side by side */
+  justify-content: space-between;
+  height: 100%; /* Relative to control-box */
+}
+
+.control-box td{
+  display: flex; /* Title div above control panel div */
+  flex-direction: column; /* Title div above control panel div */
+  align-items: stretch; /* Stretch vertically to fit tr */
+  flex-basis: 49.5%; /* 1% space-between */
+  border: 1px solid black;
+  border-radius: 10px;
+  padding: 0px;
+}
+
+.control-title{
+  padding: 0.5em 1em; /* top/bottom, left/right */
+  color: white;
+  border-radius: 8px 8px 0px 0px; /* Round corners on top-left and top-right */
+}
+
+.control-div{
+  padding: 1em;
+}
+
+.control-div p{ /* Reset margin of paragraphs in control-divs to allow control
+  of spacing using line_break()s in make_control_panel() instead */
+  margin: 0;
+}
+
+.controls-widget button{
+  margin: 1px;
+  position: relative; /* enables z-index */
+  transition: transform .3s;
+}
+
+/* See implementation of key_triggered_button() in tiny-graphics.js for hover
+   styling; must be implemented there in order to work with key controls. */
+
+.control-div button{ /* All buttons not in button groups are full width */
+  width: 100%;
+}
+
+.control-div.camera-controls .movement-button-row{
+  display: flex; /* Button group arranges a row of buttons */
+}
+
+.control-div.camera-controls .movement-button-row button{
+  flex-basis: 100%; /* Occupy as much space as possible within row */
+}
