@@ -1,6 +1,9 @@
 import './Projects.css'
 
-import React from 'react';
+import React from "react";
+
+import { collection, getDocs } from "firebase/firestore";
+import db from '../components/firebaseConfig.ts';
 
 import Button from 'react-bootstrap/Button';
 import Card from 'react-bootstrap/Card';
@@ -14,69 +17,94 @@ interface FilterState{
   filter: string;
 }
 
-interface CardParams{
-  description: string;
+interface Project{
+  /* Props interface for ProjectCard(). */
+  // Unique key prop for each projectObj.                     Source: read().
+  key: number;
+  // Title of project.                                        Source: Database.
   title: string;
-  repoLink: string;
-  image?: string; /* If present, card will display an image */
-  simLink?: string; /* If present, "Run Simulation" button will appear */
-  tags: Array<string>
-  filter: string;
+  // Description of project.                                  Source: Database.
+  desc: string;
+  // If present, card will display an image.                  Source: Database.
+  image?: string;
+  // Link to project repository.                              Source: Database.
+  repo: string;
+  // If present, "Run Simulation" button will appear.         Source: Database.
+  sim?: string;
+  // Tags associated with the project.                        Source: Database.
+  tags: Array<string>;
 }
 
-function ProjectCard(params: CardParams): JSX.Element{
-  /* Constructs a project card given CardParams */
-    let filterMatch = (params.tags.indexOf(params.filter) > -1) || (params.filter === "");
-    let unraveledTags = "";
-    params.tags.forEach(element => unraveledTags += element + ", ");
-    unraveledTags = unraveledTags.substring(0, unraveledTags.length - 2);
-    if (filterMatch){
-      return(
-        <>
-          <Card>
-            { /* Only return img element if params.image is present */
-            params.image &&
-              <Card.Img variant="top" src={params.image}/>
-            }
-            <Card.Body>
-              <Card.Title>{params.title}</Card.Title>
-              <Card.Text>{params.description}</Card.Text>
-              <Card.Text>Tags: {unraveledTags}</Card.Text>
-              { /* Only return button element if params.simLink is present */
-              params.simLink &&
-                <Button
-                  href={params.simLink}
-                  variant="primary"
-                >
-                  Run Simulation
-                </Button>
-              }
-              <Button
-                href={params.repoLink}
-                variant="primary"
-              >
-                View repository on GitHub
-              </Button>
-            </Card.Body>
-          </Card>
-        </>
-      );
-    }
-    else{
-      return(
-        <></>
-      );
-    }
-  }
+function ProjectCard(params: Project): JSX.Element{
+  /* Constructs a project card given Project object. */
+  let unraveledTags = ""; // Convert tags array to string
+  params.tags.forEach(element => unraveledTags += element + ", ");
+  unraveledTags = unraveledTags.substring(0, unraveledTags.length - 2);
+  return(
+    <>
+      <Card>
+        {params.image && // Return img element if params.image is present
+          <Card.Img variant="top" src={params.image}/>
+        }
+        <Card.Body>
+          <Card.Title>{params.title}</Card.Title>
+          <Card.Text>{params.desc}</Card.Text>
+          <Card.Text>Tags: {unraveledTags}</Card.Text>
+          {params.sim && // Return button element if params.sim is present
+            <Button href={params.sim} variant="primary">
+              Run Simulation
+            </Button>
+          }
+          <Button href={params.repo} variant="primary">
+            View repository on GitHub
+          </Button>
+        </Card.Body>
+      </Card>
+    </>
+  );
+}
 
 export default class Projects extends React.Component<{}, FilterState>{
+  featuredData: Array<Project>;
+  projectData: Array<Project>;
+
   constructor(props: {}) {
     super(props);
     this.state = {filter: ""};
+    this.featuredData = new Array<Project>;
+    this.projectData = new Array<Project>;
+    this.read(); // Read project data from database
   }
 
   handleChange(){
     console.log("Pending implementation!");
+  }
+
+  async read(){
+    /* Read project data from database and populate lists for rendering. */
+    let keyNum = 0; // Generate unique key props for each projectObj
+    const dbQuery = await getDocs(collection(db, "projects"));
+    dbQuery.forEach((doc) => {
+      let projectObj:Project = {
+        key: keyNum, // Unique key prop for each projectObj
+        desc: doc.data().desc,
+        title: doc.id,
+        repo: doc.data().repo,
+        image: doc.data().image,
+        sim: doc.data().sim,
+        tags: doc.data().tags
+      };
+
+      // Push completed projectObj to appropriate list
+      if (doc.data().featured)
+        this.featuredData.push(projectObj);
+      else
+        this.projectData.push(projectObj);
+
+      keyNum++;
+    });
+
+    this.setState(this.state); // Update render after reading from database
   }
 
   render(){
@@ -101,27 +129,23 @@ export default class Projects extends React.Component<{}, FilterState>{
 
           <h3>Featured Projects</h3>
 
-          <ProjectCard
-            description="Placeholder description text"
-            title="Earth Impact Simulator"
-            repoLink="https://github.com/md842/earth-impact-simulator"
-            image="simulations/earth-impact-simulator/thumb.png"
-            simLink="projects/earth-impact-simulator"
-            tags={["WebGL", "OpenGL", "OpenGL Shading Language (GLSL)", "JavaScript"]}
-            filter={this.state.filter}
-          />
+          {this.featuredData.length == 0 &&
+            <p>No matching projects were found!</p>
+          }
 
-          <br/>
+          {this.featuredData.map((params:Project) => ( // From database
+            <ProjectCard {...params}/>)) // Spread syntax to pass props object
+          }
 
           <h3>Projects</h3>
 
-          <ProjectCard
-            description="Placeholder description text"
-            title="Placeholder Title"
-            repoLink=""
-            tags={["C++"]}
-            filter={this.state.filter}
-          />
+          {this.projectData.length == 0 &&
+            <p>No matching projects were found!</p>
+          }
+
+          {this.projectData.map((params:Project) => ( // From database
+            <ProjectCard {...params}/>)) // Spread syntax to pass props object
+          }
         </main>
       </>
     );
