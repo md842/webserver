@@ -1,7 +1,12 @@
+import './Projects.css'
+
 import React from 'react';
+
 import Button from 'react-bootstrap/Button';
 import Card from 'react-bootstrap/Card';
-
+import Container from 'react-bootstrap/Container';
+import Form from 'react-bootstrap/Form';
+import InputGroup from 'react-bootstrap/InputGroup';
 import ToggleButton from 'react-bootstrap/ToggleButton';
 import ToggleButtonGroup from 'react-bootstrap/ToggleButtonGroup';
 
@@ -78,25 +83,38 @@ export default class Projects extends React.Component<{}, FilterState>{
     return(
       <>
         <main>
-          <p>Filter by: (Pending implementation)</p>
-          <ToggleButtonGroup type="checkbox" className="filter-btns" onChange={this.handleChange}>
-            <ToggleButton id="filter-js" value={1}>JS</ToggleButton>
-            <ToggleButton id="filter-opengl" value={2}>OpenGL</ToggleButton>
-            <ToggleButton id="filter-cpp" value={3}>C++</ToggleButton>
-          </ToggleButtonGroup>
-          <br/><br/>
+          <InputGroup className="mb-3">
+            <Form.Control
+              placeholder="Search for projects... (Pending implementation)"
+            />
+            <Button id="search-btn">Search</Button>
+          </InputGroup>
 
-          <h3>Featured Project</h3>
+          <Container fluid className="mb-5" id="filter-container">
+            <p id="filter-label">Or filter by tag: (Pending implementation)</p>
+            <ToggleButtonGroup type="checkbox" className="filter-btns" onChange={this.handleChange}>
+              <ToggleButton id="filter-js" value={1}>JavaScript</ToggleButton>
+              <ToggleButton id="filter-opengl" value={2}>OpenGL</ToggleButton>
+              <ToggleButton id="filter-cpp" value={3}>C++</ToggleButton>
+            </ToggleButtonGroup>
+          </Container>
+
+          <h3>Featured Projects</h3>
+
           <ProjectCard
             description="Placeholder description text"
             title="Earth Impact Simulator"
             repoLink="https://github.com/md842/earth-impact-simulator"
             image="simulations/earth-impact-simulator/thumb.png"
             simLink="projects/earth-impact-simulator"
-            tags={["JS", "OpenGL"]}
+            tags={["WebGL", "OpenGL", "OpenGL Shading Language (GLSL)", "JavaScript"]}
             filter={this.state.filter}
           />
+
+          <br/>
+
           <h3>Projects</h3>
+
           <ProjectCard
             description="Placeholder description text"
             title="Placeholder Title"

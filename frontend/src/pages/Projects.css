@@ -1,0 +1,44 @@
+.profile{
+  display: flex;
+}
+
+.profile section{
+  flex-basis: 30%; /* Section width relative to profile div width */
+  text-align: center;
+  margin-right: 2em;
+}
+
+.profile section img{
+  max-width: 100%; /* Image width relative to section width */
+  border-radius: 50%; /* Circular image */
+  margin: 1em 0; /* top/bottom, left/right */
+}
+
+.profile aside{
+  margin-left: 2em;
+  flex-basis: 70%; /* Aside width relative to profile div width */
+}
+
+#filter-container{
+  display: flex;
+}
+
+#filter-label{
+  margin: auto 1em auto 0; /* top, right, bottom, left */
+}
+
+.filter-btns .btn{
+  margin: 0; /* Remove margin for filter buttons */
+}
+
+.card{
+  margin: 1em 0; /* top/bottom, left/right */
+  max-width: 1024px;
+}
+
+.card img{
+  object-fit: contain; /* Maintain aspect ratio while scaling */
+  max-height: 600px;
+  height: auto;
+  width: auto;
+}
