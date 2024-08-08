@@ -33,6 +33,40 @@ interface Project{
   tags: Array<string>;
 }
 
+interface SectionParams{
+  title: string;
+  data: Array<Project>;
+}
+
+function ProjectCard(params: Project): JSX.Element{
+  /* Constructs a project card given Project object specified by params. */
+  let unraveledTags = ""; // Convert tags array to string
+  params.tags.forEach(element => unraveledTags += element + ", ");
+  unraveledTags = unraveledTags.substring(0, unraveledTags.length - 2);
+  return(
+    <>
+      <Card>
+        {params.image && // Return img element if params.image is present
+          <Card.Img variant="top" src={params.image}/>
+        }
+        <Card.Body>
+        <Card.Title>{params.title}</Card.Title>
+        <Card.Text>{params.desc}</Card.Text>
+        <Card.Text>Tags: {unraveledTags}</Card.Text>
+        {params.sim && // Return button element if params.sim is present
+          <Button href={params.sim} variant="primary">
+          Run Simulation
+        </Button>
+        }
+        <Button href={params.repo} variant="primary">
+          View repository on GitHub
+        </Button>
+        </Card.Body>
+      </Card>
+    </>
+  );
+}
+
 export default class Projects extends React.Component<{}, FilterState>{
   featuredData: Array<Project>;
   projectData: Array<Project>;
@@ -41,13 +75,17 @@ export default class Projects extends React.Component<{}, FilterState>{
   constructor(props: {}) {
     super(props);
     this.state = {filter: {}};
+
     this.featuredData = new Array<Project>;
     this.projectData = new Array<Project>;
     this.tags = new Array<string>;
+
     this.read(); // Read project data and tags from database
   }
 
   FilterButtons = (): JSX.Element => {
+    /* Renders the filter buttons at the top of the page using database tags.
+       Class member due to use of this.handleChange. */
     const [checked] = useState(false);
     return(
       <>
@@ -75,44 +113,41 @@ export default class Projects extends React.Component<{}, FilterState>{
   }
 
   handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    /* Use button name as a key, set boolean to checked state */
+    /* Updates this.state.filter based on the states of the filter buttons. */
+    // Use button name as a key, set boolean to checked state
     this.state.filter[e.currentTarget.value] = e.currentTarget.checked;
     this.setState(this.state); // Update render after updating filter
   }
 
-  ProjectCard = (params: Project): JSX.Element => {
-    /* Constructs a project card given Project object specified by params. */
-    let filter = this.resolveFilter(params.tags);
-    if (filter){
-      let unraveledTags = ""; // Convert tags array to string
-      params.tags.forEach(element => unraveledTags += element + ", ");
-      unraveledTags = unraveledTags.substring(0, unraveledTags.length - 2);
-      return(
-        <>
-          <Card>
-            {params.image && // Return img element if params.image is present
-              <Card.Img variant="top" src={params.image}/>
+  Section = (params: SectionParams): JSX.Element => {
+    /* Renders a project section, or appropriate message if none rendered.
+       Class member due to use of this.resolveFilter. */
+    let displayed = false;
+    return(
+      <>
+        <h3 className="mb-3">{params.title}</h3>
+
+        { // If data is not yet loaded from database:
+        this.projectData.length == 0 &&
+          <p>Loading projects from database...</p>
+        }
+
+        {/* Generate project cards from database info. Key warnings can be
+            safely ignored; this map won't change after being rendered. */
+          params.data.map((params:Project) => {
+            if (this.resolveFilter(params.tags)){
+              displayed = true;
+              return <ProjectCard {...params}/>;
             }
-            <Card.Body>
-            <Card.Title>{params.title}</Card.Title>
-            <Card.Text>{params.desc}</Card.Text>
-            <Card.Text>Tags: {unraveledTags}</Card.Text>
-            {params.sim && // Return button element if params.sim is present
-              <Button href={params.sim} variant="primary">
-              Run Simulation
-            </Button>
-            }
-            <Button href={params.repo} variant="primary">
-              View repository on GitHub
-            </Button>
-            </Card.Body>
-          </Card>
-        </>
-      );
-    }
-    else{
-      return <></>; // Display nothing if this.resolveFilter returned false
-    }
+          })
+        }
+
+        { // If data is loaded from database but no cards were displayed:
+        (this.projectData.length > 0 && !displayed) &&
+          <p>No projects were found that matched the filter settings.</p>
+        }
+      </>
+    );
   }
 
   async read(){
@@ -176,29 +211,9 @@ export default class Projects extends React.Component<{}, FilterState>{
           {/* Must be its own function to use "checked" hook */}
           <this.FilterButtons/>
 
-          <h3>Featured Projects</h3>
-
-          {this.featuredData.length == 0 &&
-            <p>No matching projects were found!</p>
-          }
-
-          {/* Generate project cards from database info. Key warnings can be
-              safely ignored; this map won't change after being rendered. */
-            this.featuredData.map((params:Project) => (
-              <this.ProjectCard {...params}/>)) // Spread syntax to pass props
-          }
-
-          <h3>Projects</h3>
-
-          {this.projectData.length == 0 &&
-            <p>No matching projects were found!</p>
-          }
-
-          {/* Generate project cards from database info. Key warnings can be
-              safely ignored; this map won't change after being rendered. */
-            this.projectData.map((params:Project) => (
-              <this.ProjectCard {...params}/>)) // Spread syntax to pass props
-          }
+          {/* Project sections. Data passed as reference, no memory waste. */}
+          <this.Section title="Featured Projects" data={this.featuredData}/>
+          <this.Section title="Projects" data={this.projectData}/>
         </main>
       </>
     );
