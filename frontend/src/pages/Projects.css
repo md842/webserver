@@ -1,23 +1,4 @@
-.profile{
-  display: flex;
-}
-
-.profile section{
-  flex-basis: 30%; /* Section width relative to profile div width */
-  text-align: center;
-  margin-right: 2em;
-}
-
-.profile section img{
-  max-width: 100%; /* Image width relative to section width */
-  border-radius: 50%; /* Circular image */
-  margin: 1em 0; /* top/bottom, left/right */
-}
-
-.profile aside{
-  margin-left: 2em;
-  flex-basis: 70%; /* Aside width relative to profile div width */
-}
+/* Filter section styling */
 
 #filter-container{
   display: flex;
@@ -31,14 +12,67 @@
   margin: 0; /* Remove margin for filter buttons */
 }
 
+/* Projects section styling */
+
+.projects-section{
+  display: flex;
+  flex-direction: column;
+}
+
+@media (orientation: landscape) and (min-width: 1366px){
+  .sections{
+    /* Display Featured Projects section and Projects section side by side */
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .projects-section{
+    width: 49.5%; /* 1% space between */
+  }
+}
+
+/* Card styling */
+
 .card{
-  margin: 1em 0; /* top/bottom, left/right */
-  max-width: 1024px;
+  margin: 0.5em 0; /* top/bottom, left/right */
+  overflow: hidden;
 }
 
 .card img{
-  object-fit: contain; /* Maintain aspect ratio while scaling */
-  max-height: 600px;
+  object-fit: cover; /* Maintain aspect ratio while scaling */
   height: auto;
   width: auto;
+}
+
+/* Card filter animations */
+
+.card-out{
+  border-width: 0;
+  margin: 0;
+
+  /* property, duration, timing function, delay */
+  transition: border-width 0s linear 0.5s, /* Remove border after animation */
+              margin 0.05s linear 0.45s; /* Collapse margin late in animation */
+}
+
+.body-in{
+  max-height: 300px;
+  padding: var(--bs-card-spacer-y) var(--bs-card-spacer-x); /* Restore vertical padding */
+  transition: max-height 0.5s ease-in, padding 0.5s ease-in;
+}
+
+.body-out{
+  max-height: 0;
+  padding: 0 var(--bs-card-spacer-x); /* Remove vertical padding */
+  transition: max-height 0.5s ease-out, padding 0.5s ease-out;
+}
+
+.img-in{
+  max-height: 600px;
+  transition: max-height 0.5s ease-in;
+}
+
+.img-out{
+  max-height: 0;
+  transition: max-height 0.5s ease-out;
 }

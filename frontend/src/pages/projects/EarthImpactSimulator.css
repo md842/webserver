@@ -1,4 +1,4 @@
-@media (orientation: landscape){
+@media (orientation: landscape) and (min-width: 1366px){
   #main-canvas{
     /* Display controls beside the simulation in landscape mode rather than
        below the simulation in portrait mode */
