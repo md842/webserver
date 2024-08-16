@@ -13,6 +13,7 @@ namespace http = boost::beast::http;
 
 RequestHandler* dispatch(Request& req);
 Request parse_req(char* data, int max_length);
+
 /*
 std::string req_as_string(Request req); // Temp helper for debug logging
 std::string res_as_string(Response res); // Temp helper for debug logging
