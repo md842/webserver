@@ -10,8 +10,8 @@
 namespace fs = boost::filesystem;
 namespace http = boost::beast::http;
 
-std::string last_modified_time(fs::path file_obj);
-std::string mime_type(fs::path file_obj);
+std::string last_modified_time(fs::path* file_obj);
+std::string mime_type(fs::path* file_obj);
 std::string resolve_path(const std::string& req_target);
 
 Response* FileRequestHandler::handle_request(const Request& req){
@@ -19,52 +19,41 @@ Response* FileRequestHandler::handle_request(const Request& req){
   std::string target = resolve_path(std::string(req.target()));
   std::string full_path = Config::inst().root() + target; // Add root to target
 
-  http::status status = http::status::ok; // Default response status is 200 OK
+  http::status status = http::status::ok; // Response status code 200
   std::ostringstream file_contents;
-  // Default to text/html for 404 page, overwritten if valid file is opened
-  std::string content_type = "text/html";
+  std::string content_type = "text/html"; // Overwritten if valid file opened
   std::string last_modified = "";
 
-  fs::path file_obj(full_path);
-  if (!exists(file_obj) || is_directory(file_obj)){ // Nonexistent or directory
-    status = http::status::not_found; // Set response status to 404 Not Found
-    fs::path file_obj(Config::inst().root() + Config::inst().index());
-    fs::ifstream fstream(file_obj); // Open index page
-    last_modified = last_modified_time(file_obj);
-
-    Log::info("FileRequestHandler: ." + target + " not found. Serving index page.");
-    file_contents << fstream.rdbuf(); // Read 404 page into string stream
+  fs::path* file_obj = new fs::path(full_path);
+  if (!exists(*file_obj) || is_directory(*file_obj)){ // Nonexistent or dir
+    status = http::status::not_found; // Response status code 404
+    delete file_obj; // Free old file_obj before replacing
+    file_obj = new fs::path(Config::inst().root() + Config::inst().index());
   }
-  else{ // Non-directory file found
-    fs::ifstream fstream(file_obj); // Attempt to open the file
-    if (!fstream){ // File exists, but failed to open it for some reason.
-      // Since the server does not support client-side writes, this is unlikely
-      // to occur with inadequate resources being the only failure condition.
-      Log::error("FileRequestHandler: Could not open file: ./" + target);
-      // Set response status to 500 Internal Server Error
-      status = http::status::internal_server_error;
-      content_type = "text/plain";
-      file_contents << "500 Internal Server Error";
-    }
-    else{ // File opened successfully
-      last_modified = last_modified_time(file_obj);
-      try{
-        std::string cached_time = std::string(
-          req.at(http::field::if_modified_since));
-        if (last_modified == cached_time){
-          Log::info("FileRequestHandler: Writing 304 Not Modified");
-          status = http::status::not_modified; // 304 Not Modified
-        } // If no match, last_modified is newer, continue
-      }
-      catch(std::out_of_range){} // req.at throws if not validation request
 
-      content_type = mime_type(file_obj);
-
-      if (status != http::status::not_modified){
-        Log::info("FileRequestHandler: Writing ./" + target);
-        file_contents << fstream.rdbuf(); // Read file into string stream
-      }
+  fs::ifstream fstream(*file_obj); // Attempt to open the file
+  if (!fstream){ // File exists, but failed to open it for some reason.
+    // Since the server does not support client-side writes, this is unlikely
+    // to occur with inadequate resources being the only failure condition.
+    Log::error("FileRequestHandler: Could not open file: ./" + target);
+    status = http::status::internal_server_error; // Response status code 500
+    content_type = "text/plain";
+    file_contents << "500 Internal Server Error";
+  }
+  else{
+    last_modified = last_modified_time(file_obj);
+    try{ // If validation request, compare last_modified to cached time
+      std::string cached_time = std::string(
+        req.at(http::field::if_modified_since));
+      if (last_modified == cached_time) // Else last_modified is newer
+        status = http::status::not_modified; // Response status code 304
     }
+    catch(std::out_of_range){} // req.at throws if not validation request
+
+    content_type = mime_type(file_obj);
+
+    if (status != http::status::not_modified)
+      file_contents << fstream.rdbuf(); // Read file into string stream
   }
 
   // Construct and return pointer to HTTP response object
@@ -87,11 +76,12 @@ Response* FileRequestHandler::handle_request(const Request& req){
     res->prepare_payload();
   }
   
+  delete file_obj; // Free file_obj pointer after use
   return res;
 }
 
-std::string last_modified_time(fs::path file_obj){
-  std::time_t last_write_time = fs::last_write_time(file_obj);
+std::string last_modified_time(fs::path* file_obj){
+  std::time_t last_write_time = fs::last_write_time(*file_obj);
   tm* gm = std::gmtime(&last_write_time);
 
   std::stringstream ss; // std::put_time must be used with a stream
@@ -101,8 +91,8 @@ std::string last_modified_time(fs::path file_obj){
   return ss.str();
 }
 
-std::string mime_type(fs::path file_obj){
-  std::string extension = file_obj.extension().string();
+std::string mime_type(fs::path* file_obj){
+  std::string extension = file_obj->extension().string();
   std::map<std::string, std::string> types = {
     {".html", "text/html"},
     {".htm", "text/html"},
