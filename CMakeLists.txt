@@ -3,6 +3,7 @@ project(webserver)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(GOOGLETEST_VERSION 1.15.2)
 
 # Make sure developers do not run cmake in the main project directory, to keep
 # build artifacts from becoming clutter

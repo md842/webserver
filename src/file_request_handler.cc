@@ -1,5 +1,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
+#include <iomanip>
 
 #include "file_request_handler.h"
 #include "log.h"
@@ -9,6 +10,7 @@
 namespace fs = boost::filesystem;
 namespace http = boost::beast::http;
 
+std::string last_modified_time(fs::path file_obj);
 std::string mime_type(fs::path file_obj);
 std::string resolve_path(const std::string& req_target);
 
@@ -21,6 +23,7 @@ Response* FileRequestHandler::handle_request(const Request& req){
   std::ostringstream file_contents;
   // Default to text/html for 404 page, overwritten if valid file is opened
   std::string content_type = "text/html";
+  std::string last_modified = "";
 
   fs::path file_obj(full_path);
   if (!exists(file_obj) || is_directory(file_obj)){ // Nonexistent or directory
@@ -29,6 +32,7 @@ Response* FileRequestHandler::handle_request(const Request& req){
     fs::ifstream fstream(file_obj);
     Log::info("FileRequestHandler: ." + target + " not found. Serving index page.");
     file_contents << fstream.rdbuf(); // Read 404 page into string stream
+    last_modified = last_modified_time(file_obj);
   }
   else{ // Non-directory file found
     fs::ifstream fstream(file_obj); // Attempt to open the file
@@ -45,6 +49,7 @@ Response* FileRequestHandler::handle_request(const Request& req){
       Log::info("FileRequestHandler: Writing ./" + target);
       content_type = mime_type(file_obj);
       file_contents << fstream.rdbuf(); // Read file into string stream
+      last_modified = last_modified_time(file_obj);
     }
   }
 
@@ -54,12 +59,25 @@ Response* FileRequestHandler::handle_request(const Request& req){
   response->version(11);
   response->set(http::field::content_type, content_type);
   response->body() = file_contents.str();
+  response->set("Cache-Control", "public, max-age=604800, immutable");
   if (req.keep_alive()) // Use same keep-alive option as incoming request
     response->set("Connection", "keep-alive");
   else
     response->set("Connection", "close");
+  response->set("Last-Modified", last_modified);
   response->prepare_payload();
   return response;
+}
+
+std::string last_modified_time(fs::path file_obj){
+  std::time_t last_write_time = fs::last_write_time(file_obj);
+  tm* gm = std::gmtime(&last_write_time);
+
+  std::stringstream ss; // std::put_time must be used with a stream
+  // Conversion specifiers: https://en.cppreference.com/w/cpp/io/manip/put_time
+  // HTTP Spec: <day-name>, <day> <month> <year> <hour>:<minute>:<second> GMT
+  ss << std::put_time(gm, "%a, %d %b %Y %T %Z");
+  return ss.str();
 }
 
 std::string mime_type(fs::path file_obj){
