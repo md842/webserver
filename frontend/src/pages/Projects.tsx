@@ -21,8 +21,8 @@ interface Project{
   /* Props interface for ProjectCard(). */
   // Title of project.                                        Source: Database
   title: string;
-  // Description of project.                                  Source: Database
-  desc: string;
+  // Short form description of project for card display.      Source: Database
+  card_desc: string;
   // If present, card will display an image.                  Source: Database
   image?: string;
   // If present, "View Notebook" button will appear.          Source: Database
@@ -64,7 +64,7 @@ function ProjectCard(params: Project): JSX.Element{
         }
         <Card.Body className={visible ? "body-in" : "body-out"}>
         <Card.Title>{params.title}</Card.Title>
-        <Card.Text>{params.desc}</Card.Text>
+        <Card.Text>{params.card_desc}</Card.Text>
         <Card.Text>Tags: {unraveledTags}</Card.Text>
         {params.sim && // Return button element if params.sim is present
           <Button href={params.sim} variant="primary">Run Simulation</Button>
@@ -176,8 +176,8 @@ export default class Projects extends React.Component<{}, FilterState>{
     const projectsQuery = await getDocs(collection(db, "projects"));
     projectsQuery.forEach((doc) => {
       let projectObj:Project = {
-        desc: doc.data().desc,
-        title: doc.id,
+        card_desc: doc.data().card_desc,
+        title: doc.data().title,
         repo: doc.data().repo,
         image: doc.data().image,
         nb: doc.data().nb,
