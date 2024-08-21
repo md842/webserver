@@ -98,21 +98,25 @@ void session::handle_read(const error_code& error, size_t bytes){
 
 RequestHandler* dispatch(Request& req){
   // Returns a pointer to a dynamically dispatched RequestHandler based on the
-  // incoming request's target. 
-
-  // Search for longest match between target and URI
-  int longest_match = 0;
+  // incoming request's target.
   std::string type = "";
-  std::string target = std::string(req.target());
-  // Search all handler types
-  for (const std::string& cur_type : Registry::inst().get_types()){
-    // Search the URI map for the current handler type
-    for (auto& pair : Registry::inst().get_map(cur_type)){
-      std::string key = pair.first;
-      // New longest match found, save information
-      if ((target.find(key) == 0) && key.length() > longest_match){
-        longest_match = key.length();
-        type = cur_type;
+
+  if (req.method() == http::verb::post)
+    type = "PostRequestHandler"; // Handles all POST requests
+  else{
+    // Search for longest match between target and URI
+    int longest_match = 0;
+    std::string target = std::string(req.target());
+    // Search all handler types
+    for (const std::string& cur_type : Registry::inst().get_types()){
+      // Search the URI map for the current handler type
+      for (auto& pair : Registry::inst().get_map(cur_type)){
+        std::string key = pair.first;
+        // New longest match found, save information
+        if ((target.find(key) == 0) && key.length() > longest_match){
+          longest_match = key.length();
+          type = cur_type;
+        }
       }
     }
   }
@@ -123,6 +127,7 @@ Request parse_req(char* data, int max_length){
   Request req;
   http::parser<true, http::string_body> parser{std::move(req)};
   error_code ec;
+  parser.eager(true); // Tells parser to read request body for POST requests
   parser.put(buffer(data, max_length), ec);
   req = parser.release();
   return req;
@@ -137,6 +142,7 @@ std::string req_as_string(Request req){ // Temp helper for debug logging
     out += std::string(header.name_string()) + ": " +
            std::string(header.value()) + "\n";
   }
+  out += '\n' + req.body();
   return out;
 }
 
