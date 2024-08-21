@@ -1,0 +1,13 @@
+.dyn-div{
+  display: flex;
+  flex-direction: column;
+}
+
+.dyn-div .description{
+  margin: 1em 0em; /* top/bottom, left/right */
+}
+
+.dyn-div embed{
+  border: 1px solid black;
+  flex-basis: 100%; /* Fill remainder of dyn-div */
+}
