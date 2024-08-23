@@ -39,7 +39,7 @@ export default class NotebookViewer extends React.Component<{}, Notebook>{
   }
 
   async read(){
-    // Remove "/projects/notebooks/" (length 20) from pathname to get target id
+    // Remove "/projects/notebooks/" (length 20) from pathname for target id
     let target_id = window.location.pathname.substring(20);
     const data = (await getDoc(doc(db, "projects", target_id))).data();
 
@@ -57,24 +57,22 @@ export default class NotebookViewer extends React.Component<{}, Notebook>{
   
   render(){
     return(
-      <>
-        <main>
-          <div className="dyn-div">
-            <h1>{this.state.title}</h1>
-            <div className="description">
-              <p>{this.state.long_desc}</p>
-              <p>Tags: {this.state.tags}</p>
-              <Button
-                variant="primary"
-                href="/projects"
-              >
-                Back to projects
-              </Button>
-            </div>
-            <embed src={this.state.nb_embed}/>
+      <main>
+        <div className="dyn-div">
+          <h1>{this.state.title}</h1>
+          <div className="description">
+            <p>{this.state.long_desc}</p>
+            <p>Tags: {this.state.tags}</p>
+            <Button
+              variant="primary"
+              href="/projects"
+            >
+              Back to projects
+            </Button>
           </div>
-        </main>
-      </>
+          <embed src={this.state.nb_embed}/>
+        </div>
+      </main>
     );
   }
 }

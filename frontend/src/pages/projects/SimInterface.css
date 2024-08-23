@@ -1,0 +1,15 @@
+.backend-container{
+  border: 1px solid black;
+  border-radius: 10px;
+  padding: 0px;
+}
+
+.backend-container p{
+  color: white;
+  padding: 0.5em 1em; /* top/bottom, left/right */
+  border-radius: 8px 8px 0px 0px; /* Round corners on top-left and top-right */
+}
+
+.backend-container form{
+  padding: 0.5em 1em; /* top/bottom, left/right */
+}
