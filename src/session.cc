@@ -14,8 +14,10 @@ namespace http = boost::beast::http;
 RequestHandler* dispatch(Request& req);
 Request parse_req(char* data, int max_length);
 
+/*
 std::string req_as_string(Request req); // Temp helper for debug logging
 std::string res_as_string(Response res); // Temp helper for debug logging
+*/
 
 session::session(io_service& io_service, int id) : socket_(io_service){
   id_ = std::to_string(id);
@@ -42,12 +44,12 @@ void session::handle_read(const error_code& error, size_t bytes){
 
     Request req = parse_req(data_, max_length);
 
-    Log::trace("Incoming HTTP request:\n\n" + req_as_string(req)); // Temp debug log
+    // Log::trace("Incoming HTTP request:\n\n" + req_as_string(req)); // Temp debug log
 
     RequestHandler* handler = dispatch(req);
     Response* res = handler->handle_request(req);
 
-    Log::trace("Outgoing HTTP response:\n\n" + res_as_string(*res)); // Temp debug log
+    // Log::trace("Outgoing HTTP response:\n\n" + res_as_string(*res)); // Temp debug log
 
     // async_write returns immediately, so res must be kept alive.
     // Lambda write handler captures res and deletes it after write finishes.
@@ -133,6 +135,7 @@ Request parse_req(char* data, int max_length){
   return req;
 }
 
+/*
 std::string req_as_string(Request req){ // Temp helper for debug logging
   std::string method = std::string(http::to_string(req.method()));
   std::string target = std::string(req.target());
@@ -142,7 +145,6 @@ std::string req_as_string(Request req){ // Temp helper for debug logging
     out += std::string(header.name_string()) + ": " +
            std::string(header.value()) + "\n";
   }
-  out += '\n' + req.body();
   return out;
 }
 
@@ -155,3 +157,4 @@ std::string res_as_string(Response res){ // Temp helper for debug logging
   }
   return out;
 }
+*/
