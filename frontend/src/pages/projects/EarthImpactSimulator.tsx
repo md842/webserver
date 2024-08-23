@@ -4,7 +4,7 @@ import {useEffect} from "react";
 import Button from 'react-bootstrap/Button';
 
 // @ts-ignore
-import {Main_Scene, Canvas_Widget} from '/public/simulations/earth-impact-simulator/main-scene.js';
+import {Main_Scene, Canvas_Widget} from '/src/assets/earth-impact-simulator/main-scene.js';
 
 const scenes = [Main_Scene].map(scene => new scene());
 

@@ -3,8 +3,8 @@ import {Navbar, Container, Nav, Button} from 'react-bootstrap';
 
 import './Header.css';
 
-import moon from '/moon.svg';
-import sun from '/sun.svg';
+import moon from '../assets/moon.svg';
+import sun from '../assets/sun.svg';
 
 interface DarkModeState{
   icon: string;

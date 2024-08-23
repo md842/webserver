@@ -1,4 +1,6 @@
 import './Home.css';
+import picture from '../assets/picture.jpg';
+import github_mark from '../assets/github-mark.svg';
 
 export default function Home(){
 	return(
@@ -7,11 +9,11 @@ export default function Home(){
         <div className="profile">
           <section>
             <h1>Max Deng</h1>
-            <img src="/picture.jpg"/>
+            <img src={picture}/>
             <h5>Computer Science B.S.</h5>
             <h5>University of California Los Angeles (UCLA)</h5>
             <a href="https://github.com/md842">
-              <img src="/github-mark.svg" height="64px"/>
+              <img src={github_mark} height="64px"/>
             </a>
           </section>
 

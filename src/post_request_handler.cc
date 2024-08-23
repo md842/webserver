@@ -30,7 +30,7 @@ Response* PostRequestHandler::handle_request(const Request& req){
     std::string source = req_json.get<std::string>("source");
 
     // Complete the path for the executable specified by source
-    source = Config::inst().root() + "frontend/public/simulations/" + source;
+    source = Config::inst().root() + "/simulations/" + source;
 
     /* TODO: Additional verification of request legitimacy, need to be careful
        because this request type allows running an executable on the server.
@@ -42,7 +42,7 @@ Response* PostRequestHandler::handle_request(const Request& req){
 
     if (input_as_file){ // Sim expects file input, write parsed input to file.
       std::string input_file = Config::inst().root() +
-                              "frontend/public/simulations/temp_input.txt";
+                              "/simulations/temp_input.txt";
       std::ofstream input_file_stream(input_file);
       input_file_stream << input;
       input_file_stream.close();
