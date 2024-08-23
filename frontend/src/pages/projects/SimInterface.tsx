@@ -104,15 +104,15 @@ export default class CPPTest extends React.Component<{}, IOState>{
           </p>
           <Button
             variant="primary"
-            href={this.state.repo}
-          >
-            View repository on GitHub
-          </Button>
-          <Button
-            variant="primary"
             href="/projects"
           >
             Back to projects
+          </Button>
+          <Button
+            variant="primary"
+            href={this.state.repo}
+          >
+            View repository on GitHub
           </Button>
         </div>
         <div className="backend-container">

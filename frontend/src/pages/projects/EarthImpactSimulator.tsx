@@ -53,15 +53,15 @@ export default function EarthImpactSimulator(){
           </p>
           <Button
             variant="primary"
-            href="https://github.com/md842/earth-impact-simulator"
-          >
-            View repository on GitHub
-          </Button>
-          <Button
-            variant="primary"
             href="/projects"
           >
             Back to projects
+          </Button>
+          <Button
+            variant="primary"
+            href="https://github.com/md842/earth-impact-simulator"
+          >
+            View repository on GitHub
           </Button>
         </div>
         {/* Populated later by Canvas_Widget in useEffect() */}
