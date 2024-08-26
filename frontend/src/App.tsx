@@ -11,7 +11,6 @@ import Home from './pages/Home';
 import Projects from './pages/Projects';
 import NotebookViewer from './pages/projects/NotebookViewer';
 import SimInterface from './pages/projects/SimInterface';
-import Resume from './pages/Resume';
 import NoPage from './pages/NoPage'; // 404
 
 /* Use dynamic import on EarthImpactSimulator page because it imports many
@@ -30,7 +29,6 @@ function App() {
           <Route path="projects/earth-impact-simulator" element={<EarthImpactSimulatorSuspense/>} />
           <Route path="projects/notebooks/*" element={<NotebookViewer/>} />
           <Route path="projects/sim/*" element={<SimInterface/>} />
-          <Route path="Resume" element={<Resume/>} />
 					<Route path="*" element={<NoPage/>} />
 				</Routes>
 			</BrowserRouter>

@@ -32,11 +32,13 @@ export default class Header extends React.Component<{}, DarkModeState>{
       <>
         <Navbar sticky="top" bg="dark" data-bs-theme="dark">
           <Container className="nav-container">
-            <Nav variant="underline" activeKey={window.location.pathname}> {/* Highlights active page in nav bar */}
+            <Nav
+              activeKey={'/' + window.location.pathname.split('/')[1]}
+              variant="underline"
+            > {/* Highlights active page in nav bar */}
               <Navbar.Brand href="/">Max Deng</Navbar.Brand>
               <Nav.Link href="/">Home</Nav.Link>
               <Nav.Link href="/projects">Projects</Nav.Link>
-              <Nav.Link href="/resume">Resume</Nav.Link>
             </Nav>
             <Button
               variant="link"
