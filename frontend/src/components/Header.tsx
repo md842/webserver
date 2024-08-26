@@ -1,54 +1,66 @@
-import React from 'react';
-import {Navbar, Container, Nav, Button} from 'react-bootstrap';
-
 import './Header.css';
+
+import {useEffect, useState} from 'react';
+import {Link, useLocation} from 'react-router-dom';
+
+import {Navbar, Container, Nav, Button} from 'react-bootstrap';
 
 import moon from '../assets/moon.svg';
 import sun from '../assets/sun.svg';
 
-interface DarkModeState{
-  icon: string;
-}
+export default function Header(){
+  const [icon, setIcon] = useState(moon);
+  const [mode, setMode] = useState("light");
 
-export default class Header extends React.Component<{}, DarkModeState>{
-  constructor(props: {}) {
-    super(props);
-    this.state = {icon: moon};
-  }
+  useEffect(() => {
+    const storedMode = window.localStorage.getItem('mode');
+    if (storedMode){
+      setMode(storedMode);
+      document.documentElement.setAttribute('data-bs-theme', storedMode);
+      if (storedMode == "light") // Switch to light mode
+        setIcon(moon);
+      else // Switch to dark mode
+        setIcon(sun);
+    }
+  }, []);
 
-  switchColorMode(){
-    if (this.state.icon === sun){ // Switch to light mode
-      this.setState({icon: moon});
+  useEffect(() => {
+    window.localStorage.setItem('mode', mode);
+  }, [mode]);
+
+  const switchColorMode = () => {
+    if (mode == "dark"){ // Switch to light mode
+      setIcon(moon);
+      setMode("light");
       document.documentElement.setAttribute('data-bs-theme', "light");
     }
     else{ // Switch to dark mode
-      this.setState({icon: sun});
+      setIcon(sun);
+      setMode("dark");
       document.documentElement.setAttribute('data-bs-theme', "dark");
     }
   }
 
-  render(){
-    return(
-      <>
-        <Navbar sticky="top" bg="dark" data-bs-theme="dark">
-          <Container className="nav-container">
-            <Nav
-              activeKey={'/' + window.location.pathname.split('/')[1]}
-              variant="underline"
-            > {/* Highlights active page in nav bar */}
-              <Navbar.Brand href="/">Max Deng</Navbar.Brand>
-              <Nav.Link href="/">Home</Nav.Link>
-              <Nav.Link href="/projects">Projects</Nav.Link>
-            </Nav>
-            <Button
-              variant="link"
-              onClick={() => this.switchColorMode()}
-            >
-              <img src={this.state.icon} className="dark-mode-svg"/>
-            </Button>
-          </Container>
-        </Navbar>
-      </>
-    );
-	}
+  return(
+    <header>
+      <Navbar sticky="top" bg="dark" data-bs-theme="dark">
+        <Container className="nav-container">
+          <Nav
+            activeKey={'/' + useLocation().pathname.split('/')[1]}
+            variant="underline"
+          > {/* Highlights active page in nav bar */}
+            <Navbar.Brand as={Link} to="/">Max Deng</Navbar.Brand>
+            <Nav.Link as={Link} eventKey="/" to="/">Home</Nav.Link>
+            <Nav.Link as={Link} eventKey="/projects" to="/projects">Projects</Nav.Link>
+          </Nav>
+          <Button
+            variant="link"
+            onClick={() => switchColorMode()}
+          >
+            <img src={icon} className="dark-mode-svg"/>
+          </Button>
+        </Container>
+      </Navbar>
+    </header>
+  );
 }

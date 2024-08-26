@@ -17,7 +17,7 @@ import NoPage from './pages/NoPage'; // 404
    assets that we only want to request when we actually need them */
 const EarthImpactSimulator = lazy(() => import('./pages/projects/EarthImpactSimulator'));
 
-function App() {
+function App(){
   return (
     <>
       <BrowserRouter>
