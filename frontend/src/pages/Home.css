@@ -18,3 +18,11 @@
   margin-left: 2em;
   flex-basis: 70%; /* Aside width relative to profile div width */
 }
+
+[data-bs-theme="dark"]{
+  .github-svg{
+    /* Goal is to match --bs-body-color (#dee2e6: H 210, S 3%, B 90%).
+       invert(100%) from the base #212529 yields #dedad6: H 30 S 4% B 87%. */
+    filter: invert(100%) saturate(75%) brightness(103%) hue-rotate(176deg);
+  }
+}

@@ -13,7 +13,7 @@ export default function Home(){
             <h5>Computer Science B.S.</h5>
             <h5>University of California Los Angeles (UCLA)</h5>
             <a href="https://github.com/md842">
-              <img src={github_mark} height="64px"/>
+              <img className="github-svg" src={github_mark} height="64px"/>
             </a>
           </section>
 
