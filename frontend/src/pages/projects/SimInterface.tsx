@@ -2,7 +2,7 @@ import './SimInterface.css';
 
 import React from "react";
 
-import { doc, getDoc } from "firebase/firestore";
+import {doc, getDoc} from "firebase/firestore";
 import db from '../../components/firebaseConfig.ts';
 
 import Button from 'react-bootstrap/Button';
@@ -25,7 +25,7 @@ interface IOState{
   tags: string;
 }
 
-export default class CPPTest extends React.Component<{}, IOState>{
+export default class SimInterface extends React.Component<{}, IOState>{
   constructor(props: {}) {
     super(props);
     this.state = {

@@ -2,7 +2,7 @@ import './NotebookViewer.css'
 
 import React from 'react';
 
-import { doc, getDoc } from "firebase/firestore";
+import {doc, getDoc} from "firebase/firestore";
 import db from '../../components/firebaseConfig.ts';
 
 import Button from 'react-bootstrap/Button';
@@ -19,7 +19,7 @@ interface Notebook{
 }
 
 export default class NotebookViewer extends React.Component<{}, Notebook>{
-  constructor(props: {}) {
+  constructor(props: {}){
     super(props);
     this.state = {
       long_desc: "Loading from database...",

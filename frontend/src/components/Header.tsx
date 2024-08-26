@@ -3,7 +3,10 @@ import './Header.css';
 import {useEffect, useState} from 'react';
 import {Link, useLocation} from 'react-router-dom';
 
-import {Navbar, Container, Nav, Button} from 'react-bootstrap';
+import Button from 'react-bootstrap/Button';
+import Container from 'react-bootstrap/Container';
+import Nav from 'react-bootstrap/Nav';
+import Navbar from 'react-bootstrap/Navbar';
 
 import moon from '../assets/moon.svg';
 import sun from '../assets/sun.svg';

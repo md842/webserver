@@ -1,15 +1,14 @@
 import './Projects.css'
 
-import React, { useState } from "react";
+import React, {useState} from "react";
 
-import { collection, getDocs } from "firebase/firestore";
+import {collection, getDocs} from "firebase/firestore";
 import db from '../components/firebaseConfig.ts';
 
 import Button from 'react-bootstrap/Button';
 import Card from 'react-bootstrap/Card';
 import Container from 'react-bootstrap/Container';
 import Form from 'react-bootstrap/Form';
-import InputGroup from 'react-bootstrap/InputGroup';
 import ToggleButton from 'react-bootstrap/ToggleButton';
 import ToggleButtonGroup from 'react-bootstrap/ToggleButtonGroup';
 
@@ -54,33 +53,31 @@ function ProjectCard(params: Project): JSX.Element{
   unraveledTags = unraveledTags.substring(0, unraveledTags.length - 2);
 
   return(
-    <>
-      <Card className={visible ? "card-in" : "card-out"}>
-        {params.image && // Return img element if params.image is present
-          <Card.Img
-            className={visible ? "img-in" : "img-out"} // CSS animations
-            variant="top"
-            src={params.image}
-          />
-        }
-        <Card.Body className={visible ? "body-in" : "body-out"}>
-        <Card.Title>{params.title}</Card.Title>
-        <Card.Text>{params.card_desc}</Card.Text>
-        <Card.Text>Tags: {unraveledTags}</Card.Text>
-        {params.sim && // Return button element if params.sim is present
-          <Button href={params.sim} variant="primary">Run Simulation</Button>
-        }
-        {params.nb && // Return button element if params.nb is present
-          <Button href={params.nb} variant="primary">View Notebook</Button>
-        }
-        {params.repo && // Return button element if params.nb is present
-          <Button href={params.repo} variant="primary">
-            View repository on GitHub
-          </Button>
-        }
-        </Card.Body>
-      </Card>
-    </>
+    <Card className={visible ? "card-in" : "card-out"}>
+      {params.image && // Return img element if params.image is present
+        <Card.Img
+          className={visible ? "img-in" : "img-out"} // CSS animations
+          variant="top"
+          src={params.image}
+        />
+      }
+      <Card.Body className={visible ? "body-in" : "body-out"}>
+      <Card.Title>{params.title}</Card.Title>
+      <Card.Text>{params.card_desc}</Card.Text>
+      <Card.Text>Tags: {unraveledTags}</Card.Text>
+      {params.sim && // Return button element if params.sim is present
+        <Button href={params.sim} variant="primary">Run Simulation</Button>
+      }
+      {params.nb && // Return button element if params.nb is present
+        <Button href={params.nb} variant="primary">View Notebook</Button>
+      }
+      {params.repo && // Return button element if params.nb is present
+        <Button href={params.repo} variant="primary">
+          View repository on GitHub
+        </Button>
+      }
+      </Card.Body>
+    </Card>
   );
 }
 
@@ -89,7 +86,7 @@ export default class Projects extends React.Component<{}, FilterState>{
   projectData: Array<Project>;
   filterButtonTags: Array<string>;
 
-  constructor(props: {}) {
+  constructor(props: {}){
     super(props);
     this.state = {filter: {}, search: ""};
 
@@ -105,27 +102,25 @@ export default class Projects extends React.Component<{}, FilterState>{
        Class member due to use of this.handleChange. */
     const [checked] = useState(false);
     return(
-      <>
-        <Container fluid className="mb-5" id="filter-container">
-          <p id="filter-label">Or filter by tag:</p>
-          <ToggleButtonGroup type="checkbox" className="filter-btns">
-            { /* Generate buttons from database tags. Key warnings can be
-                 safely ignored; this map won't change after being rendered. */
-            this.filterButtonTags.map((tag:string) => (
-              <ToggleButton
-                id={"filter-" + tag}
-                type="checkbox"
-                variant="primary"
-                checked={checked}
-                value={tag}
-                onChange={(e) => {this.handleFilterBtnChange(e)}}
-              >
-                {tag}
-              </ToggleButton>))
-            }
-          </ToggleButtonGroup>
-        </Container>
-      </>
+      <Container fluid className="mb-5" id="filter-container">
+        <p id="filter-label">Or filter by tag:</p>
+        <ToggleButtonGroup type="checkbox" className="filter-btns">
+          { /* Generate buttons from database tags. Key warnings can be
+                safely ignored; this map won't change after being rendered. */
+          this.filterButtonTags.map((tag:string) => (
+            <ToggleButton
+              id={"filter-" + tag}
+              type="checkbox"
+              variant="primary"
+              checked={checked}
+              value={tag}
+              onChange={(e) => {this.handleFilterBtnChange(e)}}
+            >
+              {tag}
+            </ToggleButton>))
+          }
+        </ToggleButtonGroup>
+      </Container>
     );
   }
 
@@ -248,26 +243,22 @@ export default class Projects extends React.Component<{}, FilterState>{
 
   render(){
     return(
-      <>
-        <main>
-          <InputGroup className="mb-3">
-            <Form.Control
-              onChange={(e) => this.handleSearchBarChange(e as any)}
-              placeholder="Search for projects by title, category, or tags..."
-            />
-            <Button id="search-btn">Search</Button>
-          </InputGroup>
+      <main>
+        <Form.Control
+          className="mb-3"
+          onChange={(e) => this.handleSearchBarChange(e as any)}
+          placeholder="Search for projects by title, category, or tags..."
+        />
 
-          {/* Must be its own function to use "checked" hook */}
-          <this.FilterButtons/>
+        {/* Must be its own function to use "checked" hook */}
+        <this.FilterButtons/>
 
-          {/* Project sections. Data passed as reference, no memory waste. */}
-          <div className="sections">
-            <this.Section title="Featured Projects" data={this.featuredData}/>
-            <this.Section title="Projects" data={this.projectData}/>
-          </div>
-        </main>
-      </>
+        {/* Project sections. Data passed as reference, no memory waste. */}
+        <div className="sections">
+          <this.Section title="Featured Projects" data={this.featuredData}/>
+          <this.Section title="Projects" data={this.projectData}/>
+        </div>
+      </main>
     );
   }
 }
