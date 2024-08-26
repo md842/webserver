@@ -15,6 +15,7 @@ import ToggleButtonGroup from 'react-bootstrap/ToggleButtonGroup';
 
 interface FilterState{
   filter: Record<string, boolean>;
+  search: string;
 }
 
 interface Project{
@@ -86,15 +87,15 @@ function ProjectCard(params: Project): JSX.Element{
 export default class Projects extends React.Component<{}, FilterState>{
   featuredData: Array<Project>;
   projectData: Array<Project>;
-  tags: Array<string>;
+  filterButtonTags: Array<string>;
 
   constructor(props: {}) {
     super(props);
-    this.state = {filter: {}};
+    this.state = {filter: {}, search: ""};
 
     this.featuredData = new Array<Project>;
     this.projectData = new Array<Project>;
-    this.tags = new Array<string>;
+    this.filterButtonTags = new Array<string>;
 
     this.read(); // Read project data and tags from database
   }
@@ -110,14 +111,14 @@ export default class Projects extends React.Component<{}, FilterState>{
           <ToggleButtonGroup type="checkbox" className="filter-btns">
             { /* Generate buttons from database tags. Key warnings can be
                  safely ignored; this map won't change after being rendered. */
-            this.tags.map((tag:string) => (
+            this.filterButtonTags.map((tag:string) => (
               <ToggleButton
                 id={"filter-" + tag}
                 type="checkbox"
                 variant="primary"
                 checked={checked}
                 value={tag}
-                onChange={(e) => {this.handleChange(e)}}
+                onChange={(e) => {this.handleFilterBtnChange(e)}}
               >
                 {tag}
               </ToggleButton>))
@@ -128,17 +129,24 @@ export default class Projects extends React.Component<{}, FilterState>{
     );
   }
 
-  handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    /* Updates this.state.filter based on the states of the filter buttons. */
+  handleFilterBtnChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    /* Updates this.state.filter based on the states of the filter buttons.
+       resolveFilter() called by Section() on render, no need to call here. */
     // Use button name as a key, set boolean to checked state
-    console.log("Clicked");
     this.state.filter[e.currentTarget.value] = e.currentTarget.checked;
     this.setState(this.state); // Update render after updating filter
   }
 
+  handleSearchBarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    /* Updates this.state.search to the search bar contents on change. 
+       search() called by Section() on render, no need to call here. */
+    // Set to lowercase for case insensitive search.
+    this.setState({search: e.target.value.toLowerCase()});
+  }
+
   Section = (params: SectionParams): JSX.Element => {
     /* Renders a project section, or appropriate message if none rendered.
-       Class member due to use of this.resolveFilter. */
+       Class member due to use of this.resolveFilter() and this.search(). */
     let displayed = false;
     return(
       <div className="projects-section mb-5">
@@ -151,7 +159,9 @@ export default class Projects extends React.Component<{}, FilterState>{
         {/* Generate project cards from database info. Key warnings can be
             safely ignored; this map won't change after being rendered. */
           params.data.map((params:Project) => {
-            params.vis = this.resolveFilter(params.tags); // Update vis state
+            // Update vis state based on output of filter and search functions
+            params.vis = this.resolveFilter(params.tags) &&
+                         this.search(params.tags, params.title);
             if (params.vis) // If any card is displayed in this section
               displayed = true; // Prevents message below from rendering
             return <ProjectCard {...params}/>; // Re-render with updated vis
@@ -170,7 +180,7 @@ export default class Projects extends React.Component<{}, FilterState>{
     /* Read from database and populate lists for rendering. */
     const tagsQuery = await getDocs(collection(db, "tags"));
     tagsQuery.forEach((doc) => {
-      this.tags.push(doc.id)
+      this.filterButtonTags.push(doc.id)
     });
 
     const projectsQuery = await getDocs(collection(db, "projects"));
@@ -197,22 +207,43 @@ export default class Projects extends React.Component<{}, FilterState>{
   }
 
   resolveFilter(tags: Array<string>): boolean{
-    /* Helper function to determine whether a ProjectCard should be shown. */
-    if (Object.keys(this.state.filter).length == 0)
-      return true; // Trivial case: If the filter is empty, always display card
+    /* Helper function to determine whether a ProjectCard should be shown.
+       Because of how params.vis is calculated, returning true is equivalent to
+       calling search(), while returning false skips search(). */
+    if (Object.keys(this.state.filter).length == 0) // Trivial case: Empty
+      return true;
 
     let filtersDisabled = true;
-    for (const key in this.state.filter){
-      /* Non-trivial case: If at least one filter is enabled, display card only
-         if a tag matches */
+    for (const key in this.state.filter){ // Check if any filters are enabled
+      // Non-trivial case: Filter enabled, display card only if a tag matches
       if (this.state.filter[key] == true){
-        filtersDisabled = false; // At least one filter is enabled
-        // Search for the key inside the tag (partial match allowed)
+        filtersDisabled = false; // Flag that at least one filter is enabled
+        // Search for the key inside the tags (partial match allowed)
         if (tags.some((element:string) => element.indexOf(key) != -1))
-          return true;
+          return true; // True if search bar is empty
       }
     }
-    return filtersDisabled; // Trivial case: All disabled, always display card
+    /* Filter is enabled with no matches found (filterDisabled = false)
+       or all filters are disabled (filterDisabled = true, go to search()). */
+    return filtersDisabled;
+  }
+
+  search(tags: Array<string>, title: string): boolean{
+    /* Helper function to determine whether a ProjectCard should be shown. 
+       Only called if resolveFilter() returned true. */
+    if (this.state.search.length == 0) // Trivial case: Empty
+      return true; // Use output of resolveFilter() only
+
+    // Search the title (case insensitive, partial match allowed)
+    if (title.toLowerCase().includes(this.state.search))
+      return true;
+
+    // Search the tags (case insensitive, partial match allowed)
+    if (tags.some((element:string) =>
+        element.toLowerCase().indexOf(this.state.search) != -1))
+      return true;
+
+    return false; // No matches
   }
 
   render(){
@@ -221,7 +252,8 @@ export default class Projects extends React.Component<{}, FilterState>{
         <main>
           <InputGroup className="mb-3">
             <Form.Control
-              placeholder="Search for projects... (Pending implementation)"
+              onChange={(e) => this.handleSearchBarChange(e as any)}
+              placeholder="Search for projects by title, category, or tags..."
             />
             <Button id="search-btn">Search</Button>
           </InputGroup>
