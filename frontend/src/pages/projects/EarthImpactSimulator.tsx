@@ -1,6 +1,7 @@
 import './EarthImpactSimulator.css'
 
 import {useEffect} from "react";
+import NavButton from '../../components/NavButton.tsx';
 
 import Button from 'react-bootstrap/Button';
 
@@ -51,16 +52,8 @@ export default function EarthImpactSimulator(){
         <p>
           Tags: WebGL, OpenGL, OpenGL Shading Language (GLSL), JavaScript
         </p>
-        <Button
-          variant="primary"
-          href="/projects"
-        >
-          Back to projects
-        </Button>
-        <Button
-          variant="primary"
-          href="https://github.com/md842/earth-impact-simulator"
-        >
+        <NavButton href="/projects">Back to projects</NavButton>
+        <Button href="https://github.com/md842/earth-impact-simulator">
           View repository on GitHub
         </Button>
       </div>

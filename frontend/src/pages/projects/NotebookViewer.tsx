@@ -4,8 +4,7 @@ import React from 'react';
 
 import {doc, getDoc} from "firebase/firestore";
 import db from '../../components/firebaseConfig.ts';
-
-import Button from 'react-bootstrap/Button';
+import NavButton from '../../components/NavButton.tsx';
 
 interface Notebook{
   // Title of project.                                        Source: Database
@@ -63,12 +62,7 @@ export default class NotebookViewer extends React.Component<{}, Notebook>{
           <div className="description">
             <p>{this.state.long_desc}</p>
             <p>Tags: {this.state.tags}</p>
-            <Button
-              variant="primary"
-              href="/projects"
-            >
-              Back to projects
-            </Button>
+            <NavButton href="/projects">Back to projects</NavButton>
           </div>
           <embed src={this.state.nb_embed}/>
         </div>

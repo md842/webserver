@@ -4,6 +4,7 @@ import React, {useState} from "react";
 
 import {collection, getDocs} from "firebase/firestore";
 import db from '../components/firebaseConfig.ts';
+import NavButton from '../components/NavButton.tsx';
 
 import Button from 'react-bootstrap/Button';
 import Card from 'react-bootstrap/Card';
@@ -57,7 +58,6 @@ function ProjectCard(params: Project): JSX.Element{
       {params.image && // Return img element if params.image is present
         <Card.Img
           className={visible ? "img-in" : "img-out"} // CSS animations
-          variant="top"
           src={params.image}
         />
       }
@@ -65,16 +65,14 @@ function ProjectCard(params: Project): JSX.Element{
       <Card.Title>{params.title}</Card.Title>
       <Card.Text>{params.card_desc}</Card.Text>
       <Card.Text>Tags: {unraveledTags}</Card.Text>
-      {params.sim && // Return button element if params.sim is present
-        <Button href={params.sim} variant="primary">Run Simulation</Button>
+      {params.sim && // Return NavButton element if params.sim is present
+        <NavButton href={params.sim}>Run Simulation</NavButton>
       }
-      {params.nb && // Return button element if params.nb is present
-        <Button href={params.nb} variant="primary">View Notebook</Button>
+      {params.nb && // Return NavButton element if params.nb is present
+        <NavButton href={params.nb}>View Notebook</NavButton>
       }
-      {params.repo && // Return button element if params.nb is present
-        <Button href={params.repo} variant="primary">
-          View repository on GitHub
-        </Button>
+      {params.repo && // Return Button element if params.repo is present
+        <Button href={params.repo}>View repository on GitHub</Button>
       }
       </Card.Body>
     </Card>
@@ -111,7 +109,6 @@ export default class Projects extends React.Component<{}, FilterState>{
             <ToggleButton
               id={"filter-" + tag}
               type="checkbox"
-              variant="primary"
               checked={checked}
               value={tag}
               onChange={(e) => {this.handleFilterBtnChange(e)}}

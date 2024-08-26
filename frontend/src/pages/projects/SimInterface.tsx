@@ -4,6 +4,7 @@ import React from "react";
 
 import {doc, getDoc} from "firebase/firestore";
 import db from '../../components/firebaseConfig.ts';
+import NavButton from '../../components/NavButton.tsx';
 
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
@@ -102,18 +103,8 @@ export default class SimInterface extends React.Component<{}, IOState>{
             within an HTTP response. Security mechanisms are in place to
             protect the server from excessive and/or unintended payloads.
           </p>
-          <Button
-            variant="primary"
-            href="/projects"
-          >
-            Back to projects
-          </Button>
-          <Button
-            variant="primary"
-            href={this.state.repo}
-          >
-            View repository on GitHub
-          </Button>
+          <NavButton href="/projects">Back to projects</NavButton>
+          <Button href={this.state.repo}>View repository on GitHub</Button>
         </div>
         <div className="backend-container">
           <p className="bg-dark">C++ Back-end Interface</p>
