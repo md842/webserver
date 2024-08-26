@@ -39,7 +39,9 @@
 }
 
 .card img{
-  object-fit: cover; /* Maintain aspect ratio while scaling */
+  /* Scale image to fill available card image space while allowing vertical
+     compression during filter out animation. */
+  object-fit: fill;
   height: auto;
   width: auto;
 }
