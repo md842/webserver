@@ -1,23 +1,31 @@
 import './EarthImpactSimulator.css'
 
 import {useEffect} from "react";
-import NavButton from '../../components/NavButton.tsx';
+import {useLoaderData} from 'react-router-dom';
 
 import Button from 'react-bootstrap/Button';
 
-// @ts-ignore
-import {Main_Scene, Canvas_Widget} from '/src/assets/earth-impact-simulator/main-scene.js';
+export async function loader(){
+  // @ts-ignore
+  return (await import('/src/assets/earth-impact-simulator/main-scene.js'));
+}
 
-const scenes = [Main_Scene].map(scene => new scene());
+export function Component(){
+  // @ts-ignore
+  const EISModule = useLoaderData();
+  // @ts-ignore
+  const Main_Scene = EISModule.Main_Scene;
+  // @ts-ignore
+  const Canvas_Widget = EISModule.Canvas_Widget;
 
-export default function EarthImpactSimulator(){
-  useEffect(() => { // Runs after the TSX renders
-    // Invoke main-scene.js to populate main-canvas
+  useEffect(() => {
+    const scenes = [Main_Scene].map(scene => new scene()); // Initialize scene
+    // Invoke Canvas_Widget to populate main-canvas
     new Canvas_Widget(document.querySelector("#main-canvas"), scenes);
-  }, [])
+  }, []) // Run once after the component renders
 
   return(
-    <main>
+    <main id="main">
       <h1>Earth Impact Simulator</h1>
       <div className="description">
         <p>
@@ -52,7 +60,7 @@ export default function EarthImpactSimulator(){
         <p>
           Tags: WebGL, OpenGL, OpenGL Shading Language (GLSL), JavaScript
         </p>
-        <NavButton href="/projects">Back to projects</NavButton>
+        <Button href="/projects">Back to projects</Button>
         <Button href="https://github.com/md842/earth-impact-simulator">
           View repository on GitHub
         </Button>
