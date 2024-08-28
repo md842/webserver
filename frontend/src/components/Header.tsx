@@ -15,13 +15,6 @@ export default function Header(){
   const [icon, setIcon] = useState(moon);
   const [mode, setMode] = useState("light");
 
-  /* Conserve system resources by forcibly reloading the page when exiting
-     demanding simulations that are not unloaded when using useNavigate */
-  const demanding_sims: string[] = [
-    '/projects/earth-impact-simulator'
-  ];
-  const force_reload = demanding_sims.includes(useLocation().pathname);
-
   useEffect(() => {
     /* Load saved dark/light mode setting from local storage and set it */
     const storedMode = window.localStorage.getItem('mode');
@@ -62,20 +55,9 @@ export default function Header(){
             activeKey={'/' + useLocation().pathname.split('/')[1]}
             variant="underline"
           > {/* Highlights active page in nav bar */}
-          {force_reload && // Navbar uses standard links with page reload
-            <>
-              <Navbar.Brand href="/">Max Deng</Navbar.Brand>
-              <Nav.Link href="/">Home</Nav.Link>
-              <Nav.Link href="/projects">Projects</Nav.Link>
-            </>
-          }
-          {!force_reload && // Navbar uses useNavigate with no page reload
-            <>
-              <Navbar.Brand as={Link} to="/">Max Deng</Navbar.Brand>
-              <Nav.Link as={Link} eventKey="/" to="/">Home</Nav.Link>
-              <Nav.Link as={Link} eventKey="/projects" to="/projects">Projects</Nav.Link>
-            </>
-          }
+          <Navbar.Brand as={Link} to="/">Max Deng</Navbar.Brand>
+          <Nav.Link as={Link} eventKey="/" to="/">Home</Nav.Link>
+          <Nav.Link as={Link} eventKey="/projects" to="/projects">Projects</Nav.Link>
           </Nav>
           <Button
             variant="link"

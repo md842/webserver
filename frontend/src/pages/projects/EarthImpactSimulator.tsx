@@ -1,28 +1,48 @@
 import './EarthImpactSimulator.css'
 
-import {useEffect} from "react";
+import {useEffect, useRef} from "react";
 import {useLoaderData} from 'react-router-dom';
 
 import Button from 'react-bootstrap/Button';
+import NavButton from '../../components/NavButton';
 
-export async function loader(){
+export async function loader(): Promise<Object>{
+  /* Called by router in App.tsx for dynamic import. @ts-ignore is required
+     because the module is written in JS rather than TS. */
   // @ts-ignore
-  return (await import('/src/assets/earth-impact-simulator/main-scene.js'));
+  return (await import('/src/assets/earth-impact-simulator/simulation.js'));
 }
 
 export function Component(){
+  /* Rendered by router in App.tsx after dynamic import. */
   // @ts-ignore
-  const EISModule = useLoaderData();
-  // @ts-ignore
-  const Main_Scene = EISModule.Main_Scene;
-  // @ts-ignore
-  const Canvas_Widget = EISModule.Canvas_Widget;
+  const {Simulation, Canvas_Widget} = useLoaderData(); // Module from loader()
 
-  useEffect(() => {
-    const scenes = [Main_Scene].map(scene => new scene()); // Initialize scene
-    // Invoke Canvas_Widget to populate main-canvas
-    new Canvas_Widget(document.querySelector("#main-canvas"), scenes);
-  }, []) // Run once after the component renders
+  const mainCanvas = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { // Runs after component mount
+    /* mainCanvas becomes null after navigating away, but saving a reference to
+       the element that ref.current is pointing to allows cleanup() to access
+       and delete its child nodes even after navigating away. */
+    const mainCanvasRef = mainCanvas.current;
+
+    const scenes = [Simulation].map(scene => new scene()); // Initialize scene
+    // Canvas_Widget adds child nodes to main-canvas to render the simulation
+    let canvasWidgetObjRef = new Canvas_Widget(
+      document.querySelector("#main-canvas"), scenes);
+
+    return function cleanup(){ // Runs after component unmount
+      mainCanvasRef!.replaceChildren(); // Remove all main-canvas child nodes
+
+      /* Re-initialize scenes to stop rendering immediately and save system
+         resources. Webgl_Manager.render() traverses its scenes array to draw
+         simulation frames, so this causes it to stop drawing. */
+      canvasWidgetObjRef.webgl_manager.scenes = new Array<Object>;
+
+      // Remove Canvas_Widget object reference for garbage collection
+      canvasWidgetObjRef = null;
+    };
+  });
 
   return(
     <main id="main">
@@ -60,13 +80,16 @@ export function Component(){
         <p>
           Tags: WebGL, OpenGL, OpenGL Shading Language (GLSL), JavaScript
         </p>
-        <Button href="/projects">Back to projects</Button>
+        <NavButton href="/projects">Back to projects</NavButton>
         <Button href="https://github.com/md842/earth-impact-simulator">
           View repository on GitHub
         </Button>
       </div>
-      {/* Populated later by Canvas_Widget in useEffect() */}
-      <div className="canvas-widget" id="main-canvas"></div>
+      <div
+        className="canvas-widget"
+        id="main-canvas"
+        ref={mainCanvas}
+      />
     </main>
   );
 }
