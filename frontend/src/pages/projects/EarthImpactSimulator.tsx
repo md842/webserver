@@ -33,11 +33,8 @@ export function Component(){
 
     return function cleanup(){ // Runs after component unmount
       mainCanvasRef!.replaceChildren(); // Remove all main-canvas child nodes
-
-      /* Re-initialize scenes to stop rendering immediately and save system
-         resources. Webgl_Manager.render() traverses its scenes array to draw
-         simulation frames, so this causes it to stop drawing. */
-      canvasWidgetObjRef.webgl_manager.scenes = new Array<Object>;
+      // Stop the Webgl_Manager from rendering
+      cancelAnimationFrame(canvasWidgetObjRef.webgl_manager.event);
 
       // Remove Canvas_Widget object reference for garbage collection
       canvasWidgetObjRef = null;
