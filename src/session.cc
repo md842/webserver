@@ -13,11 +13,10 @@ namespace http = boost::beast::http;
 
 RequestHandler* dispatch(Request& req);
 Request parse_req(char* data, int max_length);
+int verify_req(Request& req);
 
-/*
 std::string req_as_string(Request req); // Temp helper for debug logging
 std::string res_as_string(Response res); // Temp helper for debug logging
-*/
 
 session::session(io_service& io_service, int id) : socket_(io_service){
   id_ = std::to_string(id);
@@ -42,14 +41,27 @@ void session::handle_read(const error_code& error, size_t bytes){
     Log::info("Session (ID " + id_ + "): " +
               "Received request from client " + client);
 
+    Log::trace("Bytes received: " + std::to_string(bytes));
+    Log::trace("Incoming raw data: " + std::string(data_));
+
     Request req = parse_req(data_, max_length);
+    Response* res = nullptr; // To be defined based on result of verify_req
 
-    // Log::trace("Incoming HTTP request:\n\n" + req_as_string(req)); // Temp debug log
+    Log::trace("Incoming HTTP request:\n\n" + req_as_string(req)); // Temp debug log
 
-    RequestHandler* handler = dispatch(req);
-    Response* res = handler->handle_request(req);
+    int error = verify_req(req); // Returns 0 if request valid, else error code
+    if (error){ // Invalid request, generate an error response
+      res = new Response();
+      res->result(error); // Set response status code to output of verify_req()
+      res->version(11);
+    }
+    else{ // Valid request, dispatch a request handler to obtain response
+      RequestHandler* handler = dispatch(req);
+      res = handler->handle_request(req);
+      free(handler); // Free memory used by request handler
+    }
 
-    // Log::trace("Outgoing HTTP response:\n\n" + res_as_string(*res)); // Temp debug log
+    Log::trace("Outgoing HTTP response:\n\n" + res_as_string(*res)); // Temp debug log
 
     // async_write returns immediately, so res must be kept alive.
     // Lambda write handler captures res and deletes it after write finishes.
@@ -135,7 +147,62 @@ Request parse_req(char* data, int max_length){
   return req;
 }
 
-/*
+int verify_req(Request& req){
+  http::verb method = req.method();
+  // Verify HTTP method: GET, POST are allowed
+  switch(method){
+    case http::verb::unknown:
+      return 400; // 400 Bad Request
+    case http::verb::delete_:
+    case http::verb::put:
+    case http::verb::connect:
+    case http::verb::options:
+    case http::verb::trace:
+      return 405; // 405 Method Not Allowed
+  }
+  // Verify HTTP version: HTTP/0.9, HTTP/1.0, HTTP/1.1, HTTP/2.0, or HTTP/3.0
+  switch(req.version()){
+    case 11:
+      break;
+    case 20:
+      break;
+    case 30:
+      break;
+    case 10:
+      break;
+    case 9:
+      break;
+    default:
+      return 505; // 505 HTTP Version Not Supported
+  }
+  // Verify length of payload for POST request: Must be present and under 4096
+  if (method == http::verb::post){
+    if (req.has_content_length()){
+      Log::trace("Content Length: " + std::string(req.at(http::field::content_length)));
+      try{
+        // Throws std::invalid_argument
+        int content_length = std::stoi(req.at(http::field::content_length));
+        if (content_length > 4096)
+          return 413; // 413 Payload Too Large
+
+        /* As a security measure, we will also examine the payload size instead
+           of simply trusting the Content-Length header to be accurate. */
+        boost::optional<uint64_t> payload_size = req.payload_size();
+        if (payload_size){ // boost::optional has value
+          if (*payload_size > 4096) // value exceeds 4096
+            return 413; // 413 Payload Too Large
+        }
+      }
+      catch(std::invalid_argument){ // Thrown by std::stoi()
+        return 400; // 400 Bad Request
+      }
+    }
+    else
+      return 411; // 411 Length Required
+  }
+  return 0;
+}
+
 std::string req_as_string(Request req){ // Temp helper for debug logging
   std::string method = std::string(http::to_string(req.method()));
   std::string target = std::string(req.target());
@@ -144,6 +211,10 @@ std::string req_as_string(Request req){ // Temp helper for debug logging
   for (auto& header : req.base()){
     out += std::string(header.name_string()) + ": " +
            std::string(header.value()) + "\n";
+  }
+  std::string body = req.body();
+  if (body.length()){
+    out += '\n' + body + '\n';
   }
   return out;
 }
@@ -157,4 +228,3 @@ std::string res_as_string(Response res){ // Temp helper for debug logging
   }
   return out;
 }
-*/

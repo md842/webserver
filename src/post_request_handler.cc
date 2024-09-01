@@ -19,76 +19,89 @@ Response* PostRequestHandler::handle_request(const Request& req){
   // Parse JSON data received in req.body()
   boost::property_tree::ptree req_json;
   std::istringstream req_body(req.body());
-  read_json(req_body, req_json);
-
-  // TODO: Support Python as well?
 
   try{
-    // Throws boost::property_tree::ptree_error if requested nodes not present
-    std::string input = req_json.get<std::string>("input");
-    bool input_as_file = req_json.get<bool>("input_as_file");
-    std::string source = req_json.get<std::string>("source");
+    // Throws boost::property_tree::json_parser_error
+    read_json(req_body, req_json);
 
-    // Complete the path for the executable specified by source
-    source = Config::inst().root() + "/simulations/" + source;
+    // TODO: Support Python as well?
 
-    /* TODO: Additional verification of request legitimacy, need to be careful
-       because this request type allows running an executable on the server.
-       Make sure source doesn't contain ".." to leave the intended dir. */
+    try{
+      // Throws boost::property_tree::ptree_error if named nodes not present
+      std::string input = req_json.get<std::string>("input");
+      bool input_as_file = req_json.get<bool>("input_as_file");
+      std::string source = req_json.get<std::string>("source");
 
-    boost::asio::io_service async_pipe;
-    std::future<std::string> out_future;
-    std::future<std::string> err_future;
+      // Complete the path for the executable specified by source
+      source = Config::inst().root() + "/simulations/" + source;
 
-    if (input_as_file){ // Sim expects file input, write parsed input to file.
-      std::string input_file = Config::inst().root() +
-                              "/simulations/temp_input.txt";
-      std::ofstream input_file_stream(input_file);
-      input_file_stream << input;
-      input_file_stream.close();
+      /* TODO: Additional verification of request legitimacy, need to be careful
+        because this request type allows running an executable on the server.
+        Make sure source doesn't contain ".." to leave the intended dir. */
 
-      // Pipe stdout and stderr of child process to futures declared above
-      boost::process::child c(
-        // Throws std::system_error if executable not found
-        boost::process::system(source, input_file,
-                              boost::process::std_out > out_future,
-                              boost::process::std_err > err_future));
-      async_pipe.run(); // Blocks until child process finishes
+      boost::asio::io_service async_pipe;
+      std::future<std::string> out_future;
+      std::future<std::string> err_future;
 
-      // Clear input file; don't want user-supplied input to persist
-      std::ofstream clear_input_file(input_file);
-      clear_input_file << "";
-      clear_input_file.close();
+      if (input_as_file){ // Sim expects file input, write parsed input to file.
+        std::string input_file = Config::inst().root() +
+                                "/simulations/temp_input.txt";
+        std::ofstream input_file_stream(input_file);
+        input_file_stream << input;
+        input_file_stream.close();
+
+        Log::trace("PostRequestHandler: Wrote input file");
+
+        // Pipe stdout and stderr of child process to futures declared above
+        boost::process::child c(
+          // Throws std::system_error if executable not found
+          boost::process::system(source, input_file,
+                                boost::process::std_out > out_future,
+                                boost::process::std_err > err_future));
+        async_pipe.run(); // Blocks until child process finishes
+
+        // Clear input file; don't want user-supplied input to persist
+        std::ofstream clear_input_file(input_file);
+        clear_input_file << "";
+        clear_input_file.close();
+      }
+      else{ // Sim expects raw input, provide parsed input directly.
+        // Pipe stdout and stderr of child process to futures declared above
+        boost::process::child c(
+          // Throws std::system_error if executable not found
+          boost::process::system(source, input,
+                                boost::process::std_out > out_future,
+                                boost::process::std_err > err_future));
+        async_pipe.run(); // Blocks until child process finishes
+      }
+
+      std::string err_data = err_future.get();
+      // Escape control characters in output JSON
+      boost::replace_all(err_data, "\n", "\\n");
+      boost::replace_all(err_data, "\t", "\\t");
+
+      std::string out_data = out_future.get();
+      // Escape control characters in output JSON
+      boost::replace_all(out_data, "\n", "\\n");
+      boost::replace_all(out_data, "\t", "\\t");
+
+      output = err_data + out_data;
     }
-    else{ // Sim expects raw input, provide parsed input directly.
-      // Pipe stdout and stderr of child process to futures declared above
-      boost::process::child c(
-        // Throws std::system_error if executable not found
-        boost::process::system(source, input,
-                              boost::process::std_out > out_future,
-                              boost::process::std_err > err_future));
-      async_pipe.run(); // Blocks until child process finishes
+    catch(boost::property_tree::ptree_error e){ // Thrown by ptree.get()
+      Log::error("Property tree error: " + std::string(e.what()));
+      output = "Error 400: Bad Request";
+      status = http::status::bad_request; // Response status code 400
     }
-
-    std::string err_data = err_future.get();
-    // Escape control characters in output JSON
-    boost::replace_all(err_data, "\n", "\\n");
-    boost::replace_all(err_data, "\t", "\\t");
-
-    std::string out_data = out_future.get();
-    // Escape control characters in output JSON
-    boost::replace_all(out_data, "\n", "\\n");
-    boost::replace_all(out_data, "\t", "\\t");
-
-    output = err_data + out_data;
+    catch(boost::process::process_error e){ // Thrown by boost::process::system()
+      Log::error("Process error: " + std::string(e.what()));
+      output = "Error 500: Internal Server Error";
+      status = http::status::internal_server_error; // Response status code 500
+    }
   }
-  catch(boost::property_tree::ptree_error){ // Thrown by ptree.get()
+  catch(boost::property_tree::json_parser_error e){ // Thrown by read_json()
+    Log::error("JSON parser error: " + std::string(e.what()));
     output = "Error 400: Bad Request";
     status = http::status::bad_request; // Response status code 400
-  }
-  catch(boost::process::process_error){ // Thrown by boost::process::system()
-    output = "Error 500: Internal Server Error";
-    status = http::status::internal_server_error; // Response status code 500
   }
 
   // Construct and return pointer to HTTP response object
