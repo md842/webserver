@@ -31,7 +31,7 @@ void server::handle_accept(session* new_session, const error_code& error){
   // Accept handler, called after start_accept() accepts incoming connection.
   if (!error){
     Log::info("Server: Starting a new session (ID " + std::to_string(session_id) + ").");
-    new_session->start();
+    new_session->do_read();
   }
   else{
     Log::error("Server: Error accepting connection: " + error.message());
