@@ -15,8 +15,10 @@ RequestHandler* dispatch(Request& req);
 Request parse_req(const std::string& received);
 int verify_req(Request& req);
 
+/*
 std::string req_as_string(Request req); // Temp helper for debug logging
 std::string res_as_string(Response res); // Temp helper for debug logging
+*/
 
 session::session(io_service& io_service, int id) : socket_(io_service){
   id_ = std::to_string(id);
@@ -40,12 +42,8 @@ void session::handle_read(const error_code& error, size_t bytes){
     // Throws boost::system::system_error if remote endpoint error
     client_ip_ = socket_.remote_endpoint().address().to_string();
   }
-  catch(boost::system::system_error e){ // Thrown by socket::remote_endpoint()
-    Log::warn("Session (ID " + id_ + "): " +
-              "Connection to " + client_ip_ + " unexpectedly terminated.");
-    error_code ec;
-    socket_.shutdown(tcp::socket::shutdown_both, ec); // Close connection
-    delete this;
+  catch(boost::system::system_error){ // Thrown by socket::remote_endpoint()
+    close_session(1, "Connection to " + client_ip_ + " unexpectedly terminated.");
     return;
   }
 
@@ -106,22 +104,12 @@ void session::handle_read(const error_code& error, size_t bytes){
         do_read(); // Request is incomplete, continue reading incoming data
     }
   }
-  else if (error == error::eof){
+  else if (error == error::eof)
     // Client sends EOF when closed or keep-alive times out.
     // Expected behavior, log as info rather than error and shut down.
-    Log::info("Session (ID " + id_ + "): " +
-              "Keep-alive connection closed by client, shutting down.");
-    error_code ec;
-    socket_.shutdown(tcp::socket::shutdown_both, ec); // Close connection
-    delete this;
-  }
-  else{ // Unknown read error, log as error and shut down.
-    Log::error("Session (ID " + id_ + "): " +
-               error.message() + "while reading request, shutting down.");
-    error_code ec;
-    socket_.shutdown(tcp::socket::shutdown_both, ec); // Close connection
-    delete this;
-  }
+    close_session(0, "Keep-alive connection closed by client, shutting down.");
+  else // Unknown read error, log as error and shut down.
+    close_session(2, error.message() + "while reading request, shutting down.");
 }
 
 void session::create_response(const error_code& error, int status){
@@ -174,21 +162,30 @@ void session::do_write(const error_code& error, Response* res){
           do_read(); // Continue listening for requests
         }
         else{ // Connection: close was requested
-          Log::info("Session (ID " + id_ + "): " +
-                    "Connection: close specified, shutting down.");
-          socket_.shutdown(tcp::socket::shutdown_both, ec); // Close connection
           free(res); // Free memory used by HTTP response object
-          delete this;
+          close_session(0, "Connection: close specified, shutting down.");
         }
       }
       else{ // Error during write
-        Log::error("Session (ID " + id_ + "): " +
-                    ec.message() + " error while writing response, shutting down.");
-        socket_.shutdown(tcp::socket::shutdown_both, ec); // Close connection
         free(res); // Free memory used by HTTP response object
-        delete this;
+        close_session(2, ec.message() + " error while writing response, shutting down.");
       }
     });
+}
+
+void session::close_session(int severity, const std::string& message){
+  // Helper function that logs a message and closes the session.
+  std::string full_msg = "Session (ID " + id_ + "): " + message;
+  if (severity == 0) // info
+    Log::info(full_msg);
+  else if (severity == 1) // warning
+    Log::warn(full_msg);
+  else if (severity == 2) // error
+    Log::error(full_msg);
+
+  error_code ec;
+  socket_.shutdown(tcp::socket::shutdown_both, ec); // Close connection
+  delete this;
 }
 
 RequestHandler* dispatch(Request& req){
@@ -265,6 +262,7 @@ int verify_req(Request& req){
   return 0;
 }
 
+/*
 std::string req_as_string(Request req){ // Temp helper for debug logging
   std::string method = std::string(http::to_string(req.method()));
   std::string target = std::string(req.target());
@@ -290,3 +288,4 @@ std::string res_as_string(Response res){ // Temp helper for debug logging
   }
   return out;
 }
+*/

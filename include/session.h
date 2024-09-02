@@ -13,6 +13,7 @@ private:
   void create_response(const boost::system::error_code& error, int status);
   void create_response(const boost::system::error_code& error, Request& req);
   void do_write(const boost::system::error_code& error, Response* res);
+  void close_session(int severity, const std::string& message);
   boost::asio::ip::tcp::socket socket_;
   enum{max_length = 1024};
   char data_[max_length];
