@@ -12,7 +12,7 @@ using boost::system::error_code;
 namespace http = boost::beast::http;
 
 RequestHandler* dispatch(Request& req);
-Request parse_req(char* data, int max_length);
+Request parse_req(const std::string& received);
 int verify_req(Request& req);
 
 std::string req_as_string(Request req); // Temp helper for debug logging
@@ -26,7 +26,7 @@ tcp::socket& session::socket(){
   return socket_;
 }
 
-void session::start(){
+void session::do_read(){
   // Reads an incoming request, then calls read handler.
   socket_.async_read_some(buffer(data_, max_length),
                           boost::bind(&session::handle_read, this,
@@ -35,79 +35,160 @@ void session::start(){
 }
 
 void session::handle_read(const error_code& error, size_t bytes){
-  // Read handler, called after start() reads incoming request.
+  // Read handler, called after start() reads incoming data.
+  try{
+    // Throws boost::system::system_error if remote endpoint error
+    client_ip_ = socket_.remote_endpoint().address().to_string();
+  }
+  catch(boost::system::system_error e){ // Thrown by socket::remote_endpoint()
+    Log::warn("Session (ID " + id_ + "): " +
+              "Connection to " + client_ip_ + " unexpectedly terminated.");
+    error_code ec;
+    socket_.shutdown(tcp::socket::shutdown_both, ec); // Close connection
+    delete this;
+    return;
+  }
+
+  Log::info("Session (ID " + id_ + "): " +
+            "Received " + std::to_string(bytes) + " bytes from " + client_ip_);
+  
   if (!error){
-    std::string client = socket_.remote_endpoint().address().to_string();
-    Log::info("Session (ID " + id_ + "): " +
-              "Received request from client " + client);
+    // Append incoming data from read buffer (data_) to total received data
+    total_received_data_ += std::string(data_, bytes);
 
-    Log::trace("Bytes received: " + std::to_string(bytes));
-    Log::trace("Incoming raw data: " + std::string(data_));
+    // Treat excessively long requests as malicious
+    if (total_received_data_.length() > max_length * 8)
+      create_response(error, 413); // Create 413 Payload Too Large response
 
-    Request req = parse_req(data_, max_length);
-    Response* res = nullptr; // To be defined based on result of verify_req
+    Request req = parse_req(total_received_data_);
+    /* Because only max_length bytes can be read at a time, it is possible to
+       receive an incomplete request from one read. We need to ensure that the
+       full request has been read before processing it. */
 
-    Log::trace("Incoming HTTP request:\n\n" + req_as_string(req)); // Temp debug log
+    /* If the Content-Length header is present, we know the complete request
+       has been read when payload size matches Content-Length. */
+    if (req.has_content_length()){
+      try{
+        // Throws std::invalid_argument
+        int content_length = std::stoi(req.at(http::field::content_length));
+        int payload_size = 0;
 
-    int error = verify_req(req); // Returns 0 if request valid, else error code
-    if (error){ // Invalid request, generate an error response
-      res = new Response();
-      res->result(error); // Set response status code to output of verify_req()
-      res->version(11);
-    }
-    else{ // Valid request, dispatch a request handler to obtain response
-      RequestHandler* handler = dispatch(req);
-      res = handler->handle_request(req);
-      free(handler); // Free memory used by request handler
-    }
+        boost::optional<uint64_t> payload_size_opt = req.payload_size();
+        if (payload_size_opt) // boost::optional has value
+          payload_size = *payload_size_opt; // Extract and set value
 
-    Log::trace("Outgoing HTTP response:\n\n" + res_as_string(*res)); // Temp debug log
-
-    // async_write returns immediately, so res must be kept alive.
-    // Lambda write handler captures res and deletes it after write finishes.
-    http::async_write(socket_, *res,
-      [this, res](error_code ec, size_t bytes){
-        if (!ec){ // Successful write
-          Log::info("Session (ID " + id_ + "): " +
-                    "Wrote " + std::to_string(bytes) + " bytes.");
-          if (res->keep_alive()){ // Connection: keep-alive was requested
-            free(res); // Free memory used by HTTP response object
-            start(); // Continue listening for requests
-          }
-          else{ // Connection: close was requested
-            Log::info("Session (ID " + id_ + "): " +
-                      "Connection: close specified, shutting down.");
-            socket_.shutdown(tcp::socket::shutdown_both, ec); // Close connection
-            free(res); // Free memory used by HTTP response object
-            delete this;
-          }
+        if (payload_size < content_length)
+          do_read(); // Request is incomplete, continue reading incoming data
+        else if (payload_size == content_length)
+          create_response(error, req); // Request is complete, handle it
+        else{ // Payload size exceeds Content-Length; should not happen!
+          create_response(error, 400); // Create 400 Bad Request response
         }
-        else{ // Error during write
-          Log::error("Session (ID " + id_ + "): " +
-                     ec.message() + " error while writing response, shutting down.");
-          socket_.shutdown(tcp::socket::shutdown_both, ec); // Close connection
-          free(res); // Free memory used by HTTP response object
-          delete this;
-        }
-      });
+      }
+      catch(std::invalid_argument){ // Thrown by std::stoi()
+        create_response(error, 400); // Create 400 Bad Request response
+      }
+    }
 
+    /* Otherwise, there should be no body, so we know the complete request has
+       been read when bytes < max_length or the request ends with \r\n\r\n. */
+    else{
+      if (bytes < max_length)
+        create_response(error, req); // Request is complete, handle it
+      else if (total_received_data_.substr(
+        total_received_data_.length() - 4) == "\r\n\r\n")
+        /* This condition would suffice for all requests with no body. However,
+         it is a rare case (complete request length perfectly divisible by
+         max_length) that is slower than comparing bytes < max_length, so the
+         above comparison is preferred and this is left as a fallback. */
+        create_response(error, req); // Request is complete, process it
+      else
+        do_read(); // Request is incomplete, continue reading incoming data
+    }
   }
   else if (error == error::eof){
     // Client sends EOF when closed or keep-alive times out.
-    // Expected behavior, log as info rather than error, and shut down.
+    // Expected behavior, log as info rather than error and shut down.
     Log::info("Session (ID " + id_ + "): " +
               "Keep-alive connection closed by client, shutting down.");
     error_code ec;
     socket_.shutdown(tcp::socket::shutdown_both, ec); // Close connection
     delete this;
   }
-  else{ // Unknown read error, log as error and shut down
+  else{ // Unknown read error, log as error and shut down.
     Log::error("Session (ID " + id_ + "): " +
                error.message() + "while reading request, shutting down.");
     error_code ec;
     socket_.shutdown(tcp::socket::shutdown_both, ec); // Close connection
     delete this;
   }
+}
+
+void session::create_response(const error_code& error, int status){
+  Log::info("Session (ID " + id_ + "): " +
+            "Received invalid request from " + client_ip_);
+
+  total_received_data_ = ""; // Clear total received data
+  Response* res = new Response();
+  res->result(status); // Set response status code to specified error status
+  res->version(11);
+
+  do_write(error, res);
+}
+
+void session::create_response(const error_code& error, Request& req){
+  Log::info("Session (ID " + id_ + "): " +
+            "Received valid request from " + client_ip_);
+
+  Log::trace("Incoming HTTP request:\n\n" + req_as_string(req)); // Temp debug log
+
+  total_received_data_ = ""; // Clear total received data
+  Response* res = nullptr; // To be defined based on result of verify_req
+
+  int req_error = verify_req(req); // Returns 0 if request valid, else err code
+  if (req_error){ // Invalid request, generate an error response
+    res = new Response();
+    res->result(req_error); // Set response status code to verify_req() output
+    res->version(11);
+  }
+  else{ // Valid request, dispatch a request handler to obtain response
+    RequestHandler* handler = dispatch(req);
+    res = handler->handle_request(req);
+    free(handler); // Free memory used by request handler
+  }
+  do_write(error, res);
+}
+
+void session::do_write(const error_code& error, Response* res){
+  Log::trace("Outgoing HTTP response:\n\n" + res_as_string(*res)); // Temp debug log
+
+  // async_write returns immediately, so res must be kept alive.
+  // Lambda write handler captures res and deletes it after write finishes.
+  http::async_write(socket_, *res,
+    [this, res](error_code ec, size_t bytes){
+      if (!ec){ // Successful write
+        Log::info("Session (ID " + id_ + "): " +
+                  "Wrote " + std::to_string(bytes) + " bytes.");
+        if (res->keep_alive()){ // Connection: keep-alive was requested
+          free(res); // Free memory used by HTTP response object
+          do_read(); // Continue listening for requests
+        }
+        else{ // Connection: close was requested
+          Log::info("Session (ID " + id_ + "): " +
+                    "Connection: close specified, shutting down.");
+          socket_.shutdown(tcp::socket::shutdown_both, ec); // Close connection
+          free(res); // Free memory used by HTTP response object
+          delete this;
+        }
+      }
+      else{ // Error during write
+        Log::error("Session (ID " + id_ + "): " +
+                    ec.message() + " error while writing response, shutting down.");
+        socket_.shutdown(tcp::socket::shutdown_both, ec); // Close connection
+        free(res); // Free memory used by HTTP response object
+        delete this;
+      }
+    });
 }
 
 RequestHandler* dispatch(Request& req){
@@ -137,12 +218,12 @@ RequestHandler* dispatch(Request& req){
   return Registry::inst().get_factory(type)->create();
 }
 
-Request parse_req(char* data, int max_length){
+Request parse_req(const std::string& received){
   Request req;
   http::parser<true, http::string_body> parser{std::move(req)};
   error_code ec;
   parser.eager(true); // Tells parser to read request body for POST requests
-  parser.put(buffer(data, max_length), ec);
+  parser.put(buffer(received, received.length()), ec);
   req = parser.release();
   return req;
 }
@@ -175,29 +256,10 @@ int verify_req(Request& req){
     default:
       return 505; // 505 HTTP Version Not Supported
   }
-  // Verify length of payload for POST request: Must be present and under 4096
+  /* Verify POST request has Content-Length header. Payload length limit and
+     matching are already enforced in handle_read, no need to handle here. */
   if (method == http::verb::post){
-    if (req.has_content_length()){
-      Log::trace("Content Length: " + std::string(req.at(http::field::content_length)));
-      try{
-        // Throws std::invalid_argument
-        int content_length = std::stoi(req.at(http::field::content_length));
-        if (content_length > 4096)
-          return 413; // 413 Payload Too Large
-
-        /* As a security measure, we will also examine the payload size instead
-           of simply trusting the Content-Length header to be accurate. */
-        boost::optional<uint64_t> payload_size = req.payload_size();
-        if (payload_size){ // boost::optional has value
-          if (*payload_size > 4096) // value exceeds 4096
-            return 413; // 413 Payload Too Large
-        }
-      }
-      catch(std::invalid_argument){ // Thrown by std::stoi()
-        return 400; // 400 Bad Request
-      }
-    }
-    else
+    if (!req.has_content_length())
       return 411; // 411 Length Required
   }
   return 0;
