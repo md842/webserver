@@ -111,13 +111,15 @@ Response* PostRequestHandler::handle_request(const Request& req){
   res->result(status);
   res->version(11);
 
-  // Set headers
+  /* Set headers; Content-Type should be set to JSON even for an error response
+     because PostRequestHandler uses JSON for error reporting to the client */
   res->set(http::field::cache_control, "public, max-age=604800, immutable");
+  res->set(http::field::content_type, "application/json");
+
   if (req.keep_alive()) // Use same keep-alive option as incoming request
     res->set(http::field::connection, "keep-alive");
   else
     res->set(http::field::connection, "close");
-  res->set(http::field::content_type, "application/json"); 
 
   // Set body
   res->body() = "{\"output\":\"" + output + "\"}";
