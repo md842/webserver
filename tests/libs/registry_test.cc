@@ -1,12 +1,14 @@
 #include "registry.h"
 #include "gtest/gtest.h"
 
+
 class RegistryTest : public ::testing::Test {
 protected:
   void SetUp() override { // Setup test fixture
     Registry::inst().register_mapping("Test", "/uri", "/mapping");
   }
 };
+
 
 TEST_F(RegistryTest, MappingTest){ // Uses test fixture
   // Get types
@@ -17,6 +19,7 @@ TEST_F(RegistryTest, MappingTest){ // Uses test fixture
   std::map<std::string, std::string> map_ = Registry::inst().get_map("Test");
   EXPECT_EQ(map_["/uri"], "/mapping");
 }
+
 
 TEST_F(RegistryTest, PointerTest){ // Uses test fixture
   // get_factory() should return a nullptr since no factory was registered

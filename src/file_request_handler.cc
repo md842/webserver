@@ -1,6 +1,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
-#include <iomanip>
+#include <iomanip> // put_time
 
 #include "file_request_handler.h"
 #include "log.h"
@@ -39,8 +39,7 @@ Response* FileRequestHandler::handle_request(const Request& req){
     // to occur with inadequate resources being the only failure condition.
     Log::error("FileRequestHandler: Could not open file: ./" + target);
     status = http::status::internal_server_error; // Response status code 500
-    content_type = "text/plain";
-    file_contents << "500 Internal Server Error";
+    file_contents << "<h1>Internal Server Error (Error 500).</h1>\n";
   }
   else{
     last_modified = last_modified_time(file_obj);
@@ -63,19 +62,27 @@ Response* FileRequestHandler::handle_request(const Request& req){
   res->result(status);
   res->version(11);
 
-  // Set headers
-  res->set(http::field::cache_control, "public, max-age=604800, immutable");
+  // Set Keep-Alive header for all response types.
   if (req.keep_alive()) // Use same keep-alive option as incoming request
     res->set(http::field::connection, "keep-alive");
   else
     res->set(http::field::connection, "close");
-  res->set(http::field::content_type, content_type); 
-  res->set(http::field::last_modified, last_modified);
 
-  // Set body (ignore if 304 Not Modified)
-  if (status != http::status::not_modified){
-    res->body() = file_contents.str();
-    res->prepare_payload();
+  switch(status){
+    case http::status::ok: // 200 OK
+    case http::status::not_found: // 404 Not Found
+      // Set Cache-Control, Content-Type, Last-Modified, and body
+      res->set(http::field::cache_control, "public, max-age=604800, immutable");
+      res->set(http::field::last_modified, last_modified);
+    case http::status::internal_server_error: // 500 Internal Server Error
+      // Set Content-Type and body (200, 404 responses fall through to here)
+      res->set(http::field::content_type, content_type); 
+      res->body() = file_contents.str();
+      res->prepare_payload();
+      break;
+    case http::status::not_modified: // 304 Not Modified
+      // Set Cache-Control only
+      res->set(http::field::cache_control, "public, max-age=604800, immutable");
   }
   
   delete file_obj; // Free file_obj pointer after use
