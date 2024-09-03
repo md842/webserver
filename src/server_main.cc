@@ -9,9 +9,11 @@
 
 namespace fs = boost::filesystem;
 
-// Global so it can be stopped gracefully by signal_handler
+// Made global so that it can be stopped gracefully by signal_handler.
 boost::asio::io_service io_service_;
 
+
+// Used by signals.async_wait, stops the IO service upon receiving a signal.
 void signal_handler(const boost::system::error_code& ec, int sig){
   if (sig == SIGINT)
     Log::info("Main: SIGINT received, shutting down gracefully.");
@@ -19,6 +21,7 @@ void signal_handler(const boost::system::error_code& ec, int sig){
     Log::info("Main: SIGTERM received, shutting down gracefully.");
   io_service_.stop(); // Causes io_service_.run() to stop blocking main
 }
+
 
 int main(int argc, char* argv[]){
   try{

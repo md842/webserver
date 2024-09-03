@@ -10,12 +10,14 @@
 namespace fs = boost::filesystem;
 namespace http = boost::beast::http;
 
+
 std::string last_modified_time(fs::path* file_obj);
 std::string mime_type(fs::path* file_obj);
 std::string resolve_path(const std::string& req_target);
 
+
+/// Generates a response to a given GET request.
 Response* FileRequestHandler::handle_request(const Request& req){
-  // Returns a pointer to an HTTP response object for the given HTTP request.
   std::string target = resolve_path(std::string(req.target()));
   std::string full_path = Config::inst().root() + target; // Add root to target
 
@@ -80,6 +82,14 @@ Response* FileRequestHandler::handle_request(const Request& req){
   return res;
 }
 
+
+/** 
+ * Returns the last modified time for the given file. Used for HTTP caching.
+ *
+ * @param file_obj A pointer to a path object for the target file.
+ * @returns The last modified time for the file in HTTP time string format.
+ * @relatesalso FileRequestHandler
+ */
 std::string last_modified_time(fs::path* file_obj){
   std::time_t last_write_time = fs::last_write_time(*file_obj);
   tm* gm = std::gmtime(&last_write_time);
@@ -91,6 +101,14 @@ std::string last_modified_time(fs::path* file_obj){
   return ss.str();
 }
 
+
+/** 
+ * Returns the MIME type of the given file. Used to set Content-Type header.
+ *
+ * @param file_obj A pointer to a path object for the target file.
+ * @returns The MIME type of the file as a string.
+ * @relatesalso FileRequestHandler
+ */
 std::string mime_type(fs::path* file_obj){
   std::string extension = file_obj->extension().string();
   std::map<std::string, std::string> types = {
@@ -115,8 +133,15 @@ std::string mime_type(fs::path* file_obj){
   return "application/octet-stream"; // Default case
 }
 
+
+/** 
+ * Resolves the target URI of the request to a relative path on the web server.
+ *
+ * @param req_target The target URI of the incoming request.
+ * @returns The relative path on the web server as a string.
+ * @relatesalso FileRequestHandler
+ */
 std::string resolve_path(const std::string& req_target){
-  // Performs relative path substitution on req_target using config mapping.
   std::string target = req_target;
 
   // Configure server to serve index.html for paths handled by React Router
@@ -144,10 +169,12 @@ std::string resolve_path(const std::string& req_target){
   return target;
 }
 
+
+/// Returns a pointer to a new file request handler.
 RequestHandler* FileRequestHandlerFactory::create(){
-  // Returns a pointer to a new file request handler for the given path.
   return new FileRequestHandler;
 }
 
-// Register FileRequestHandler and corresponding factory. Runs before main().
+
+/// Register FileRequestHandler and corresponding factory. Runs before main().
 REGISTER_HANDLER("FileRequestHandler", FileRequestHandlerFactory)

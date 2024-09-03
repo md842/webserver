@@ -4,6 +4,13 @@
 
 class server{
 public:
+  /** 
+   * Initializes the server and starts listening for incoming connections.
+   *
+   * The port to listen on is extracted from the config.
+   *
+   * @param io_service The boost::asio::io_service supplied by main.
+   */
   server(boost::asio::io_service& io_service);
 
 private:

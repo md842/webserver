@@ -11,36 +11,39 @@ using boost::asio::ip::tcp;
 using boost::system::error_code;
 namespace http = boost::beast::http;
 
+
 RequestHandler* dispatch(Request& req);
 Request parse_req(const std::string& received);
 int verify_req(Request& req);
+// std::string req_as_string(Request req); // Temp helper for debug logging
+// std::string res_as_string(Response res); // Temp helper for debug logging
 
-/*
-std::string req_as_string(Request req); // Temp helper for debug logging
-std::string res_as_string(Response res); // Temp helper for debug logging
-*/
 
+/// Sets up the session socket.
 session::session(io_service& io_service, int id) : socket_(io_service){
   id_ = std::to_string(id);
 }
 
+
+/// Returns a reference to the TCP socket used by this session.
 tcp::socket& session::socket(){
   return socket_;
 }
 
+
+/// Asynchronously reads incoming data from socket_, then calls handle_read.
 void session::do_read(){
-  // Reads an incoming request, then calls read handler.
   socket_.async_read_some(buffer(data_, max_length),
                           boost::bind(&session::handle_read, this,
                           placeholders::error,
                           placeholders::bytes_transferred));
 }
 
+
+/// Read handler, called after start() reads incoming data.
 void session::handle_read(const error_code& error, size_t bytes){
-  // Read handler, called after start() reads incoming data.
-  try{
-    // Throws boost::system::system_error if remote endpoint error
-    client_ip_ = socket_.remote_endpoint().address().to_string();
+  try{ // Throws boost::system::system_error
+    client_ip_ = socket_.remote_endpoint().address().to_string(); 
   }
   catch(boost::system::system_error){ // Thrown by socket::remote_endpoint()
     close_session(1, "Connection to " + client_ip_ + " unexpectedly terminated.");
@@ -112,6 +115,8 @@ void session::handle_read(const error_code& error, size_t bytes){
     close_session(2, error.message() + "while reading request, shutting down.");
 }
 
+
+/// Creates an error response to an invalid request.
 void session::create_response(const error_code& error, int status){
   Log::info("Session (ID " + id_ + "): " +
             "Received invalid request from " + client_ip_);
@@ -124,11 +129,13 @@ void session::create_response(const error_code& error, int status){
   do_write(error, res);
 }
 
+
+/// Creates a response by dispatching a RequestHandler for a valid request.
 void session::create_response(const error_code& error, Request& req){
   Log::info("Session (ID " + id_ + "): " +
             "Received valid request from " + client_ip_);
 
-  Log::trace("Incoming HTTP request:\n\n" + req_as_string(req)); // Temp debug log
+  // Log::trace("Incoming HTTP request:\n\n" + req_as_string(req)); // Temp debug log
 
   total_received_data_ = ""; // Clear total received data
   Response* res = nullptr; // To be defined based on result of verify_req
@@ -147,8 +154,10 @@ void session::create_response(const error_code& error, Request& req){
   do_write(error, res);
 }
 
+
+/// Given a pointer to a Response object, writes the response to the client.
 void session::do_write(const error_code& error, Response* res){
-  Log::trace("Outgoing HTTP response:\n\n" + res_as_string(*res)); // Temp debug log
+  // Log::trace("Outgoing HTTP response:\n\n" + res_as_string(*res)); // Temp debug log
 
   // async_write returns immediately, so res must be kept alive.
   // Lambda write handler captures res and deletes it after write finishes.
@@ -173,8 +182,9 @@ void session::do_write(const error_code& error, Response* res){
     });
 }
 
+
+/// Helper function that logs a message and closes the session.
 void session::close_session(int severity, const std::string& message){
-  // Helper function that logs a message and closes the session.
   std::string full_msg = "Session (ID " + id_ + "): " + message;
   if (severity == 0) // info
     Log::info(full_msg);
@@ -188,9 +198,9 @@ void session::close_session(int severity, const std::string& message){
   delete this;
 }
 
+
+/// Dynamically dispatches a RequestHandler based on the given request target.
 RequestHandler* dispatch(Request& req){
-  // Returns a pointer to a dynamically dispatched RequestHandler based on the
-  // incoming request's target.
   std::string type = "";
 
   if (req.method() == http::verb::post)
@@ -215,6 +225,8 @@ RequestHandler* dispatch(Request& req){
   return Registry::inst().get_factory(type)->create();
 }
 
+
+/// Parses a Request object given data received from the client.
 Request parse_req(const std::string& received){
   Request req;
   http::parser<true, http::string_body> parser{std::move(req)};
@@ -225,6 +237,8 @@ Request parse_req(const std::string& received){
   return req;
 }
 
+
+/// Verifies a given Request object. Returns status code if an error is found.
 int verify_req(Request& req){
   http::verb method = req.method();
   // Verify HTTP method: GET, POST are allowed
@@ -262,8 +276,10 @@ int verify_req(Request& req){
   return 0;
 }
 
+
 /*
-std::string req_as_string(Request req){ // Temp helper for debug logging
+/// Helper function for debugging. Converts given Request object to a string.
+std::string req_as_string(Request req){
   std::string method = std::string(http::to_string(req.method()));
   std::string target = std::string(req.target());
   std::string ver = std::to_string(req.version());
@@ -279,6 +295,8 @@ std::string req_as_string(Request req){ // Temp helper for debug logging
   return out;
 }
 
+
+/// Helper function for debugging. Converts given Response object to a string.
 std::string res_as_string(Response res){ // Temp helper for debug logging
   std::string result = std::to_string(res.result_int()) + " " + std::string(res.reason());
   std::string out = "HTTP/1.1 " + result + '\n';

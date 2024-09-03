@@ -12,21 +12,56 @@ struct NginxConfig{
 
 class Config final{ // Singleton class (only one instance)
  public:
-  // Singleton should delete copy and assignment operators
+  // Deleting the copy and assignment operators due to being a singleton class
   Config(const Config&) = delete;
   Config& operator=(const Config&) = delete;
 
-  static Config& inst(); // Get static instance
+  /// Returns a static reference to the singleton instance of Config.
+  static Config& inst();
 
+  /** 
+   * Returns the path to the index page specified by Config.
+   * 
+   * @pre parse() succeeded.
+   * @returns NginxConfig.index
+   */
   std::string index();
+
+  /** 
+   * Returns the port number specified by Config.
+   * 
+   * @pre parse() succeeded.
+   * @returns NginxConfig.port
+   */
   short port();
+
+  /** 
+   * Returns the path to the root directory specified by Config.
+   * 
+   * @pre parse() succeeded.
+   * @returns NginxConfig.root
+   */
   std::string root();
+
+  /** 
+   * Converts the relative root directory in NginxConfig to an absolute root.
+   * 
+   * @pre parse() succeeded.
+   * @param absolute_root A string containing the absolute path of the web
+   *   server root directory.
+   */
   void set_absolute_root(const std::string& absolute_root);
   
-  bool parse(const std::string& file_name);
+  /** 
+   * Parses the specified config file and populates NginxConfig.
+   * 
+   * @param file_path A string containing the path to the config file.
+   * @returns true on successful parse, false on parse error.
+   */
+  bool parse(const std::string& file_path);
 
  private:
-  Config(){}; // Singleton should have private constructor
+  Config(){}; // Making constructor private due to being a singleton class
 
   enum Context{
     MAIN_CONTEXT = 0,

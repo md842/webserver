@@ -4,7 +4,10 @@
 
 class Log{
 public:
+  /// Enables trace logs globally; they are suppressed by default.
   static void enable_trace();
+
+  /// Convenience wrappers for BOOST_LOG_TRIVIAL macros.
   static void debug(const std::string& msg);
   static void error(const std::string& msg);
   static void fatal(const std::string& msg);
