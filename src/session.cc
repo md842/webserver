@@ -15,8 +15,8 @@ namespace http = boost::beast::http;
 RequestHandler* dispatch(Request& req);
 Request parse_req(const std::string& received);
 int verify_req(Request& req);
-// std::string req_as_string(Request req); // Helper function for debugging
-// std::string res_as_string(Response res); // Helper function for debugging
+std::string req_as_string(Request req); // Helper function for debugging
+std::string res_as_string(Response res); // Helper function for debugging
 
 
 /// Sets up the session socket.
@@ -282,7 +282,6 @@ int verify_req(Request& req){
 }
 
 
-/*
 /// Helper function for debugging. Converts given Request object to a string.
 std::string req_as_string(Request req){
   std::string method = std::string(http::to_string(req.method()));
@@ -311,4 +310,3 @@ std::string res_as_string(Response res){ // Temp helper for debug logging
   }
   return out;
 }
-*/

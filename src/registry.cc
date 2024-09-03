@@ -10,7 +10,7 @@ RequestHandlerFactory* Registry::get_factory(const std::string& name){
 
 
 /// Returns the corresponding URI map for a given RequestHandler type.
-std::map<std::string, std::string> Registry::get_map(const std::string& name){
+std::map<std::string, std::vector<std::string>> Registry::get_map(const std::string& name){
   return registry[name].uri_map;
 }
 
@@ -37,7 +37,7 @@ void Registry::register_handler(const std::string& name,
   RegEntry entry;
   entry.factory_ptr = factory;
   // Initialize an empty URI map for the new handler type.
-  entry.uri_map = std::map<std::string, std::string>();
+  entry.uri_map = std::map<std::string, std::vector<std::string>>();
   registry[name] = entry;
 }
 
@@ -45,6 +45,6 @@ void Registry::register_handler(const std::string& name,
 /// Registers a new URI mapping for the given handler type and values.
 void Registry::register_mapping(const std::string& name,
                                 const std::string& uri,
-                                const std::string& mapping){
-  registry[name].uri_map[uri] = mapping;
+                                const std::string& rel_path){
+  registry[name].uri_map[uri].push_back(rel_path);
 }

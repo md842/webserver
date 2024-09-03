@@ -247,9 +247,10 @@ bool Config::parse_statement(std::vector<std::string>& statement){
   else if (context == LOCATION_CONTEXT){
     if (arg == "try_files"){
       Log::trace("Config: Got " + name + " with URI \"" + uri + "\"");
-      for (int i = 1; i < statement.size() - 1; i++){
-        if (statement.at(i) != "=404") // Don't add 404 fallback as a mapping
-          process_mapping(statement.at(i));
+      for (int i = 1; i < statement.size() - 1; i++){ // Exclude try_files arg
+        // Ignore 404 fallback, React Router handles 404
+        if (statement.at(i) != "=404")
+          register_mapping(statement.at(i));
       }
     }
     else{
@@ -268,12 +269,15 @@ bool Config::parse_statement(std::vector<std::string>& statement){
 }
 
 
-/// Processes a try_files arg into a mapping, then registers the mapping.
-void Config::process_mapping(const std::string& arg){
+/// Processes a try_files sub-argument "arg" and maps it to the associated URI.
+void Config::register_mapping(const std::string& arg){
   // Match "$uri" in token and replace with URI for this location, then clean.
-  mapping = clean(std::regex_replace(arg, std::regex("\\$uri"), uri));
+  std::string rel_path = clean(std::regex_replace(arg, std::regex("\\$uri"), uri));
 
-  Registry::inst().register_mapping(name, uri, mapping);
+  Log::trace("Config: Mapping " + name + " for URI \"" + uri +
+             "\" to relative path \"" + rel_path + "\"");
+
+  Registry::inst().register_mapping(name, uri, rel_path);
 }
 
 

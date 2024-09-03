@@ -1,2 +1,6 @@
+frontend/public/* linguist-vendored
+
+simulations/* linguist-vendored
+
 tests/inputs/* linguist-vendored
-tests/integration/outputs/* linguist-vendored
+tests/nc/* linguist-vendored

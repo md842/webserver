@@ -92,7 +92,6 @@ class Config final{ // Singleton class (only one instance)
 
   Context context = MAIN_CONTEXT;
   NginxConfig config;
-  std::string mapping;
   std::string name;
   std::string uri;
 
@@ -100,7 +99,7 @@ class Config final{ // Singleton class (only one instance)
   bool parse_block_start(std::vector<std::string>& statement);
   bool parse_block_end(std::vector<std::string>& statement);
   bool parse_statement(std::vector<std::string>& statement);
-  void process_mapping(const std::string& arg);
+  void register_mapping(const std::string& arg);
   bool validate_config();
 
   TokenType get_token(boost::filesystem::ifstream& cfg_in, std::string& token);

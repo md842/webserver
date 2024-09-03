@@ -51,9 +51,11 @@ int main(int argc, char* argv[]){
     
     // Log mapping that was extracted from the config
     for (const std::string& type : Registry::inst().get_types()){
-      for (auto& pair : Registry::inst().get_map(type))
-        Log::info(type + ": Mapping URI prefix " + pair.first +
-                  " to relative path " + pair.second);
+      for (auto& pair : Registry::inst().get_map(type)){
+        for (const std::string& rel_path : pair.second)
+          Log::info(type + ": Mapped URI \"" + pair.first +
+                    "\" to relative path \"" + rel_path + "\"");
+      }
     }
 
     // Register signal_handler to handle SIGINT and SIGTERM.
