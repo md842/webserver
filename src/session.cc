@@ -15,8 +15,8 @@ namespace http = boost::beast::http;
 RequestHandler* dispatch(Request& req);
 Request parse_req(const std::string& received);
 int verify_req(Request& req);
-// std::string req_as_string(Request req); // Temp helper for debug logging
-// std::string res_as_string(Response res); // Temp helper for debug logging
+// std::string req_as_string(Request req); // Helper function for debugging
+// std::string res_as_string(Response res); // Helper function for debugging
 
 
 /// Sets up the session socket.
@@ -253,8 +253,8 @@ int verify_req(Request& req){
       return 405; // 405 Method Not Allowed
   }
 
-  // Verify target does not try to access unintended files using ".." in URI
-  if (req.target().find("..") != std::string::npos)
+  // Verify target does not try to access unintended files using "../" in URI
+  if (req.target().find("../") != std::string::npos)
     return 403; // 403 Forbidden
 
   // Verify HTTP version: HTTP/0.9, HTTP/1.0, HTTP/1.1, HTTP/2.0, or HTTP/3.0

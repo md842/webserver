@@ -1,5 +1,5 @@
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <boost/filesystem.hpp> // exists, is_directory, path
+#include <boost/filesystem/fstream.hpp> // ifstream
 #include <iomanip> // put_time
 
 #include "file_request_handler.h"
@@ -34,14 +34,7 @@ Response* FileRequestHandler::handle_request(const Request& req){
   }
 
   fs::ifstream fstream(*file_obj); // Attempt to open the file
-  if (!fstream){ // File exists, but failed to open it for some reason.
-    // Since the server does not support client-side writes, this is unlikely
-    // to occur with inadequate resources being the only failure condition.
-    Log::error("FileRequestHandler: Could not open file: ./" + target);
-    status = http::status::internal_server_error; // Response status code 500
-    file_contents << "<h1>Internal Server Error (Error 500).</h1>\n";
-  }
-  else{
+  if (fstream){ // Successfully opened the file
     last_modified = last_modified_time(file_obj);
     try{ // If validation request, compare last_modified to cached time
       std::string cached_time = std::string(
@@ -49,12 +42,20 @@ Response* FileRequestHandler::handle_request(const Request& req){
       if (last_modified == cached_time) // Else last_modified is newer
         status = http::status::not_modified; // Response status code 304
     }
-    catch(std::out_of_range){} // req.at throws if not validation request
+    // req.at() throws if not validation request. Safe to catch and ignore.
+    catch(std::out_of_range){}
 
     content_type = mime_type(file_obj);
 
     if (status != http::status::not_modified)
       file_contents << fstream.rdbuf(); // Read file into string stream
+  }
+  else{ // File exists, but failed to open it for some reason.
+    // Since the server does not support client-side writes, this is unlikely
+    // to occur with inadequate resources being the only failure condition.
+    Log::error("FileRequestHandler: Could not open file: ./" + target);
+    status = http::status::internal_server_error; // Response status code 500
+    file_contents << "<h1>Internal Server Error (Error 500).</h1>\n";
   }
 
   // Construct and return pointer to HTTP response object

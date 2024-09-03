@@ -1,6 +1,6 @@
 #pragma once
 
-#include "request_handler_interface.h" // RequestHandler*
+#include "request_handler_interface.h" // RequestHandler
 
 class session{
 public:

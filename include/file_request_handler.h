@@ -1,6 +1,6 @@
 #pragma once
 
-#include "request_handler_interface.h"
+#include "request_handler_interface.h" // RequestHandler, RequestHandlerFactory
 
 class FileRequestHandler : public RequestHandler{
 public:

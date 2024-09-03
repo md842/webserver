@@ -32,7 +32,7 @@ Response* PostRequestHandler::handle_request(const Request& req){
       std::string source = req_json.get<std::string>("source");
 
       // Ensure that the request does not try to leave the intended directory
-      if (source.find("..") == std::string::npos){
+      if (source.find("../") == std::string::npos){
         // Complete the path for the executable specified by source
         source = Config::inst().root() + "/simulations/" + source;
 
