@@ -1,0 +1,6 @@
+public/** -linguist-detectable
+
+# Overriding incorrect XML designations to TSX
+src/components/Footer.tsx linguist-language=TSX
+src/pages/Home.tsx linguist-language=TSX
+src/pages/NoPage.tsx linguist-language=TSX
