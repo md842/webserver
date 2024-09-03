@@ -252,6 +252,11 @@ int verify_req(Request& req){
     case http::verb::trace:
       return 405; // 405 Method Not Allowed
   }
+
+  // Verify target does not try to access unintended files using ".." in URI
+  if (req.target().find("..") != std::string::npos)
+    return 403; // 403 Forbidden
+
   // Verify HTTP version: HTTP/0.9, HTTP/1.0, HTTP/1.1, HTTP/2.0, or HTTP/3.0
   switch(req.version()){
     case 11:
