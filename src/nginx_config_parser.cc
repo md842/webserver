@@ -7,41 +7,43 @@
 
 namespace fs = boost::filesystem;
 
+
 std::string clean(const std::string& path);
 
+
+/// Returns a static reference to the singleton instance of Config.
 Config& Config::inst(){
-  // Returns a reference to the static instance of the config.
   static Config instRef;
   return instRef;
 }
 
+
+/// Returns the path to the index page specified by Config.
 std::string Config::index(){
-  // Returns index from the parsed config object.
-  // Should not be called before parse().
   return config.index;
 }
 
+
+/// Returns the port number specified by Config.
 short Config::port(){
-  // Returns port from the parsed config object.
-  // Should not be called before parse().
   return config.port;
 }
 
+
+/// Returns the path to the root directory specified by Config.
 std::string Config::root(){
-  // Returns root from the parsed config object.
-  // Should not be called before parse().
   return config.root;
 }
 
+
+/// Converts the relative root directory in NginxConfig to an absolute root.
 void Config::set_absolute_root(const std::string& absolute_root){
-  // Prepends the absolute root to config.root (relative) and cleans the path.
-  // Should be called by main after parse().
   config.root = clean(absolute_root + config.root);
 }
 
+
+/// Parses the specified config file and populates NginxConfig.
 bool Config::parse(const std::string& file_path){
-  // Sets up a file stream for a given file path, then calls the config parser.
-  // Returns true if parsing was successful, false otherwise.
   fs::path file_obj(file_path);
 
   if (!exists(file_obj) || is_directory(file_obj)){ // Nonexistent or directory
@@ -61,9 +63,9 @@ bool Config::parse(const std::string& file_path){
   }
 }
 
+
+/// Parses the config pointed to by cfg_in and populates NginxConfig.
 bool Config::parse(fs::ifstream& cfg_in){
-  // Parses the config file given by the file stream cfg_in.
-  // Returns true if parsing was successful, false otherwise.
   TokenType prev_type = INIT;
   TokenType token_type = INIT;
   std::vector<std::string> statement;
@@ -135,9 +137,9 @@ bool Config::parse(fs::ifstream& cfg_in){
   return false;
 }
 
+
+/// Parses a block start within the config. Returns bool success status.
 bool Config::parse_block_start(std::vector<std::string>& statement){
-  // Parses a block start statement within the config.
-  // Returns true if parsing was successful, false otherwise.
   std::string new_context = statement.at(0); // First token is target context
 
   // Verify statement size; 2 tokens for http/server, 4 tokens for location
@@ -179,11 +181,10 @@ bool Config::parse_block_start(std::vector<std::string>& statement){
   return true;
 }
 
-bool Config::parse_block_end(std::vector<std::string>& statement){
-  // Parses a block end statement within the config.
-  // Returns true if parsing was successful, false otherwise.
 
-  // No need to check size, the valid preceding tokens also call parse routines
+/// Parses a block end within the config. Returns bool success status.
+bool Config::parse_block_end(std::vector<std::string>& statement){
+  // No need to check size, any valid preceding tokens also call parse routines
   // so it is impossible for statement to have size > 1.
 
   // Verify and perform context transition
@@ -203,9 +204,9 @@ bool Config::parse_block_end(std::vector<std::string>& statement){
   return true;
 }
 
+
+/// Parses a general statement within the config. Returns bool success status.
 bool Config::parse_statement(std::vector<std::string>& statement){
-  // Parses a general statement within the config.
-  // Returns true if parsing was successful, false otherwise.
   std::string arg = statement.at(0); // First token is argument type
 
   // Valid in server context: listen, index, root, server_name, return
@@ -265,17 +266,18 @@ bool Config::parse_statement(std::vector<std::string>& statement){
   return true;
 }
 
-void Config::process_mapping(const std::string& arg){
-  // Processes a try_files arg into a mapping, then registers the mapping.
 
+/// Processes a try_files arg into a mapping, then registers the mapping.
+void Config::process_mapping(const std::string& arg){
   // Match "$uri" in token and replace with URI for this location, then clean.
   mapping = clean(std::regex_replace(arg, std::regex("\\$uri"), uri));
 
   Registry::inst().register_mapping(name, uri, mapping);
 }
 
+
+/// Validates the contents of the parsed config. Returns bool success status.
 bool Config::validate_config(){
-  // Returns true if the config is valid. Called at the end of parse().
   if (config.port == 0)
     return false;
   if (config.index == "")
@@ -287,8 +289,15 @@ bool Config::validate_config(){
   return true; // No errors
 }
 
+
+/** 
+ * Parses the next token in the config.
+ * 
+ * @param[in] cfg_in A file stream pointing to the config being parsed.
+ * @param[out] token A string containing the contents of the parsed token.
+ * @returns The type of the parsed token.
+ */
 Config::TokenType Config::get_token(fs::ifstream& cfg_in, std::string& token){
-  // Returns next token type, puts contents in token (passed by reference).
   TokenParserState state = INIT_STATE; // DFA state of the token parser
   bool escaped = false; // If true, previous character was escape character
 
@@ -433,8 +442,14 @@ Config::TokenType Config::get_token(fs::ifstream& cfg_in, std::string& token){
   }
 }
 
+
+/** 
+ * Cleans extraneous '/'s from the given path.
+ * 
+ * @param path A string containing the path to clean.
+ * @returns A string containing the cleaned version of path.
+ */
 std::string clean(const std::string& path){
-  // Returns a cleaned up version of path with proper '/'s.
   std::string out = "/" + path + "/";
   // Remove duplicate slashes
   out = std::regex_replace(out, std::regex("/+"), "/");

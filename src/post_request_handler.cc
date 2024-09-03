@@ -1,8 +1,8 @@
 #include <boost/algorithm/string/replace.hpp> // replace_all
 #include <boost/asio.hpp> // io_service
 #include <boost/process.hpp> // child, system, std_out, std_err
-#include <boost/property_tree/ptree.hpp> // ptree
 #include <boost/property_tree/json_parser.hpp> // read_json
+#include <boost/property_tree/ptree.hpp> // ptree
 
 #include "post_request_handler.h"
 #include "log.h"
@@ -11,8 +11,9 @@
 
 namespace http = boost::beast::http;
 
+
+/// Generates a response to a given POST request.
 Response* PostRequestHandler::handle_request(const Request& req){
-  // Returns a pointer to an HTTP response object for the given HTTP request.
   http::status status = http::status::ok; // Response status code 200
   std::string output;
 
@@ -124,10 +125,12 @@ Response* PostRequestHandler::handle_request(const Request& req){
   return res;
 }
 
+
+/// Returns a pointer to a new POST request handler.
 RequestHandler* PostRequestHandlerFactory::create(){
-  // Returns a pointer to a new file request handler for the given path.
   return new PostRequestHandler;
 }
 
-// Register FileRequestHandler and corresponding factory. Runs before main().
+
+/// Register PostRequestHandler and corresponding factory. Runs before main().
 REGISTER_HANDLER("PostRequestHandler", PostRequestHandlerFactory)
