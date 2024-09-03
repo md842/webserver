@@ -1,6 +1,5 @@
 #include <boost/asio.hpp> // io_service
 #include <boost/filesystem.hpp> // system_complete
-#include <regex>
 
 #include "log.h"
 #include "nginx_config_parser.h" // Config::inst()
@@ -31,7 +30,7 @@ int main(int argc, char* argv[]){
     }
 
     Log::enable_trace(); // Remove to suppress trace logs
-    // TODO: Make this configurable rather than hardcoded
+    // TODO: Make this configurable rather than hardcoded?
 
     // Find root directory from binary path argv[0], works regardless of cwd
     std::string binary_path = fs::system_complete(argv[0]).string();

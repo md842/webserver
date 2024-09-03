@@ -2,7 +2,7 @@
 
 #include <map>
 
-#include "request_handler_interface.h"
+#include "request_handler_interface.h" // RequestHandlerFactory
 
 /// A data structure used by Registry that wraps a factory and URI map.
 struct RegEntry{

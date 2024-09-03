@@ -18,7 +18,7 @@ std::map<std::string, std::string> Registry::get_map(const std::string& name){
 /// Returns a list of names of registered RequestHandler types.
 std::vector<std::string> Registry::get_types(){
   std::vector<std::string> out;
-  for (auto entry : registry)
+  for (const std::pair<std::string, RegEntry>& entry : registry)
     out.push_back(entry.first);
   return out;
 }

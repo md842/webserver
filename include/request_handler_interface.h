@@ -1,6 +1,6 @@
 #pragma once
 
-#include <boost/beast.hpp>
+#include <boost/beast.hpp> // http::request, http::response
 
 using Request = boost::beast::http::request<boost::beast::http::string_body>;
 using Response = boost::beast::http::response<boost::beast::http::string_body>;

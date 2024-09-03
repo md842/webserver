@@ -1,5 +1,6 @@
-#include <boost/lexical_cast.hpp>
-#include <regex>
+#include <boost/filesystem.hpp> // exists, is_directory, path
+#include <boost/lexical_cast.hpp> // lexical_cast
+#include <regex> // regex, regex_replace
 
 #include "log.h"
 #include "nginx_config_parser.h"
@@ -46,20 +47,20 @@ void Config::set_absolute_root(const std::string& absolute_root){
 bool Config::parse(const std::string& file_path){
   fs::path file_obj(file_path);
 
-  if (!exists(file_obj) || is_directory(file_obj)){ // Nonexistent or directory
-    Log::fatal("Config: " + file_path + " not found, aborting.");
-    return false;
-  }
-  else{ // Non-directory file found
+  if (exists(file_obj) && !is_directory(file_obj)){ // Non-directory file found
     fs::ifstream fstream(file_obj); // Attempt to open the file
-    if (!fstream){ // File exists, but failed to open it for some reason.
-      Log::fatal("Config: " + file_path + " not found, aborting.");
-      return false;
-    }
-    else{ // File opened successfully
+    if (fstream){ // File opened successfully
       Log::info("Config: Parsing " + file_path);
       return parse(fstream);
     }
+    else{ // File exists, but failed to open it for some reason.
+      Log::fatal("Config: " + file_path + " not found, aborting.");
+      return false;
+    }
+  }
+  else{ // Nonexistent or directory
+    Log::fatal("Config: " + file_path + " not found, aborting.");
+    return false;
   }
 }
 

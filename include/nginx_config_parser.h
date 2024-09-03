@@ -1,7 +1,6 @@
 #pragma once
 
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <boost/filesystem/fstream.hpp> // ifstream
 #include <string>
 
 struct NginxConfig{
