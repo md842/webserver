@@ -16,8 +16,9 @@ TEST_F(RegistryTest, MappingTest){ // Uses test fixture
   EXPECT_EQ(types.at(0), "Test");
 
   // Get mapping
-  std::map<std::string, std::string> map_ = Registry::inst().get_map("Test");
-  EXPECT_EQ(map_["/uri"], "/mapping");
+  std::map<std::string, std::vector<std::string>> map_ =
+    Registry::inst().get_map("Test");
+  EXPECT_EQ(map_["/uri"].at(0), "/mapping");
 }
 
 

@@ -7,7 +7,7 @@
 /// A data structure used by Registry that wraps a factory and URI map.
 struct RegEntry{
   RequestHandlerFactory* factory_ptr;
-  std::map<std::string, std::string> uri_map;
+  std::map<std::string, std::vector<std::string>> uri_map;
 };
 
 /// A macro for registering a RequestHandler type before main() runs.
@@ -36,9 +36,9 @@ public:
    * Returns the corresponding URI map for a given RequestHandler type.
    *
    * @param name The name of a RequestHandler type.
-   * @returns A map containing URI to relative path pairs.
+   * @returns A map of URIs to relative paths.
    */
-  std::map<std::string, std::string> get_map(const std::string& name);
+  std::map<std::string, std::vector<std::string>> get_map(const std::string& name);
 
   /// Returns a list of names of registered RequestHandler types.
   std::vector<std::string> get_types();
@@ -59,10 +59,10 @@ public:
    *
    * @param name The name of the RequestHandler type to add the mapping to.
    * @param uri The URI associated with the new mapping.
-   * @param value The relative path to map to uri.
+   * @param rel_path The relative path to map to uri.
    */
   void register_mapping(const std::string& name, const std::string& uri,
-                        const std::string& value);
+                        const std::string& rel_path);
 
 private:
   Registry(){}; // Making constructor private due to being a singleton class
