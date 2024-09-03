@@ -47,7 +47,8 @@ int main(int argc, char* argv[]){
 
     // Config's root dir is relative, so set the absolute root_dir found above.
     Config::inst().set_absolute_root(root_dir);
-    Log::info("Main: Found root directory: " + Config::inst().root());
+    Log::info("Main: Root directory: " + Config::inst().root());
+    Log::info("Main: Index page: " + Config::inst().index());
     
     // Log mapping that was extracted from the config
     for (const std::string& type : Registry::inst().get_types()){

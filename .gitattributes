@@ -1,6 +1,3 @@
-frontend/public/* linguist-vendored
-
-simulations/* linguist-vendored
-
-tests/inputs/* linguist-vendored
-tests/nc/* linguist-vendored
+frontend/public/* linguist-vendored=true
+tests/inputs/* linguist-vendored=true
+tests/nc/* linguist-vendored=true
