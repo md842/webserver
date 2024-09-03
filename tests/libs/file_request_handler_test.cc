@@ -195,8 +195,7 @@ TEST_F(FileRequestHandlerTest, ServeOctetStream){ // Uses test fixture
 TEST_F(FileRequestHandlerTest, ValidateCache){ // Uses test fixture
   // Set If-Modified-Since to last_modified_time to produce a 304 response.
   boost::filesystem::path* file_obj =
-    new boost::filesystem::path(Config::inst().root() +
-                                Config::inst().index());
+    new boost::filesystem::path(Config::inst().index());
   std::string lm_time = last_modified_time(file_obj);
   req.set(boost::beast::http::field::if_modified_since, lm_time);
 

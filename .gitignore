@@ -1,5 +1,4 @@
 build
 build_coverage
-frontend/build
 tests/integration/output
 tests/integration/results.txt

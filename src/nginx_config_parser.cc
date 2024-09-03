@@ -40,6 +40,7 @@ std::string Config::root(){
 /// Converts the relative root directory in NginxConfig to an absolute root.
 void Config::set_absolute_root(const std::string& absolute_root){
   config.root = clean(absolute_root + config.root);
+  config.index = config.root + config.index;
 }
 
 

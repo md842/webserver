@@ -163,7 +163,7 @@ fs::path* resolve_path(const std::string& req_target, http::status& status){
     })){
     Log::trace("Target \"" + req_target +
                "\" is a React Router path. Serving index.");
-    file_obj = new fs::path(Config::inst().root() + Config::inst().index());
+    file_obj = new fs::path(Config::inst().index());
     return file_obj; // Leave status at default value (200 OK)
   }
 
@@ -203,7 +203,7 @@ fs::path* resolve_path(const std::string& req_target, http::status& status){
              "\" failed to resolve to a known file. Serving index.");
 
   delete file_obj; // Free memory used by previous file_obj before replace
-  file_obj = new fs::path(Config::inst().root() + Config::inst().index());
+  file_obj = new fs::path(Config::inst().index());
   status = http::status::not_found; // 404 Not Found
 
   return file_obj;
