@@ -47,8 +47,6 @@ Response* PostRequestHandler::handle_request(const Request& req){
           input_file_stream << input;
           input_file_stream.close();
 
-          Log::trace("PostRequestHandler: Wrote input file");
-
           // Pipe stdout and stderr of child process to futures declared above
           boost::process::child c(
             // Throws std::system_error if executable not found

@@ -29,7 +29,7 @@ int main(int argc, char* argv[]){
       return 1; // Exit with non-zero exit code
     }
 
-    Log::enable_trace(); // Remove to suppress trace logs
+    // Log::enable_trace(); // Remove to suppress trace logs
     // TODO: Make this configurable rather than hardcoded?
 
     // Find root directory from binary path argv[0], works regardless of cwd
@@ -47,8 +47,8 @@ int main(int argc, char* argv[]){
 
     // Config's root dir is relative, so set the absolute root_dir found above.
     Config::inst().set_absolute_root(root_dir);
-    Log::info("Main: Root directory: " + Config::inst().root());
-    Log::info("Main: Index page: " + Config::inst().index());
+    Log::info("Main: Found root directory at " + Config::inst().root());
+    Log::info("Main: Found index page at " + Config::inst().index());
     
     // Log mapping that was extracted from the config
     for (const std::string& type : Registry::inst().get_types()){

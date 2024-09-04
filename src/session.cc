@@ -1,5 +1,6 @@
 #include <boost/asio.hpp> // io_service, tcp
 #include <boost/bind/bind.hpp> // bind
+#include <boost/log/trivial.hpp> // BOOST_LOG_TRIVIAL
 
 #include "log.h"
 #include "nginx_config_parser.h" // Config::inst()
@@ -15,14 +16,12 @@ namespace http = boost::beast::http;
 RequestHandler* dispatch(Request& req);
 Request parse_req(const std::string& received);
 int verify_req(Request& req);
-std::string req_as_string(Request req); // Helper function for debugging
-std::string res_as_string(Response res); // Helper function for debugging
+// std::string req_as_string(Request req); // Helper function for debugging
+// std::string res_as_string(Response res); // Helper function for debugging
 
 
 /// Sets up the session socket.
-session::session(io_service& io_service, int id) : socket_(io_service){
-  id_ = std::to_string(id);
-}
+session::session(io_service& io_service) : socket_(io_service){}
 
 
 /// Returns a reference to the TCP socket used by this session.
@@ -46,12 +45,9 @@ void session::handle_read(const error_code& error, size_t bytes){
     client_ip_ = socket_.remote_endpoint().address().to_string(); 
   }
   catch(boost::system::system_error){ // Thrown by socket::remote_endpoint()
-    close_session(1, "Connection to " + client_ip_ + " unexpectedly terminated.");
+    close_session(0, "Client disconnected from session, shutting down.");
     return;
   }
-
-  Log::info("Session (ID " + id_ + "): " +
-            "Received " + std::to_string(bytes) + " bytes from " + client_ip_);
   
   if (!error){
     // Append incoming data from read buffer (data_) to total received data
@@ -112,28 +108,28 @@ void session::handle_read(const error_code& error, size_t bytes){
     // Expected behavior, log as info rather than error and shut down.
     close_session(0, "Keep-alive connection closed by client, shutting down.");
   else // Unknown read error, log as error and shut down.
-    close_session(2, error.message() + "while reading request, shutting down.");
+    close_session(2, "Got error \"" + error.message() + "\" while reading request, shutting down.");
 }
 
 
 /// Creates an error response to an invalid request.
 void session::create_response(const error_code& error, int status){
-  Log::info("Session (ID " + id_ + "): " +
-            "Received invalid request from " + client_ip_);
+  size_t req_bytes = total_received_data_.length();
+  std::string method = "UNKNOWN";
 
   total_received_data_ = ""; // Clear total received data
   Response* res = new Response();
   res->result(status); // Set response status code to specified error status
   res->version(11);
 
-  do_write(error, res);
+  do_write(error, res, req_bytes, method);
 }
 
 
 /// Creates a response by dispatching a RequestHandler for a valid request.
 void session::create_response(const error_code& error, Request& req){
-  Log::info("Session (ID " + id_ + "): " +
-            "Received valid request from " + client_ip_);
+  size_t req_bytes = total_received_data_.length();
+  std::string method = req.method_string();
 
   // Log::trace("Incoming HTTP request:\n\n" + req_as_string(req)); // Temp debug log
 
@@ -151,21 +147,29 @@ void session::create_response(const error_code& error, Request& req){
     res = handler->handle_request(req);
     free(handler); // Free memory used by request handler
   }
-  do_write(error, res);
+  do_write(error, res, req_bytes, method);
 }
 
 
 /// Given a pointer to a Response object, writes the response to the client.
-void session::do_write(const error_code& error, Response* res){
+void session::do_write(const error_code& error, Response* res,
+                       size_t req_bytes, const std::string& method){
   // Log::trace("Outgoing HTTP response:\n\n" + res_as_string(*res)); // Temp debug log
 
   // async_write returns immediately, so res must be kept alive.
   // Lambda write handler captures res and deletes it after write finishes.
   http::async_write(socket_, *res,
-    [this, res](error_code ec, size_t bytes){
+    [this, res, req_bytes, method](error_code ec, size_t res_bytes){
       if (!ec){ // Successful write
-        Log::info("Session (ID " + id_ + "): " +
-                  "Wrote " + std::to_string(bytes) + " bytes.");
+
+        Log::res_metrics( // Write machine-parseable formatted log
+          client_ip_,
+          req_bytes,
+          res_bytes,
+          method,
+          res->result_int()
+        );
+
         if (res->keep_alive()){ // Connection: keep-alive was requested
           free(res); // Free memory used by HTTP response object
           do_read(); // Continue listening for requests
@@ -177,7 +181,7 @@ void session::do_write(const error_code& error, Response* res){
       }
       else{ // Error during write
         free(res); // Free memory used by HTTP response object
-        close_session(2, ec.message() + " error while writing response, shutting down.");
+        close_session(2, "Got error \"" + ec.message() + "\" while writing response, shutting down.");
       }
     });
 }
@@ -185,7 +189,7 @@ void session::do_write(const error_code& error, Response* res){
 
 /// Helper function that logs a message and closes the session.
 void session::close_session(int severity, const std::string& message){
-  std::string full_msg = "Session (ID " + id_ + "): " + message;
+  std::string full_msg = "Session (client " + client_ip_ + "): " + message;
   if (severity == 0) // info
     Log::info(full_msg);
   else if (severity == 1) // warning
@@ -282,6 +286,7 @@ int verify_req(Request& req){
 }
 
 
+/*
 /// Helper function for debugging. Converts given Request object to a string.
 std::string req_as_string(Request req){
   std::string method = std::string(http::to_string(req.method()));
@@ -310,3 +315,4 @@ std::string res_as_string(Response res){ // Temp helper for debug logging
   }
   return out;
 }
+*/
