@@ -51,7 +51,7 @@ bool Config::parse(const std::string& file_path){
   if (exists(file_obj) && !is_directory(file_obj)){ // Non-directory file found
     fs::ifstream fstream(file_obj); // Attempt to open the file
     if (fstream){ // File opened successfully
-      Log::info("Config: Parsing " + file_path);
+      Log::trace("Config: Parsing " + file_path);
       return parse(fstream);
     }
     else{ // File exists, but failed to open it for some reason.

@@ -11,6 +11,23 @@ void Log::enable_trace(){
 }
 
 
+/// Machine-parseable log for response metrics.
+void Log::res_metrics(
+  const std::string& client_ip,
+  size_t req_bytes,
+  size_t res_bytes,
+  const std::string& method,
+  unsigned response_code
+){
+  BOOST_LOG_TRIVIAL(info) <<
+    "[ResponseMetrics][client:" << client_ip <<
+    "][req_bytes:" << req_bytes <<
+    "][res_bytes:" << res_bytes <<
+    "][method:" << method <<
+    "][response_code:" << response_code << "]";
+}
+
+
 /// Convenience wrappers for BOOST_LOG_TRIVIAL macros.
 void Log::debug(const std::string& msg){
   BOOST_LOG_TRIVIAL(debug) << msg;
