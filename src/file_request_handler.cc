@@ -7,6 +7,9 @@
 #include "nginx_config_parser.h" // Config::inst()
 #include "registry.h" // Registry::inst(), REGISTER_HANDLER macro
 
+// Standardized log prefix for this source
+#define LOG_PRE "[FileRequestHandler] "
+
 namespace fs = boost::filesystem;
 namespace http = boost::beast::http;
 
@@ -44,7 +47,7 @@ Response* FileRequestHandler::handle_request(const Request& req){
   else{ // File exists, but failed to open it for some reason.
     // Since the server does not support client-side writes, this is unlikely
     // to occur with inadequate resources being the only failure condition.
-    Log::error("FileRequestHandler: Failed to open file");
+    Log::error(LOG_PRE, "Failed to open file");
     status = http::status::internal_server_error; // Response status code 500
     file_contents << "<h1>Internal Server Error (Error 500).</h1>\n";
   }
@@ -161,7 +164,7 @@ fs::path* resolve_path(const std::string& req_target, http::status& status){
     [req_target](std::string page){
       return (req_target == page);
     })){
-    Log::trace("Target \"" + req_target +
+    Log::trace(LOG_PRE, "Target \"" + req_target +
                "\" is a React Router path. Serving index.");
     file_obj = new fs::path(Config::inst().index());
     return file_obj; // Leave status at default value (200 OK)
@@ -192,14 +195,14 @@ fs::path* resolve_path(const std::string& req_target, http::status& status){
 
       // Valid file found (exists and is not a directory)
       if (exists(*file_obj) && !is_directory(*file_obj)){
-        Log::trace("Target \"" + req_target +
+        Log::trace(LOG_PRE, "Target \"" + req_target +
                    "\" resolved to \"" + target + "\"");
         return file_obj; // Leave status at default value (200 OK)
       }
     }
   }
 
-  Log::trace("Target \"" + req_target +
+  Log::trace(LOG_PRE, "Target \"" + req_target +
              "\" failed to resolve to a known file. Serving index.");
 
   delete file_obj; // Free memory used by previous file_obj before replace

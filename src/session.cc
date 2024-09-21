@@ -7,6 +7,9 @@
 #include "registry.h" // Registry::inst()
 #include "session.h"
 
+// Standardized log prefix for this source
+#define LOG_PRE "[Session]            "
+
 using namespace boost::asio;
 using boost::asio::ip::tcp;
 using boost::system::error_code;
@@ -189,13 +192,13 @@ void session::do_write(const error_code& error, Response* res,
 
 /// Helper function that logs a message and closes the session.
 void session::close_session(int severity, const std::string& message){
-  std::string full_msg = "Session (client " + client_ip_ + "): " + message;
+  std::string full_msg = "Client: " + client_ip_ + " | " + message;
   if (severity == 0) // info
-    Log::info(full_msg);
+    Log::info(LOG_PRE, full_msg);
   else if (severity == 1) // warning
-    Log::warn(full_msg);
+    Log::warn(LOG_PRE, full_msg);
   else if (severity == 2) // error
-    Log::error(full_msg);
+    Log::error(LOG_PRE, full_msg);
 
   error_code ec;
   socket_.shutdown(tcp::socket::shutdown_both, ec); // Close connection

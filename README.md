@@ -15,6 +15,12 @@ $ sudo pacman -S cmake
 $ sudo pacman -S boost
 ```
 
+#### gcovr, gtest (gcovr-7.2-2, gtest 1.15.2-1 used)
+```console
+$ sudo pacman -S gcovr
+$ sudo pacman -S gtest
+```
+
 ## How to Build
 1. Install required dependencies from previous section.
 2. Clone this repository.
@@ -69,11 +75,6 @@ The server will now serve requests from a local browser. For example, if the con
 If the server is running within a Docker container, replace `localhost` with the `IPv4Address` of the Docker container, e.g., `172.17.0.2`. The address can be found by running `docker network inspect bridge` from a local terminal outside of the Docker container. For example, if the config specifies port 8080, visiting `http://172.17.0.2:8080/` will display the home page. 
 
 ## Coverage Reporting Dependencies (optional)
-
-#### gcovr (gcovr-7.2-2 used)
-```console
-$ sudo pacman -S gcovr
-```
 
 #### Python (python-3.12.4-1 used)
 ```console

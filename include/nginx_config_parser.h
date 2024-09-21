@@ -7,6 +7,7 @@ struct NginxConfig{
   short port;
   std::string index;
   std::string root;
+  std::string absolute_root;
 };
 
 class Config final{ // Singleton class (only one instance)
