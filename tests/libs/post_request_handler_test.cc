@@ -31,9 +31,9 @@ protected:
     size_t found = binary_path.find("webserver"); // Search for substring
     std::string root_dir = binary_path.substr(0, found + target_dir.length());
 
-    // Parse the test config and set absolute root to frontend production build
-    Config::inst().parse(root_dir + "/tests/inputs/configs/test_config.conf");
+    // Set absolute root to frontend production build and parse the test config
     Config::inst().set_absolute_root(root_dir + "/frontend/build");
+    Config::inst().parse(root_dir + "/tests/inputs/configs/test_config.conf");
 
     // POST / HTTP/1.1
     req.method(boost::beast::http::verb::post);

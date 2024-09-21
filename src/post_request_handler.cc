@@ -9,6 +9,9 @@
 #include "nginx_config_parser.h" // Config::inst()
 #include "registry.h" // Registry::inst(), REGISTER_HANDLER macro
 
+// Standardized log prefix for this source
+#define LOG_PRE "[PostRequestHandler] "
+
 namespace http = boost::beast::http;
 
 
@@ -88,18 +91,18 @@ Response* PostRequestHandler::handle_request(const Request& req){
       }
     }
     catch(boost::property_tree::ptree_error e){ // Thrown by ptree.get()
-      Log::error("Property tree error: " + std::string(e.what()));
+      Log::error(LOG_PRE, "Property tree error: " + std::string(e.what()));
       output = "Error 400: Bad Request";
       status = http::status::bad_request; // Response status code 400
     }
     catch(boost::process::process_error e){ // Thrown by boost::process::system()
-      Log::error("Process error: " + std::string(e.what()));
+      Log::error(LOG_PRE, "Process error: " + std::string(e.what()));
       output = "Error 500: Internal Server Error";
       status = http::status::internal_server_error; // Response status code 500
     }
   }
   catch(boost::property_tree::json_parser_error e){ // Thrown by read_json()
-    Log::error("JSON parser error: " + std::string(e.what()));
+    Log::error(LOG_PRE, "JSON parser error: " + std::string(e.what()));
     output = "Error 400: Bad Request";
     status = http::status::bad_request; // Response status code 400
   }

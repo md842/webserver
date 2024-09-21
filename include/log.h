@@ -17,10 +17,10 @@ public:
   );
 
   /// Convenience wrappers for BOOST_LOG_TRIVIAL macros.
-  static void debug(const std::string& msg);
-  static void error(const std::string& msg);
-  static void fatal(const std::string& msg);
-  static void info(const std::string& msg);
-  static void trace(const std::string& msg);
-  static void warn(const std::string& msg);
+  static void debug(const std::string& source, const std::string& msg);
+  static void error(const std::string& source, const std::string& msg);
+  static void fatal(const std::string& source, const std::string& msg);
+  static void info(const std::string& source, const std::string& msg);
+  static void trace(const std::string& source, const std::string& msg);
+  static void warn(const std::string& source, const std::string& msg);
 };

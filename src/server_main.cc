@@ -6,6 +6,9 @@
 #include "registry.h" // Registry::inst()
 #include "server.h"
 
+// Standardized log prefix for this source
+#define LOG_PRE "[Main]               "
+
 namespace fs = boost::filesystem;
 
 // Made global so that it can be stopped gracefully by signal_handler.
@@ -15,9 +18,9 @@ boost::asio::io_service io_service_;
 // Used by signals.async_wait, stops the IO service upon receiving a signal.
 void signal_handler(const boost::system::error_code& ec, int sig){
   if (sig == SIGINT)
-    Log::info("Main: SIGINT received, shutting down gracefully.");
+    Log::info(LOG_PRE, "SIGINT received, shutting down gracefully.");
   else
-    Log::info("Main: SIGTERM received, shutting down gracefully.");
+    Log::info(LOG_PRE, "SIGTERM received, shutting down gracefully.");
   io_service_.stop(); // Causes io_service_.run() to stop blocking main
 }
 
@@ -25,7 +28,7 @@ void signal_handler(const boost::system::error_code& ec, int sig){
 int main(int argc, char* argv[]){
   try{
     if (argc != 2){ // Check args
-      Log::fatal("Usage: server <config>");
+      Log::fatal(LOG_PRE, "Usage: server <config>");
       return 1; // Exit with non-zero exit code
     }
 
@@ -40,24 +43,13 @@ int main(int argc, char* argv[]){
     if (found != std::string::npos) // Found, extract root dir
       root_dir = binary_path.substr(0, found + target_dir.length());
 
+    // Config's root dir is relative, so provide absolute root_dir found above.
+    Config::inst().set_absolute_root(root_dir);
+
     // Parse the config file given in argv[1] (Config is a singleton).
     // If a parse error occurs, Config will handle the fatal log, so just exit.
     if (!Config::inst().parse(root_dir + "/" + argv[1]))
       return 1; // Exit with non-zero exit code
-
-    // Config's root dir is relative, so set the absolute root_dir found above.
-    Config::inst().set_absolute_root(root_dir);
-    Log::info("Main: Found root directory at " + Config::inst().root());
-    Log::info("Main: Found index page at " + Config::inst().index());
-    
-    // Log mapping that was extracted from the config
-    for (const std::string& type : Registry::inst().get_types()){
-      for (auto& pair : Registry::inst().get_map(type)){
-        for (const std::string& rel_path : pair.second)
-          Log::info(type + ": Mapped URI \"" + pair.first +
-                    "\" to relative path \"" + rel_path + "\"");
-      }
-    }
 
     // Register signal_handler to handle SIGINT and SIGTERM.
     boost::asio::signal_set signals(io_service_, SIGINT, SIGTERM);
@@ -67,9 +59,9 @@ int main(int argc, char* argv[]){
     io_service_.run(); // Blocks until signal_handler calls io_service_.stop()
   }
   catch (std::exception& e){
-    Log::fatal("Main: Exception " + std::string(e.what()));
+    Log::fatal(LOG_PRE, "Exception " + std::string(e.what()));
     return 1; // Exit with non-zero exit code
   }
-  Log::info("Main: Server successfully shut down.");
+  Log::info(LOG_PRE, "Server successfully shut down.");
   return 0;
 }

@@ -39,11 +39,12 @@ protected:
     size_t found = binary_path.find("webserver"); // Search for substring
     std::string root_dir = binary_path.substr(0, found + target_dir.length());
 
-    // Parse the test config and set absolute root
+    // Set the absolute root and parse the test config
     // test_file_config specifies small.html as index and /tests/inputs as root
+    Config::inst().set_absolute_root(root_dir);
     Config::inst().parse(root_dir +
                          "/tests/inputs/configs/test_file_config.conf");
-    Config::inst().set_absolute_root(root_dir);
+    
 
     // GET / HTTP/1.1 (will serve small.html by default)
     req.method(boost::beast::http::verb::get);

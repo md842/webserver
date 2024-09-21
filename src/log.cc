@@ -19,42 +19,42 @@ void Log::res_metrics(
   const std::string& method,
   unsigned response_code
 ){
-  BOOST_LOG_TRIVIAL(info) <<
-    "[ResponseMetrics][client:" << client_ip <<
-    "][req_bytes:" << req_bytes <<
-    "][res_bytes:" << res_bytes <<
-    "][method:" << method <<
-    "][response_code:" << response_code << "]";
+  BOOST_LOG_TRIVIAL(info) << "[Response]          " <<
+    " Client: " << client_ip <<
+    " | Method: " << method <<
+    " | Status: " << response_code <<
+    " | Received (B): " << req_bytes <<
+    " | Sent (B): " << res_bytes;
 }
 
 
 /// Convenience wrappers for BOOST_LOG_TRIVIAL macros.
-void Log::debug(const std::string& msg){
-  BOOST_LOG_TRIVIAL(debug) << msg;
+void Log::debug(const std::string& source, const std::string& msg){
+  BOOST_LOG_TRIVIAL(debug) << source << msg;
 }
 
 
-void Log::error(const std::string& msg){
-  BOOST_LOG_TRIVIAL(error) << msg;
+void Log::error(const std::string& source, const std::string& msg){
+  BOOST_LOG_TRIVIAL(error) << source << msg;
 }
 
 
-void Log::fatal(const std::string& msg){
-  BOOST_LOG_TRIVIAL(fatal) << msg;
+void Log::fatal(const std::string& source, const std::string& msg){
+  BOOST_LOG_TRIVIAL(fatal) << source << msg;
 }
 
 
-void Log::info(const std::string& msg){
-  BOOST_LOG_TRIVIAL(info) << msg;
+void Log::info(const std::string& source, const std::string& msg){
+  BOOST_LOG_TRIVIAL(info) << source << msg;
 }
 
 
-void Log::trace(const std::string& msg){
+void Log::trace(const std::string& source, const std::string& msg){
   if (trace_enabled)
-    BOOST_LOG_TRIVIAL(trace) << msg;
+    BOOST_LOG_TRIVIAL(trace) << source << msg;
 }
 
 
-void Log::warn(const std::string& msg){
-  BOOST_LOG_TRIVIAL(warning) << msg;
+void Log::warn(const std::string& source, const std::string& msg){
+  BOOST_LOG_TRIVIAL(warning) << source << msg;
 }

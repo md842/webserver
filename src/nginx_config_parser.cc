@@ -6,6 +6,9 @@
 #include "nginx_config_parser.h"
 #include "registry.h" // Registry::inst()
 
+// Standardized log prefix for this source
+#define LOG_PRE "[Config]             "
+
 namespace fs = boost::filesystem;
 
 
@@ -37,10 +40,9 @@ std::string Config::root(){
 }
 
 
-/// Converts the relative root directory in NginxConfig to an absolute root.
+/// Sets the absolute root directory for later conversion of the relative root.
 void Config::set_absolute_root(const std::string& absolute_root){
-  config.root = clean(absolute_root + config.root);
-  config.index = config.root + config.index;
+  config.absolute_root = absolute_root;
 }
 
 
@@ -51,16 +53,16 @@ bool Config::parse(const std::string& file_path){
   if (exists(file_obj) && !is_directory(file_obj)){ // Non-directory file found
     fs::ifstream fstream(file_obj); // Attempt to open the file
     if (fstream){ // File opened successfully
-      Log::trace("Config: Parsing " + file_path);
+      Log::trace(LOG_PRE, "Parsing " + file_path);
       return parse(fstream);
     }
     else{ // File exists, but failed to open it for some reason.
-      Log::fatal("Config: " + file_path + " not found, aborting.");
+      Log::fatal(LOG_PRE, file_path + " not found, aborting.");
       return false;
     }
   }
   else{ // Nonexistent or directory
-    Log::fatal("Config: " + file_path + " not found, aborting.");
+    Log::fatal(LOG_PRE, file_path + " not found, aborting.");
     return false;
   }
 }
@@ -78,7 +80,7 @@ bool Config::parse(fs::ifstream& cfg_in){
     token_type = get_token(cfg_in, token); // Populates token string
 
     if (token_type == INVALID){ // Encountered error while parsing token
-      Log::fatal("Config: Invalid token \"" + token + "\", aborting.");
+      Log::fatal(LOG_PRE, "Invalid token \"" + token + "\", aborting.");
       return false;
     }
 
@@ -135,7 +137,7 @@ bool Config::parse(fs::ifstream& cfg_in){
     }
   }
 
-  Log::fatal("Config: Invalid transition to token \"" + token + "\".");
+  Log::fatal(LOG_PRE, "Invalid transition to token \"" + token + "\".");
   return false;
 }
 
@@ -147,20 +149,20 @@ bool Config::parse_block_start(std::vector<std::string>& statement){
   // Verify statement size; 2 tokens for http/server, 4 tokens for location
   if (new_context == "http" || new_context == "server"){
     if (statement.size() != 2){
-      Log::fatal("Config: Malformed " + new_context + " block (size " +
+      Log::fatal(LOG_PRE, "Malformed " + new_context + " block (size " +
                  std::to_string(statement.size()) + ", expected size 2)");
       return false;
     }
   }
   else if (new_context == "location"){
     if (statement.size() != 4){
-      Log::fatal("Config: Malformed location block (size " +
+      Log::fatal(LOG_PRE, "Malformed location block (size " +
                  std::to_string(statement.size()) + ", expected size 4)");
       return false;
     }
   }
   else{
-    Log::fatal("Config: Unknown target context " + new_context);
+    Log::fatal(LOG_PRE, "Unknown target context " + new_context);
     return false;
   }
 
@@ -175,7 +177,7 @@ bool Config::parse_block_start(std::vector<std::string>& statement){
     name = statement.at(2); // Get handler name
   }
   else{
-    Log::fatal("Config: Invalid context transition to " + new_context);
+    Log::fatal(LOG_PRE, "Invalid context transition to " + new_context);
     return false;
   }
 
@@ -197,7 +199,7 @@ bool Config::parse_block_end(std::vector<std::string>& statement){
   else if (context == HTTP_CONTEXT)
     context = MAIN_CONTEXT;
   else{
-    Log::fatal("Config: Invalid context exit from main; "
+    Log::fatal(LOG_PRE, "Invalid context exit from main; "
                "check number of closing brackets");
     return false;
   }
@@ -216,38 +218,38 @@ bool Config::parse_statement(std::vector<std::string>& statement){
     if (arg == "listen"){
       try{
         config.port = boost::lexical_cast<short>(statement.at(1));
-        Log::trace("Config: Got port " + std::to_string(config.port));
+        Log::trace(LOG_PRE, "Got port " + std::to_string(config.port));
       }
       catch(boost::bad_lexical_cast&){ // Out of range, not a number, etc.
-        Log::fatal("Config: Invalid port \"" + statement.at(1) + "\"");
+        Log::fatal(LOG_PRE, "Invalid port \"" + statement.at(1) + "\"");
         return false;
       }
     }
     else if (arg == "index"){
       config.index = statement.at(1);
-      Log::trace("Config: Got relative index \"" + config.index + "\"");
+      Log::trace(LOG_PRE, "Got relative index \"" + config.index + "\"");
     }
     else if (arg == "root"){
       config.root = statement.at(1);
-      Log::trace("Config: Got relative root \"" + config.root + "\"");
+      Log::trace(LOG_PRE, "Got relative root \"" + config.root + "\"");
     }
     else if (arg == "server_name"){
       // Not implemented - don't do anything with it, but don't error
-      Log::trace("Config: Got server name (not implemented)");
+      Log::trace(LOG_PRE, "Got server name (not implemented)");
     }
     else if (arg == "return"){
       // Not implemented - don't do anything with it, but don't error
-      Log::trace("Config: Got return (not implemented)");
+      Log::trace(LOG_PRE, "Got return (not implemented)");
     }
     else{
-      Log::fatal("Config: Unknown server argument: \"" + arg + "\"");
+      Log::fatal(LOG_PRE, "Unknown server argument: \"" + arg + "\"");
       return false;
     }
   }
   // Valid in location context: try_files
   else if (context == LOCATION_CONTEXT){
     if (arg == "try_files"){
-      Log::trace("Config: Got " + name + " with URI \"" + uri + "\"");
+      Log::trace(LOG_PRE, "Got " + name + " with URI \"" + uri + "\"");
       for (int i = 1; i < statement.size() - 1; i++){ // Exclude try_files arg
         // Ignore 404 fallback, React Router handles 404
         if (statement.at(i) != "=404")
@@ -255,12 +257,12 @@ bool Config::parse_statement(std::vector<std::string>& statement){
       }
     }
     else{
-      Log::fatal("Config: Unknown location argument: \"" + arg + "\"");
+      Log::fatal(LOG_PRE, "Unknown location argument: \"" + arg + "\"");
       return false;
     }
   }
   else{ // No valid arguments in http or main context
-    Log::fatal("Config: Unexpected argument: \"" + arg +
+    Log::fatal(LOG_PRE, "Unexpected argument: \"" + arg +
                "\" in http or main context (expected block)");
     return false;
   }
@@ -275,7 +277,7 @@ void Config::register_mapping(const std::string& arg){
   // Match "$uri" in token and replace with URI for this location, then clean.
   std::string rel_path = clean(std::regex_replace(arg, std::regex("\\$uri"), uri));
 
-  Log::trace("Config: Mapping " + name + " for URI \"" + uri +
+  Log::trace(LOG_PRE, "Mapping " + name + " for URI \"" + uri +
              "\" to relative path \"" + rel_path + "\"");
 
   Registry::inst().register_mapping(name, uri, rel_path);
@@ -290,9 +292,28 @@ bool Config::validate_config(){
     return false;
   if (config.root == "")
     return false;
+  if (config.absolute_root == "") // Should be set by main before parse
+    return false;
   if (context != MAIN_CONTEXT)
     return false;
-  return true; // No errors
+
+  // No parse errors. Prepare absolute root dir and log info, then return true.
+  config.root = clean(config.absolute_root + config.root);
+  config.index = config.root + config.index;
+
+  Log::info(LOG_PRE, "Found root directory at " + Config::inst().root());
+  Log::info(LOG_PRE, "Found index page at " + Config::inst().index());
+  
+  // Log mapping that was extracted from the config
+  for (const std::string& type : Registry::inst().get_types()){
+    for (auto& pair : Registry::inst().get_map(type)){
+      for (const std::string& rel_path : pair.second)
+        Log::info(LOG_PRE, type + " mapped URI \"" + pair.first +
+                  "\" to relative path \"" + rel_path + "\"");
+    }
+  }
+
+  return true;
 }
 
 
