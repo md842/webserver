@@ -13,3 +13,9 @@ main{
 .description{
   margin: 1em 0em; /* top/bottom, left/right */
 }
+
+.long-desc{ /* Allows line breaks to show in long project descriptions. */
+  white-space: pre-line;
+  line-height: 1.25em;
+  padding-bottom: 0.625em;
+}

@@ -51,17 +51,20 @@ export default class SimInterface extends React.Component<{}, IOState>{
     let target_id = window.location.pathname.substring(14);
     const data = (await getDoc(doc(db, "projects", target_id))).data();
 
-    let unraveledTags = ""; // Convert tags array to string
-    data!.tags.forEach((element: string) => unraveledTags += element + ", ");
-    unraveledTags = unraveledTags.substring(0, unraveledTags.length - 2);
+    let uDesc = ""; // Unravel long_desc array to string
+    data!.long_desc.forEach((element: string) => uDesc += element + '\n\n');
+
+    let uTags = ""; // Unravel tags array to string
+    data!.tags.forEach((element: string) => uTags += element + ", ");
+    uTags = uTags.substring(0, uTags.length - 2); // Remove the last comma
 
     this.setState({
       // Firestore stores \n as literal "\\n", so replace with newlines \n
       input: data!.default_input.replaceAll("\\n", '\n'),
       input_as_file: data!.input_as_file,
-      long_desc: data!.long_desc,
+      long_desc: uDesc,
       repo: data!.repo,
-      tags: unraveledTags,
+      tags: uTags,
       title: data!.title
     });
   }
@@ -92,7 +95,7 @@ export default class SimInterface extends React.Component<{}, IOState>{
       <main>
         <h1 className="mb-4">{this.state.title}</h1>
         <div className="description">
-          <p>{this.state.long_desc}</p>
+          <p className="long-desc">{this.state.long_desc}</p>
           <p>Tags: {this.state.tags}</p>
           <p>
             This simulation runs on a custom interface that communicates with
