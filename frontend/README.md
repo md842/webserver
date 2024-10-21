@@ -1,4 +1,4 @@
-# Max's Personal Web Server
+# Max's Personal Website
 This repository contains the source code and documentation for my personal website.
 
 All console commands given in this document assume Arch Linux kernel 6.9.6-arch1-1.

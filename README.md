@@ -40,6 +40,8 @@ webserver/build$ cmake ..
 webserver/build$ make
 ```
 
+Note: `build.sh` only builds the web server back end; it does not build the front end. See the README.md in the `frontend/` directory for instructions on how to build the front end.
+
 ## How to Test
 Navigate to the project directory and run the test script.
 ```console
@@ -59,6 +61,8 @@ webserver/tests/integration$ ./integration_tests.sh
 ```
 The detailed results of the integration tests are written to `webserver/tests/integration/results.txt`.
 
+Note: Some tests will fail if the front end has not been built.
+
 ## How to Run
 After building the server, start it using the run script, which uses the default config.
 ```console
@@ -70,7 +74,9 @@ The server can be started manually with the following command. Any config file m
 webserver$ ./build/bin/server configs/local_config.conf
 ```
 
-The server will now serve requests from a local browser. For example, if the config specifies port 8080, `http://localhost:8080/` will display the home page. 
+The server will now serve requests from a local browser. For example, if the config specifies port 8080, `http://localhost:8080/` will display the home page.
+
+Note: The home page will display Internal Server Error (Error 500) if the front end has not been built.
 
 If the server is running within a Docker container, replace `localhost` with the `IPv4Address` of the Docker container, e.g., `172.17.0.2`. The address can be found by running `docker network inspect bridge` from a local terminal outside of the Docker container. For example, if the config specifies port 8080, visiting `http://172.17.0.2:8080/` will display the home page. 
 
