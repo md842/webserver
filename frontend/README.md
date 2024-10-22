@@ -1,7 +1,7 @@
 # Max's Personal Website
 This repository contains the source code and documentation for my personal website.
 
-All console commands given in this document assume Arch Linux kernel 6.9.6-arch1-1.
+All console commands given in this document are for Arch Linux kernel 6.9.6-arch1-1 and assume you have already cloned the top level repository.
 
 This project was bootstrapped with [Vite](https://vitejs.dev/).
 
@@ -14,22 +14,18 @@ $ sudo pacman -S npm
 
 ## How to Build
 1. Install required dependencies from previous section.
-2. Clone this repository.
-```console
-$ git clone https://github.com/md842/webserver
-```
-3. Navigate to the project directory.
+2. Navigate to the `frontend/` directory.
 ```console
 $ cd webserver
 webserver$ cd frontend
 ```
 
-4. Install package dependencies.
+3. Install package dependencies.
 ```console
 frontend$ npm install
 ```
 
-5. Run the production build.
+4. Run the production build.
 ```console
 frontend$ npm run build
 ```
