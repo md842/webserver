@@ -65,6 +65,6 @@ images: [
 ]
 
 # Cloud build options
-serviceAccount: "464336319665@cloudbuild.gserviceaccount.com"
+serviceAccount: "464336319665-compute@developer.gserviceaccount.com"
 options:
   logging: CLOUD_LOGGING_ONLY
