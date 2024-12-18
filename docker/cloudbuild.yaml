@@ -2,10 +2,12 @@ steps:
   # Install npm dependencies
   - name: 'gcr.io/cloud-builders/npm'
     args: ['install']
+    dir: 'frontend'
 
   # Build npm frontend
   - name: 'gcr.io/cloud-builders/npm'
     args: ['run', 'build']
+    dir: 'frontend'
 
   # Pull base image for cache
   - name: 'gcr.io/cloud-builders/docker'
