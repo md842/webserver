@@ -20,16 +20,16 @@ export default function Home(){
         <aside>
           <h3>About Me</h3>
           <p>
-            I am a hard-working, driven computer science major who wishes to better the world through software engineering.
+            I am a passionate and driven computer science graduate who strives to make my mark on the world through software engineering.
             <br/><br/>
-            I am available for employment opportunities following my graduation in December 2024. 
+            I graduated from UCLA with a B.S. in Computer Science in December 2024 and am currently seeking employment opportunities.
           </p>
           <br/><br/>
           <h3>About This Website</h3>
           <p>
-            I wanted to put a unique twist on the classic personal website and showcase my full stack development skills by making one from scratch. The front end is written in <a href="https://react.dev/">React</a> + TypeScript. The back end consists of a web server and a database; the web server is written in C++ with <a href="https://www.boost.org/">Boost</a>, and the database used is <a href="https://firebase.google.com/">Google Cloud Firestore</a>.
+            I've put a unique twist on the classic personal website and showcased my full stack development skills by writing both the website and the web server from scratch. The front end is built with <a href="https://react.dev/">React</a> + TypeScript. The back end consists of a web server and a database; the web server is written in C++ with <a href="https://www.boost.org/">Boost</a>, and the database used is <a href="https://firebase.google.com/">Google Cloud Firestore</a>.
             <br/><br/>
-            I have implemented many advanced features into this website, including the ability to <a href="/projects/sim/cpu-simulator">directly run some of my past projects' binaries through a custom web interface</a>! I would be thrilled if you took the time to <a href="/projects">check out my projects</a>.
+            I have implemented many advanced features into this website, including the ability to <a href="/projects/sim/cpu-simulator">directly run some of my past projects' binaries through a custom web interface</a>. I would be delighted if you took the time to <a href="/projects">explore my projects</a>.
           </p>
         </aside>
       </div>
