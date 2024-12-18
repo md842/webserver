@@ -12,6 +12,12 @@ This project was bootstrapped with [Vite](https://vitejs.dev/).
 $ sudo pacman -S npm
 ```
 
+#### Earth Impact Simulator
+```console
+$ cd src/assets
+$ git clone git@github.com:md842/earth-impact-simulator.git
+```
+
 ## How to Build
 1. Install required dependencies from previous section.
 2. Navigate to the `frontend/` directory.

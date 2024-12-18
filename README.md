@@ -15,10 +15,13 @@ $ sudo pacman -S cmake
 $ sudo pacman -S boost
 ```
 
-#### gcovr, gtest (gcovr-7.2-2, gtest 1.15.2-1 used)
+## Testing Dependencies (required)
+
+#### gcovr, gtest, netcat (gcovr-7.2-2, gtest 1.15.2-1, gnu-netcat-0.7.1-10 used)
 ```console
 $ sudo pacman -S gcovr
 $ sudo pacman -S gtest
+$ sudo pacman -S netcat
 ```
 
 ## How to Build
@@ -78,7 +81,7 @@ The server will now serve requests from a local browser. For example, if the con
 
 Note: The home page will display Internal Server Error (Error 500) if the front end has not been built. The Docker container, however, is not required.
 
-## Coverage Reporting Dependencies (optional)
+## Coverage Reporting Dependencies (optional, required for Docker)
 
 #### Python (python-3.12.4-1 used)
 ```console
