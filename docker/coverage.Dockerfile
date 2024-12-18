@@ -6,6 +6,4 @@ COPY . /webserver
 
 # Generate coverage report
 RUN cmake -DCMAKE_BUILD_TYPE=Coverage ..
-
-ENTRYPOINT ["make"]
-CMD ["coverage"]
+RUN make coverage

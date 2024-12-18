@@ -1,0 +1,65 @@
+steps:
+  # Install npm dependencies
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['install']
+
+  # Build npm frontend
+  - name: 'gcr.io/cloud-builders/npm'
+    args: ['run', 'build']
+
+  # Pull base image for cache
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args: ['-c', 'docker pull gcr.io/$PROJECT_ID/webserver:base || exit 0']
+
+  # Build base image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-f', 'docker/base.Dockerfile',
+      '-t', 'webserver:base',
+      '-t', 'gcr.io/$PROJECT_ID/webserver:base',
+      '--cache-from', 'gcr.io/$PROJECT_ID/webserver:base',
+      '.'
+    ]
+
+  # Push base image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/webserver:base']
+
+  # Build build image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-f', 'docker/build.Dockerfile',
+      '-t', 'webserver:build',
+      '-t', 'gcr.io/$PROJECT_ID/webserver:build',
+      '.'
+    ]
+    id: 'build'
+
+  # Build coverage image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-f', 'docker/coverage.Dockerfile',
+      '.'
+    ]
+    waitFor: ['build']
+
+  # Build deploy image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-f', 'docker/deploy.Dockerfile',
+      '-t', 'webserver',
+      '-t', 'gcr.io/$PROJECT_ID/webserver',
+      '.'
+    ]
+    waitFor: ['build']
+
+# Push base and deploy image to artifact registry
+images: [
+  'us-west1-docker.pkg.dev/$PROJECT_ID/docker-artifact-registry/webserver:base',
+  'us-west1-docker.pkg.dev/$PROJECT_ID/docker-artifact-registry/webserver',
+]
