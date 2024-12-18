@@ -35,7 +35,6 @@ steps:
       'build',
       '-f', 'docker/build.Dockerfile',
       '-t', 'webserver:build',
-      '-t', 'gcr.io/$PROJECT_ID/webserver:build',
       '.'
     ]
     id: 'build'
@@ -54,17 +53,13 @@ steps:
     args: [
       'build',
       '-f', 'docker/deploy.Dockerfile',
-      '-t', 'webserver',
-      '-t', 'gcr.io/$PROJECT_ID/webserver',
+      '-t', 'gcr.io/$PROJECT_ID/webserver:latest',
       '.'
     ]
     waitFor: ['build']
 
 # Push base and deploy image to artifact registry
-images: [
-  'us-west1-docker.pkg.dev/$PROJECT_ID/docker-artifact-registry/webserver:base',
-  'us-west1-docker.pkg.dev/$PROJECT_ID/docker-artifact-registry/webserver',
-]
+images: ['gcr.io/$PROJECT_ID/webserver:base', 'gcr.io/$PROJECT_ID/webserver:latest']
 
 # Cloud build options
 serviceAccount: "464336319665-compute@developer.gserviceaccount.com"
