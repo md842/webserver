@@ -1,11 +1,26 @@
 /* Filter section styling */
 
-#filter-container{
-  display: flex;
+@media (max-width: 1599px){
+  /* If the window is less than 1600px wide, the tag buttons render poorly. */
+  #filter-container{
+    display: none;
+  }
 }
 
-#filter-label{
-  margin: auto 1em auto 0; /* top, right, bottom, left */
+@media (min-width: 1600px) and (max-width: 1919px){
+  #filter-label{
+    margin: 0 1em 1em 0; /* top, right, bottom, left */
+  }
+}
+
+@media (orientation: landscape) and (min-width: 1920px){
+  /* If the window is at least 1920px wide, the tag buttons and label can be on the same line. */
+  #filter-container{
+    display: flex;
+  }
+  #filter-label{ /* Vertically align label based on button height */
+    margin: auto 1em auto 0; /* top, right, bottom, left */
+  }
 }
 
 .filter-btns .btn{
