@@ -16,13 +16,13 @@ void Log::res_metrics(
   const std::string& client_ip,
   size_t req_bytes,
   size_t res_bytes,
-  const std::string& method,
+  const std::string& req_summary,
   unsigned response_code
 ){
   BOOST_LOG_TRIVIAL(info) << "[Response]          " <<
     " Client: " << client_ip <<
-    " | Method: " << method <<
     " | Status: " << response_code <<
+    " | Request: " << req_summary <<
     " | Received (B): " << req_bytes <<
     " | Sent (B): " << res_bytes;
 }

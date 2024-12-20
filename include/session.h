@@ -21,7 +21,7 @@ private:
   void handle_read(const boost::system::error_code& error, size_t bytes);
   void create_response(const boost::system::error_code& error, int status);
   void create_response(const boost::system::error_code& error, Request& req);
-  void do_write(const boost::system::error_code& error, Response* res, size_t req_bytes, const std::string& method);
+  void do_write(const boost::system::error_code& error, Response* res, size_t req_bytes, const std::string& req_summary);
   void close_session(int severity, const std::string& message);
   boost::asio::ip::tcp::socket socket_;
   enum{max_length = 1024};
