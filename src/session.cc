@@ -65,45 +65,51 @@ void session::handle_read(const error_code& error, size_t bytes){
        receive an incomplete request from one read. We need to ensure that the
        full request has been read before processing it. */
 
-    /* If the Content-Length header is present, we know the complete request
-       has been read when payload size matches Content-Length. */
-    if (req.has_content_length()){
-      try{
-        // Throws std::invalid_argument
-        int content_length = std::stoi(req.at(http::field::content_length));
-        int payload_size = 0;
+    int req_error = verify_req(req); // Returns 0 if request valid, else status
+    if (req_error){ // Invalid request, generate an error response
+      create_response(error, req_error);
+    }
+    else {
+      /* If the Content-Length header is present, we know the complete request
+        has been read when payload size matches Content-Length. */
+      if (req.has_content_length()){
+        try{
+          // Throws std::invalid_argument
+          int content_length = std::stoi(req.at(http::field::content_length));
+          int payload_size = 0;
 
-        boost::optional<uint64_t> payload_size_opt = req.payload_size();
-        if (payload_size_opt) // boost::optional has value
-          payload_size = *payload_size_opt; // Extract and set value
+          boost::optional<uint64_t> payload_size_opt = req.payload_size();
+          if (payload_size_opt) // boost::optional has value
+            payload_size = *payload_size_opt; // Extract and set value
 
-        if (payload_size < content_length)
-          do_read(); // Request is incomplete, continue reading incoming data
-        else if (payload_size == content_length)
-          create_response(error, req); // Request is complete, handle it
-        else{ // Payload size exceeds Content-Length; should not happen!
+          if (payload_size < content_length)
+            do_read(); // Request is incomplete, continue reading incoming data
+          else if (payload_size == content_length)
+            create_response(error, req); // Request is complete, handle it
+          else{ // Payload size exceeds Content-Length; should not happen!
+            create_response(error, 400); // Create 400 Bad Request response
+          }
+        }
+        catch(std::invalid_argument){ // Thrown by std::stoi()
           create_response(error, 400); // Create 400 Bad Request response
         }
       }
-      catch(std::invalid_argument){ // Thrown by std::stoi()
-        create_response(error, 400); // Create 400 Bad Request response
-      }
-    }
 
-    /* Otherwise, there should be no body, so we know the complete request has
-       been read when bytes < max_length or the request ends with \r\n\r\n. */
-    else{
-      if (bytes < max_length)
-        create_response(error, req); // Request is complete, handle it
-      else if (total_received_data_.substr(
-        total_received_data_.length() - 4) == "\r\n\r\n")
-        /* This condition would suffice for all requests with no body. However,
-         it is a rare case (complete request length perfectly divisible by
-         max_length) that is slower than comparing bytes < max_length, so the
-         above comparison is preferred and this is left as a fallback. */
-        create_response(error, req); // Request is complete, process it
-      else
-        do_read(); // Request is incomplete, continue reading incoming data
+      /* Otherwise, there should be no body, so we know the complete request has
+        been read when bytes < max_length or the request ends with \r\n\r\n. */
+      else{
+        if (bytes < max_length)
+          create_response(error, req); // Request is complete, handle it
+        else if (total_received_data_.substr(
+          total_received_data_.length() - 4) == "\r\n\r\n")
+          /* This condition would suffice for all requests with no body. However,
+          it is a rare case (complete request length perfectly divisible by
+          max_length) that is slower than comparing bytes < max_length, so the
+          above comparison is preferred and this is left as a fallback. */
+          create_response(error, req); // Request is complete, process it
+        else
+          do_read(); // Request is incomplete, continue reading incoming data
+      }
     }
   }
   else if (error == error::eof)
@@ -118,58 +124,47 @@ void session::handle_read(const error_code& error, size_t bytes){
 /// Creates an error response to an invalid request.
 void session::create_response(const error_code& error, int status){
   size_t req_bytes = total_received_data_.length();
-  std::string method = "UNKNOWN";
+  std::string req_summary = "Invalid";
 
   total_received_data_ = ""; // Clear total received data
   Response* res = new Response();
   res->result(status); // Set response status code to specified error status
   res->version(11);
 
-  do_write(error, res, req_bytes, method);
+  do_write(error, res, req_bytes, req_summary);
 }
 
 
 /// Creates a response by dispatching a RequestHandler for a valid request.
 void session::create_response(const error_code& error, Request& req){
   size_t req_bytes = total_received_data_.length();
-  std::string method = req.method_string();
-
-  // Log::trace("Incoming HTTP request:\n\n" + req_as_string(req)); // Temp debug log
+  std::string req_summary = req.method_string();
+  req_summary += " " + std::string(req.target());
 
   total_received_data_ = ""; // Clear total received data
-  Response* res = nullptr; // To be defined based on result of verify_req
+  Response* res = nullptr; // To be defined by the request handler
+  RequestHandler* handler = dispatch(req);
+  res = handler->handle_request(req);
+  free(handler); // Free memory used by request handler
 
-  int req_error = verify_req(req); // Returns 0 if request valid, else err code
-  if (req_error){ // Invalid request, generate an error response
-    res = new Response();
-    res->result(req_error); // Set response status code to verify_req() output
-    res->version(11);
-  }
-  else{ // Valid request, dispatch a request handler to obtain response
-    RequestHandler* handler = dispatch(req);
-    res = handler->handle_request(req);
-    free(handler); // Free memory used by request handler
-  }
-  do_write(error, res, req_bytes, method);
+  do_write(error, res, req_bytes, req_summary);
 }
 
 
 /// Given a pointer to a Response object, writes the response to the client.
 void session::do_write(const error_code& error, Response* res,
-                       size_t req_bytes, const std::string& method){
-  // Log::trace("Outgoing HTTP response:\n\n" + res_as_string(*res)); // Temp debug log
+                       size_t req_bytes, const std::string& req_summary){
 
   // async_write returns immediately, so res must be kept alive.
   // Lambda write handler captures res and deletes it after write finishes.
   http::async_write(socket_, *res,
-    [this, res, req_bytes, method](error_code ec, size_t res_bytes){
+    [this, res, req_bytes, req_summary](error_code ec, size_t res_bytes){
       if (!ec){ // Successful write
-
         Log::res_metrics( // Write machine-parseable formatted log
           client_ip_,
           req_bytes,
           res_bytes,
-          method,
+          req_summary,
           res->result_int()
         );
 
@@ -253,6 +248,7 @@ int verify_req(Request& req){
     case http::verb::unknown:
       return 400; // 400 Bad Request
     case http::verb::delete_:
+    case http::verb::head:
     case http::verb::put:
     case http::verb::connect:
     case http::verb::options:

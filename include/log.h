@@ -12,7 +12,7 @@ public:
     const std::string& client_ip,
     size_t req_bytes,
     size_t res_bytes,
-    const std::string& method,
+    const std::string& req_summary,
     unsigned response_code
   );
 
