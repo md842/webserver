@@ -17,6 +17,7 @@ void Log::res_metrics(
   size_t req_bytes,
   size_t res_bytes,
   const std::string& req_summary,
+  const std::string& invalid_req,
   unsigned response_code
 ){
   BOOST_LOG_TRIVIAL(info) << "[Response]          " <<
@@ -24,7 +25,8 @@ void Log::res_metrics(
     " | Status: " << response_code <<
     " | Request: " << req_summary <<
     " | Received (B): " << req_bytes <<
-    " | Sent (B): " << res_bytes;
+    " | Sent (B): " << res_bytes <<
+    (invalid_req.length() > 0 ? "\nInvalid request:\n" + invalid_req : "");
 }
 
 

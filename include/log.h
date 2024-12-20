@@ -13,6 +13,7 @@ public:
     size_t req_bytes,
     size_t res_bytes,
     const std::string& req_summary,
+    const std::string& invalid_req,
     unsigned response_code
   );
 
