@@ -29,7 +29,7 @@ export default class NotebookViewer extends React.Component<{}, Notebook>{
 
     const set_dyn_height = () => {
       document.documentElement.style.setProperty('--dyn-height',
-        "calc(" + window.innerHeight * 0.9 + "px - 70px - 5em");
+        "calc(" + window.innerHeight + "px - 1em)");
     }
     set_dyn_height(); // Set --dyn-height immediately one time
     window.addEventListener("resize", set_dyn_height); // Add resize listener
@@ -60,14 +60,14 @@ export default class NotebookViewer extends React.Component<{}, Notebook>{
   render(){
     return(
       <main>
-        <div className="dyn-div">
-          <h1>{this.state.title}</h1>
-          <div className="description">
-            <p className="long-desc">{this.state.long_desc}</p>
-            <p>Tags: {this.state.tags}</p>
-            <NavButton href="/projects">Back to projects</NavButton>
-          </div>
-          <embed src={this.state.nb_embed}/>
+        <h1>{this.state.title}</h1>
+        <div className="description">
+          <p className="long-desc">{this.state.long_desc}</p>
+          <p>Tags: {this.state.tags}</p>
+          <NavButton href="/projects">Back to projects</NavButton>
+        </div>
+        <div className="nb-container">
+          <iframe src={this.state.nb_embed}/>
         </div>
       </main>
     );

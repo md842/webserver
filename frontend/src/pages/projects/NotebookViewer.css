@@ -1,16 +1,25 @@
 :root {
-  --dyn-height: 0px;
+  --dyn-height: 500px;
 }
 
-.dyn-div{
-  height: var(--dyn-height);
-  min-height: 500px; /* Prevent embed from disappearing on small screens */
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.dyn-div embed{
+.nb-container {
   border: 1px solid black;
-  flex-basis: 100%; /* Fill remainder of dyn-div */
+  height: var(--dyn-height);
+  overflow: hidden;
+  overflow-x: scroll;
+}
+
+.nb-container iframe {
+  height: 100%;
+}
+
+@media (max-width: 1599px){
+  .nb-container iframe {
+    width: 1200px; /* Ensure the whole notebook is viewable on any screen */
+  }
+}
+@media (min-width: 1600px){
+  .nb-container iframe {
+    width: 100%;
+  }
 }
