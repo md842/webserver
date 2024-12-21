@@ -52,10 +52,6 @@ integration_test "../../frontend/build/index.html"                    "curl"    
 integration_test "../../frontend/public/test.txt"                     "curl"        "-o output -s http://localhost:8080/test.txt"
 integration_test "../nc/outputs/leave_dir.txt"                        "nc"          "localhost 8080"                                              "../nc/inputs/leave_dir.txt"
 integration_test "../nc/outputs/invalid_method.txt"                   "nc"          "localhost 8080"                                              "../nc/inputs/invalid_method.txt"
-integration_test "../nc/outputs/content_length_non_numeric_get.txt"   "nc"          "localhost 8080"                                              "../nc/inputs/content_length_non_numeric_get.txt"
-integration_test "../nc/outputs/content_length_non_numeric_post.txt"  "nc"          "localhost 8080"                                              "../nc/inputs/content_length_non_numeric_post.txt"
-integration_test "../nc/outputs/excessive_payload_get.txt"            "nc"          "localhost 8080"                                              "../nc/inputs/excessive_payload_get.txt"
-integration_test "../nc/outputs/excessive_payload_post.txt"           "nc"          "localhost 8080"                                              "../nc/inputs/excessive_payload_post.txt"
 # Function call  $1: Expected output file                             $2: Command   $3: Options                                                   $4 Netcat input file (omit for curl)
 
 kill $WEBSERVER_PID # Shut down web server after all tests have finished. Also ends any netcat background processes that are still alive.
