@@ -54,12 +54,11 @@ void session::handle_read(const error_code& error, size_t bytes){
   if (!error){
     // Append incoming data from read buffer (data_) to total received data
     total_received_data_ += std::string(data_, bytes);
-
-    // Treat excessively long requests as malicious
-    if (total_received_data_.length() > max_length * 8)
-      create_response(error,
-                      "(Invalid, payload size is excessive)",
-                      413); // 413 Payload Too Large
+    // Treat excessively large requests as malicious
+    if (total_received_data_.length() >= max_length * 4){
+      create_response(error, 413); // 413 Payload Too Large
+      return;
+    }
 
     Request req = parse_req(total_received_data_);
     
@@ -69,30 +68,26 @@ void session::handle_read(const error_code& error, size_t bytes){
     if (req.has_content_length()){
       /* If the Content-Length header is present, we know the complete request
          has been read when payload size matches Content-Length. */
-      try{
-        // Throws std::invalid_argument
-        int content_length = std::stoi(req.at(http::field::content_length));
-        int payload_size = 0;
 
-        boost::optional<uint64_t> payload_size_opt = req.payload_size();
-        if (payload_size_opt) // boost::optional has value
-          payload_size = *payload_size_opt; // Extract and set value
+      /* Throws std::invalid_argument if non-numeric, but has_content_length()
+         ensures it is numeric, no further exception handling required. */
+      int content_length = std::stoi(req.at(http::field::content_length));
+      int payload_size = 0;
+      
+      // Treat excessively large requests as malicious
+      if (content_length >= max_length * 4){
+        create_response(error, 413); // 413 Payload Too Large
+        return;
+      }
 
-        if (payload_size < content_length) // Request is incomplete
-          do_read(); // Continue reading incoming data
-        else if (payload_size == content_length) // Request is complete
-          create_response(error, req); // Create response
-        else{
-          create_response(error,
-                          "(Invalid, payload size exceeds Content-Length)",
-                          400); // 400 Bad Request
-        }
-      }
-      catch(std::invalid_argument){ // Thrown by std::stoi() for non-numeric
-        create_response(error,
-                        "(Invalid, non-numeric Content-Length argument)",
-                        400); // 400 Bad Request
-      }
+      boost::optional<uint64_t> payload_size_opt = req.payload_size();
+      if (payload_size_opt) // boost::optional has value
+        payload_size = *payload_size_opt; // Extract and set value
+
+      if (payload_size < content_length) // Request is incomplete
+        do_read(); // Continue reading incoming data
+      else // Request is complete
+        create_response(error, req); // Create response
     }
     else{
       /* If the Content-Length header is not present, there should be no body,
@@ -121,9 +116,8 @@ void session::handle_read(const error_code& error, size_t bytes){
 
 
 /* Overload 1 of 2:
-   Create an error response to a given reason and status. */
-void session::create_response(const error_code& error,
-                              const std::string& reason, int status){
+   Create an error response to a given status code. */
+void session::create_response(const error_code& error, int status){
   size_t req_bytes = total_received_data_.length();
 
   total_received_data_ = ""; // Clear total received data
@@ -131,7 +125,7 @@ void session::create_response(const error_code& error,
   res->result(status); // Set response status code to specified error status
   res->version(11);
 
-  do_write(error, res, req_bytes, reason, "");
+  do_write(error, res, req_bytes, "(Invalid)", "");
 }
 
 
@@ -153,8 +147,8 @@ void session::create_response(const error_code& error, Request& req){
     res = new Response();
     res->result(req_error); // Set response status code to verify_req() output
     res->version(11);
-    req_summary = "(Invalid)"; // Indicate invalid request in log
-    invalid_req = req_as_string(req);
+    req_summary = "(Invalid)"; // Log invalid request
+    invalid_req = req_as_string(req); // Log invalid request
   }
   else{ // Valid request, dispatch a request handler to obtain response
     RequestHandler* handler = dispatch(req);
@@ -185,8 +179,11 @@ void session::do_write(const error_code& error, Response* res,
           invalid_req,
           res->result_int()
         );
-
-        if (res->keep_alive()){ // Connection: keep-alive was requested
+        if (res->result_int() == 413){ // 413 Payload Too Large
+          free(res); // Free memory used by HTTP response object
+          close_session(1, "Client attempted to send an excessive payload, shutting down.");
+        }
+        else if (res->keep_alive()){ // Connection: keep-alive was requested
           free(res); // Free memory used by HTTP response object
           do_read(); // Continue listening for requests
         }
@@ -309,14 +306,14 @@ std::string req_as_string(Request req){
   std::string method = req.method_string();
   std::string target = std::string(req.target());
   std::string ver = std::to_string(req.version());
-  std::string out = method + ' ' + target + " HTTP/" + ver[0] + '.' + ver[1] + '\n';
+  std::string out = method + ' ' + target + " HTTP/" + ver[0] + '.' + ver[1] + " | ";
   for (auto& header : req.base()){
     out += std::string(header.name_string()) + ": " +
-           std::string(header.value()) + "\n";
+           std::string(header.value()) + " | ";
   }
   std::string body = req.body();
   if (body.length()){
-    out += '\n' + body + '\n';
+    out += "Body: " + body;
   }
   return out;
 }

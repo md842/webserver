@@ -1,0 +1,21 @@
+HTTP/1.1 200 OK
+Connection: keep-alive
+Cache-Control: public, max-age=604800, immutable
+Last-Modified: Fri, 20 Dec 2024 20:13:54 GMT
+Content-Type: text/html
+Content-Length: 470
+
+<!doctype html>
+<html lang="en" data-bs-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:,">
+    <title>Max Deng's Personal Website</title>
+    <script type="module" crossorigin src="/assets/index-D3wbwtKi.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-RGylyymo.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

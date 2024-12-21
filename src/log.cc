@@ -20,13 +20,14 @@ void Log::res_metrics(
   const std::string& invalid_req,
   unsigned response_code
 ){
-  BOOST_LOG_TRIVIAL(info) << "[Response]          " <<
-    " Client: " << client_ip <<
+  BOOST_LOG_TRIVIAL(info) << "[Response]           " <<
+    "Client: " << client_ip <<
     " | Status: " << response_code <<
     " | Request: " << req_summary <<
     " | Received (B): " << req_bytes <<
-    " | Sent (B): " << res_bytes <<
-    (invalid_req.length() > 0 ? "\nInvalid request:\n" + invalid_req : "");
+    " | Sent (B): " << res_bytes;
+  if (invalid_req.length() > 0)
+    BOOST_LOG_TRIVIAL(warning) << "[Invalid Request]    " << invalid_req;
 }
 
 
