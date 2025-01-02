@@ -8,11 +8,11 @@ import Container from 'react-bootstrap/Container';
 import Nav from 'react-bootstrap/Nav';
 import Navbar from 'react-bootstrap/Navbar';
 
-import moon from '../assets/moon.svg';
-import sun from '../assets/sun.svg';
+//import moon from '../assets/moon.svg';
+//import sun from '../assets/sun.svg';
 
 export default function Header(){
-  const [icon, setIcon] = useState(moon);
+  const [icon, setIcon] = useState("moon");
   const [mode, setMode] = useState("light");
 
   useEffect(() => {
@@ -22,9 +22,9 @@ export default function Header(){
       setMode(storedMode);
       document.documentElement.setAttribute('data-bs-theme', storedMode);
       if (storedMode == "light") // Switch to light mode
-        setIcon(moon);
+        setIcon("moon");
       else // Switch to dark mode
-        setIcon(sun);
+        setIcon("sun");
     } // Stick with default if undefined (e.g., first session)
   }, []);
 
@@ -36,12 +36,12 @@ export default function Header(){
 
   const switchColorMode = () => {
     if (mode == "dark"){ // Switch to light mode
-      setIcon(moon); // Set icon to moon as a "switch to dark mode" button
+      setIcon("moon"); // Set icon to moon as a "switch to dark mode" button
       setMode("light");
       document.documentElement.setAttribute('data-bs-theme', "light");
     }
     else{ // Switch to dark mode
-      setIcon(sun); // Set icon to sun as a "switch to light mode" button
+      setIcon("sun"); // Set icon to sun as a "switch to light mode" button
       setMode("dark");
       document.documentElement.setAttribute('data-bs-theme', "dark");
     }
@@ -63,7 +63,7 @@ export default function Header(){
             variant="link"
             onClick={() => switchColorMode()}
           >
-            <img src={icon} className="dark-mode-svg"/>
+            <i className={"bi bi-" + icon + "-fill"}></i>
           </Button>
         </Container>
       </Navbar>

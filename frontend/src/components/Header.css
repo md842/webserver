@@ -2,11 +2,12 @@
   margin-bottom: 4em;
 }
 
-.dark-mode-svg{
-  max-height: 2em; /* Shrink svg to match navbar */
-  filter: invert(100%); /* Default state is white */
+.navbar .bi{
+  line-height: 0px; /* Remove padding introduced by line-height */
+  font-size: 2em;
+  color: #fff;
 }
 
-.dark-mode-svg:hover{
-  filter: invert(80%); /* Turns light-gray when hovered */
+.navbar .bi:hover{
+  filter: invert(20%); /* Turns light-gray when hovered */
 }

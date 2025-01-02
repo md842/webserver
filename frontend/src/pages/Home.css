@@ -36,10 +36,7 @@
   margin: 1em 0em; /* top/bottom, left/right */
 }
 
-[data-bs-theme="dark"]{
-  .github-svg{
-    /* Goal is to match --bs-body-color (#dee2e6: H 210, S 3%, B 90%).
-       invert(100%) from the base #212529 yields #dedad6: H 30 S 4% B 87%. */
-    filter: invert(100%) saturate(75%) brightness(103%) hue-rotate(176deg);
-  }
+.profile section .bi{
+  font-size: 4em;
+  margin: 0em 0.125em; /* top/bottom, left/right */
 }
