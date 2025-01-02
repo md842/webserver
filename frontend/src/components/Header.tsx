@@ -48,7 +48,7 @@ export default function Header(){
   }
 
   return(
-    <header>
+    <header className="sticky-top">
       <Navbar sticky="top" bg="dark" data-bs-theme="dark">
         <Container className="nav-container">
           <Nav
