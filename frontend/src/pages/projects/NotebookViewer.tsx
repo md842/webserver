@@ -51,7 +51,8 @@ export default class NotebookViewer extends React.Component<{}, Notebook>{
 
     this.setState({
       long_desc: uDesc,
-      nb_embed: data!.nb_embed,
+      // Use naming convention of notebook files to get embed
+      nb_embed: "/notebooks/" + target_id + "-nb.html",
       tags: uTags,
       title: data!.title
     });
