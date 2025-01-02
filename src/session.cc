@@ -1,6 +1,5 @@
 #include <boost/asio.hpp> // io_service, tcp
 #include <boost/bind/bind.hpp> // bind
-#include <boost/log/trivial.hpp> // BOOST_LOG_TRIVIAL
 
 #include "log.h"
 #include "nginx_config_parser.h" // Config::inst()
@@ -8,7 +7,7 @@
 #include "session.h"
 
 // Standardized log prefix for this source
-#define LOG_PRE "[Session]            "
+#define LOG_PRE "[Session]  "
 
 using namespace boost::asio;
 using boost::asio::ip::tcp;
@@ -19,7 +18,8 @@ namespace http = boost::beast::http;
 RequestHandler* dispatch(Request& req);
 Request parse_req(const std::string& received);
 int verify_req(Request& req);
-std::string req_as_string(Request req); // Helper function for debugging
+std::string proc_invalid_req(const std::string& received); // Helper function for invalid request logging
+// std::string req_as_string(Request req); // Helper function for debugging
 // std::string res_as_string(Response res); // Helper function for debugging
 
 
@@ -48,7 +48,7 @@ void session::handle_read(const error_code& error, size_t bytes){
     client_ip_ = socket_.remote_endpoint().address().to_string(); 
   }
   catch(boost::system::system_error){ // Thrown by socket::remote_endpoint()
-    close_session(0, "Client disconnected from session, shutting down.");
+    close_session(0, "Client disconnected from session.");
     return;
   }
   if (!error){
@@ -120,12 +120,12 @@ void session::handle_read(const error_code& error, size_t bytes){
 void session::create_response(const error_code& error, int status){
   size_t req_bytes = total_received_data_.length();
 
-  total_received_data_ = ""; // Clear total received data
   Response* res = new Response();
   res->result(status); // Set response status code to specified error status
   res->version(11);
 
-  do_write(error, res, req_bytes, "(Invalid)", "");
+  total_received_data_ = ""; // Clear total received data
+  do_write(error, res, req_bytes, "(Invalid)", ""); // Write response
 }
 
 
@@ -139,7 +139,6 @@ void session::create_response(const error_code& error, Request& req){
   req_summary += " " + std::string(req.target());
   std::string invalid_req = "";
 
-  total_received_data_ = ""; // Clear total received data
   Response* res = nullptr; // To be defined by the request handler
 
   int req_error = verify_req(req); // Returns 0 if request valid, else err code
@@ -148,7 +147,7 @@ void session::create_response(const error_code& error, Request& req){
     res->result(req_error); // Set response status code to verify_req() output
     res->version(11);
     req_summary = "(Invalid)"; // Log invalid request
-    invalid_req = req_as_string(req); // Log invalid request
+    invalid_req = proc_invalid_req(total_received_data_);
   }
   else{ // Valid request, dispatch a request handler to obtain response
     RequestHandler* handler = dispatch(req);
@@ -156,7 +155,8 @@ void session::create_response(const error_code& error, Request& req){
     free(handler); // Free memory used by request handler
   }
 
-  do_write(error, res, req_bytes, req_summary, invalid_req);
+  total_received_data_ = ""; // Clear total received data
+  do_write(error, res, req_bytes, req_summary, invalid_req); // Write response
 }
 
 
@@ -301,25 +301,45 @@ int verify_req(Request& req){
 }
 
 
-/// Helper function for invalid request logging. Converts req to a string.
-std::string req_as_string(Request req){
-  std::string method = req.method_string();
-  std::string target = std::string(req.target());
-  std::string ver = std::to_string(req.version());
-  std::string out = method + ' ' + target + " HTTP/" + ver[0] + '.' + ver[1] + " | ";
-  for (auto& header : req.base()){
-    out += std::string(header.name_string()) + ": " +
-           std::string(header.value()) + " | ";
+/// Helper function for invalid request logging.
+/// Converts CRLF characters in received data to keep the log to a single line.
+std::string proc_invalid_req(const std::string& received){
+  //Log::trace(LOG_PRE, "Before processing:\n" + received);
+
+  std::string out = "";
+  for (int i = 0; i < received.length(); i++){
+    if (received[i] == '\r')
+      out += "\\r";
+    else if (received[i] == '\n')
+      out += "\\n";
+    else [[likely]]
+      out += received[i];
   }
-  std::string body = req.body();
-  if (body.length()){
-    out += "Body: " + body;
-  }
+
+  //Log::trace(LOG_PRE, "After processing: " + out);
   return out;
 }
 
 
 /*
+/// Helper function for debugging. Converts given Request object to a string.
+std::string req_as_string(Request req){
+  std::string method = req.method_string();
+  std::string target = std::string(req.target());
+  std::string ver = std::to_string(req.version());
+  std::string out = method + ' ' + target + " HTTP/" + ver[0] + '.' + ver[1] + '\n';
+  for (auto& header : req.base()){
+    out += std::string(header.name_string()) + ": " +
+           std::string(header.value()) + "\n";
+  }
+  std::string body = req.body();
+  if (body.length()){
+    out += '\n' + body + '\n';
+  }
+  return out;
+}
+
+
 /// Helper function for debugging. Converts res to a string.
 std::string res_as_string(Response res){ // Temp helper for debug logging
   std::string result = std::to_string(res.result_int()) + " " + std::string(res.reason());

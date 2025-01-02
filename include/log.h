@@ -4,9 +4,6 @@
 
 class Log{
 public:
-  /// Enables trace logs globally; they are suppressed by default.
-  static void enable_trace();
-
   /// Machine-parseable log for response metrics.
   static void res_metrics(
     const std::string& client_ip,

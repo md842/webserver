@@ -1,10 +1,8 @@
-#include "log.h"
 #include "registry.h"
 
 
 /// Returns the corresponding factory for a given RequestHandler type.
 RequestHandlerFactory* Registry::get_factory(const std::string& name){
-  // Returns the corresponding factory for a given request handler type.
   return registry[name].factory_ptr;
 }
 

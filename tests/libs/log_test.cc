@@ -36,20 +36,12 @@ TEST(LogTest, LogInfo){
   EXPECT_EQ(stdout.substr(50, stdout.length()), "[info]    Info\n");
 }
 
-TEST(LogTest, LogTraceEnabled){
-  Log::enable_trace(); // Enable trace logging
+TEST(LogTest, LogTrace){
   testing::internal::CaptureStdout();
   Log::trace(LOG_PRE, "Trace");
   std::string stdout = testing::internal::GetCapturedStdout();
   // Cut off the timestamp and prefix of the log, as it can vary
   EXPECT_EQ(stdout.substr(50, stdout.length()), "[trace]   Trace\n");
-}
-
-TEST(LogTest, LogTraceSuppressed){
-  testing::internal::CaptureStdout();
-  Log::trace(LOG_PRE, "Suppressed");
-  std::string stdout = testing::internal::GetCapturedStdout();
-  EXPECT_EQ(stdout, "");
 }
 
 TEST(LogTest, LogWarn){

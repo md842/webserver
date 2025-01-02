@@ -7,7 +7,7 @@
 #include "server.h"
 
 // Standardized log prefix for this source
-#define LOG_PRE "[Main]               "
+#define LOG_PRE "[Main]     "
 
 namespace fs = boost::filesystem;
 
@@ -31,9 +31,6 @@ int main(int argc, char* argv[]){
       Log::fatal(LOG_PRE, "Usage: server <config>");
       return 1; // Exit with non-zero exit code
     }
-
-    // Log::enable_trace(); // Remove to suppress trace logs
-    // TODO: Make this configurable rather than hardcoded?
 
     // Find root directory from binary path argv[0], works regardless of cwd
     std::string binary_path = fs::system_complete(argv[0]).string();

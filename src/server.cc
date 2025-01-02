@@ -6,7 +6,7 @@
 #include "server.h"
 
 // Standardized log prefix for this source
-#define LOG_PRE "[Server]             "
+#define LOG_PRE "[Server]   "
 
 using namespace boost::asio;
 using boost::asio::ip::tcp;

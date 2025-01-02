@@ -2,14 +2,6 @@
 
 #include "log.h"
 
-static bool trace_enabled = false; // When false, trace logs are suppressed.
-
-
-/// Enables trace logs globally; they are suppressed by default.
-void Log::enable_trace(){
-  trace_enabled = true;
-}
-
 
 /// Machine-parseable log for response metrics.
 void Log::res_metrics(
@@ -20,14 +12,14 @@ void Log::res_metrics(
   const std::string& invalid_req,
   unsigned response_code
 ){
-  BOOST_LOG_TRIVIAL(info) << "[Response]           " <<
+  BOOST_LOG_TRIVIAL(info) << "[Response] " <<
     "Client: " << client_ip <<
     " | Status: " << response_code <<
     " | Request: " << req_summary <<
     " | Received (B): " << req_bytes <<
     " | Sent (B): " << res_bytes;
   if (invalid_req.length() > 0)
-    BOOST_LOG_TRIVIAL(warning) << "[Invalid Request]    " << invalid_req;
+    BOOST_LOG_TRIVIAL(warning) << "[Request]  " << invalid_req;
 }
 
 
@@ -53,8 +45,7 @@ void Log::info(const std::string& source, const std::string& msg){
 
 
 void Log::trace(const std::string& source, const std::string& msg){
-  if (trace_enabled)
-    BOOST_LOG_TRIVIAL(trace) << source << msg;
+  BOOST_LOG_TRIVIAL(trace) << source << msg;
 }
 
 
