@@ -7,7 +7,7 @@
 #include "registry.h" // Registry::inst()
 
 // Standardized log prefix for this source
-#define LOG_PRE "[Config]             "
+#define LOG_PRE "[Config]   "
 
 namespace fs = boost::filesystem;
 
@@ -53,7 +53,7 @@ bool Config::parse(const std::string& file_path){
   if (exists(file_obj) && !is_directory(file_obj)){ // Non-directory file found
     fs::ifstream fstream(file_obj); // Attempt to open the file
     if (fstream){ // File opened successfully
-      Log::trace(LOG_PRE, "Parsing " + file_path);
+      //Log::trace(LOG_PRE, "Parsing " + file_path);
       return parse(fstream);
     }
     else{ // File exists, but failed to open it for some reason.
@@ -218,7 +218,7 @@ bool Config::parse_statement(std::vector<std::string>& statement){
     if (arg == "listen"){
       try{
         config.port = boost::lexical_cast<short>(statement.at(1));
-        Log::trace(LOG_PRE, "Got port " + std::to_string(config.port));
+        //Log::trace(LOG_PRE, "Got port " + std::to_string(config.port));
       }
       catch(boost::bad_lexical_cast&){ // Out of range, not a number, etc.
         Log::fatal(LOG_PRE, "Invalid port \"" + statement.at(1) + "\"");
@@ -227,19 +227,19 @@ bool Config::parse_statement(std::vector<std::string>& statement){
     }
     else if (arg == "index"){
       config.index = statement.at(1);
-      Log::trace(LOG_PRE, "Got relative index \"" + config.index + "\"");
+      //Log::trace(LOG_PRE, "Got relative index \"" + config.index + "\"");
     }
     else if (arg == "root"){
       config.root = statement.at(1);
-      Log::trace(LOG_PRE, "Got relative root \"" + config.root + "\"");
+      //Log::trace(LOG_PRE, "Got relative root \"" + config.root + "\"");
     }
     else if (arg == "server_name"){
       // Not implemented - don't do anything with it, but don't error
-      Log::trace(LOG_PRE, "Got server name (not implemented)");
+      //Log::trace(LOG_PRE, "Got server name (not implemented)");
     }
     else if (arg == "return"){
       // Not implemented - don't do anything with it, but don't error
-      Log::trace(LOG_PRE, "Got return (not implemented)");
+      //Log::trace(LOG_PRE, "Got return (not implemented)");
     }
     else{
       Log::fatal(LOG_PRE, "Unknown server argument: \"" + arg + "\"");
@@ -249,7 +249,7 @@ bool Config::parse_statement(std::vector<std::string>& statement){
   // Valid in location context: try_files
   else if (context == LOCATION_CONTEXT){
     if (arg == "try_files"){
-      Log::trace(LOG_PRE, "Got " + name + " with URI \"" + uri + "\"");
+      //Log::trace(LOG_PRE, "Got " + name + " with URI \"" + uri + "\"");
       for (int i = 1; i < statement.size() - 1; i++){ // Exclude try_files arg
         // Ignore 404 fallback, React Router handles 404
         if (statement.at(i) != "=404")
@@ -277,8 +277,7 @@ void Config::register_mapping(const std::string& arg){
   // Match "$uri" in token and replace with URI for this location, then clean.
   std::string rel_path = clean(std::regex_replace(arg, std::regex("\\$uri"), uri));
 
-  Log::trace(LOG_PRE, "Mapping " + name + " for URI \"" + uri +
-             "\" to relative path \"" + rel_path + "\"");
+  //Log::trace(LOG_PRE, "Mapping " + name + " for URI \"" + uri + "\" to relative path \"" + rel_path + "\"");
 
   Registry::inst().register_mapping(name, uri, rel_path);
 }
