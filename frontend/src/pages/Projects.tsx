@@ -4,10 +4,8 @@ import React, {useState} from "react";
 
 import {collection, getDocs} from "firebase/firestore";
 import db from '../components/firebaseConfig.ts';
-import NavButton from '../components/NavButton.tsx';
+import {Project, ProjectCard, readProjectData} from '../components/ProjectCard.tsx';
 
-import Button from 'react-bootstrap/Button';
-import Card from 'react-bootstrap/Card';
 import Container from 'react-bootstrap/Container';
 import Form from 'react-bootstrap/Form';
 import ToggleButton from 'react-bootstrap/ToggleButton';
@@ -18,65 +16,9 @@ interface FilterState{
   search: string;
 }
 
-interface Project{
-  /* Props interface for ProjectCard(). */
-  // Title of project.                                        Source: Database
-  title: string;
-  // Short form description of project for card display.      Source: Database
-  card_desc: string;
-  // If present, card will display an image.                  Source: Database
-  image?: string;
-  // If present, "View Notebook" button will appear.          Source: Database
-  nb?: string;
-  // Link to project repository.                              Source: Database
-  repo?: string;
-  // If present, "Run Simulation" button will appear.         Source: Database
-  sim?: string;
-  // Tags associated with the project.                        Source: Database
-  tags: Array<string>;
-  // The visibility of this card.                             Source: Section()
-  vis: boolean;
-}
-
 interface SectionParams{
   title: string;
   data: Array<Project>;
-}
-
-function ProjectCard(params: Project): JSX.Element{
-  /* Constructs a project card given Project object specified by params. */
-  const [visible, setVisible] = useState(params.vis);
-  if (params.vis != visible) // visible state is out of date
-    setVisible(params.vis); // Update visible state
-
-  let unraveledTags = ""; // Convert tags array to string
-  params.tags.forEach(element => unraveledTags += element + ", ");
-  unraveledTags = unraveledTags.substring(0, unraveledTags.length - 2);
-
-  return(
-    <Card className={visible ? "card-in" : "card-out"}>
-      {params.image && // Return img element if params.image is present
-        <Card.Img
-          className={visible ? "img-in" : "img-out"} // CSS animations
-          src={params.image}
-        />
-      }
-      <Card.Body className={visible ? "body-in" : "body-out"}>
-      <Card.Title>{params.title}</Card.Title>
-      <Card.Text>{params.card_desc}</Card.Text>
-      <Card.Text>Tags: {unraveledTags}</Card.Text>
-      {params.sim && // Return NavButton element if params.sim is present
-        <NavButton href={params.sim}>Run Simulation</NavButton>
-      }
-      {params.nb && // Return NavButton element if params.nb is present
-        <NavButton href={params.nb}>View Notebook</NavButton>
-      }
-      {params.repo && // Return Button element if params.repo is present
-        <Button href={params.repo}>View repository on GitHub</Button>
-      }
-      </Card.Body>
-    </Card>
-  );
 }
 
 export default class Projects extends React.Component<{}, FilterState>{
@@ -175,25 +117,9 @@ export default class Projects extends React.Component<{}, FilterState>{
       this.filterButtonTags.push(doc.id)
     });
 
-    const projectsQuery = await getDocs(collection(db, "projects"));
-    projectsQuery.forEach((doc) => {
-      let projectObj:Project = {
-        card_desc: doc.data().card_desc,
-        title: doc.data().title,
-        repo: doc.data().repo,
-        image: doc.data().image,
-        nb: doc.data().nb,
-        sim: doc.data().sim,
-        tags: doc.data().tags,
-        vis: true
-      };
-
-      // Push completed projectObj to appropriate list
-      if (doc.data().featured)
-        this.featuredData.push(projectObj);
-      else
-        this.projectData.push(projectObj);
-    });
+    let data = await readProjectData(true); // all = true: Read all projects
+    this.featuredData = data[0];
+    this.projectData = data[1];
 
     this.setState(this.state); // Update render after reading from database
   }
