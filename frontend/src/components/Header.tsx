@@ -8,9 +8,6 @@ import Container from 'react-bootstrap/Container';
 import Nav from 'react-bootstrap/Nav';
 import Navbar from 'react-bootstrap/Navbar';
 
-//import moon from '../assets/moon.svg';
-//import sun from '../assets/sun.svg';
-
 export default function Header(){
   const [icon, setIcon] = useState("moon");
   const [mode, setMode] = useState("light");
@@ -26,7 +23,7 @@ export default function Header(){
       else // Switch to dark mode
         setIcon("sun");
     } // Stick with default if undefined (e.g., first session)
-  }, []);
+  }, []); // Trigger on component mount
 
   useEffect(() => {
     /* Save dark/light mode setting to local storage, allows dark/light mode

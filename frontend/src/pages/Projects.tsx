@@ -83,7 +83,7 @@ export default class Projects extends React.Component<{}, FilterState>{
        Class member due to use of this.resolveFilter() and this.search(). */
     let displayed = false;
     return(
-      <div className="projects-section mb-5">
+      <div className="projects-section mb-3">
         <h3 className="mb-3">{params.title}</h3>
         { // If data is not yet loaded from database:
         this.projectData.length == 0 &&

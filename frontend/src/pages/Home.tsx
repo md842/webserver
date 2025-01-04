@@ -1,8 +1,28 @@
 import './Home.css';
 
+import {useState, useEffect} from 'react';
+
 import picture from '../assets/picture.jpg';
+import {Project, ProjectCard, readProjectData} from '../components/ProjectCard.tsx';
+
+import Carousel from 'react-bootstrap/Carousel';
 
 export default function Home(){
+  const [data, setData] = useState([{
+    card_desc: "",
+    title: "Loading from database...",
+    tags: ["Loading from database..."],
+    vis: true
+  }]); // Placeholder card to display while waiting for database
+
+  useEffect(() => {
+    async function getItems(){
+      // all = false: Read featured projects only
+      setData((await readProjectData(false))[0]);
+    }
+    getItems(); // Replaces placeholder with data from database, updates render
+  }, []);
+
 	return(
     <main>
       <div className="profile">
@@ -26,13 +46,24 @@ export default function Home(){
             <br/><br/>
             I graduated from UCLA with a B.S. in Computer Science in December 2024 and am currently seeking employment opportunities.
           </p>
-          <br/><br/>
+          <br/>
           <h3>About This Website</h3>
           <p>
             I've put a unique twist on the classic personal website and showcased my full stack development skills by writing both the website and the web server from scratch. The front end is built with <a href="https://react.dev/">React</a> + TypeScript. The back end consists of a web server and a database; the web server is written in C++ with <a href="https://www.boost.org/">Boost</a>, and the database used is <a href="https://firebase.google.com/">Google Cloud Firestore</a>.
             <br/><br/>
-            I have implemented many advanced features into this website, including the ability to <a href="/projects/sim/cpu-simulator">directly run some of my past projects' binaries through a custom web interface</a>. I would be delighted if you took the time to <a href="/projects">explore my projects</a>.
+            I have implemented many advanced features into this website, including the ability to <a href="/projects/sim/cpu-simulator">directly run some of my past projects' binaries through a custom web interface</a>.
           </p>
+          <br/>
+          <h3>Featured Projects</h3>
+          <p>
+            Below is a selection of my favorite projects. I would be delighted if you took the time to view my full portfolio on the <a href="/projects">projects page</a>.
+          </p>
+          <Carousel className="featured-projects">
+            {data.map((params:Project) => { // Create a carousel item for each
+              if (params.image) // featured project with an image.
+                return <Carousel.Item><ProjectCard {...params}/></Carousel.Item>;
+            })}
+          </Carousel>
         </aside>
       </div>
     </main>

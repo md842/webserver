@@ -1,13 +1,14 @@
 /* Filter section styling */
 
 @media (max-width: 1599px){
-  /* If the window is less than 1600px wide, the tag buttons render poorly. */
+  /* Tag buttons render poorly below 1600px, so hide them. */
   #filter-container{
     display: none;
   }
 }
 
 @media (min-width: 1600px) and (max-width: 1919px){
+  /* The tag buttons and label should be on different lines. */
   #filter-label{
     margin: 0 1em 1em 0; /* top, right, bottom, left */
   }
@@ -29,6 +30,10 @@
 
 /* Projects section styling */
 
+.projects-section .card{
+  margin-bottom: 1em;
+}
+
 .projects-section{
   display: flex;
   flex-direction: column;
@@ -45,3 +50,29 @@
     width: 49.5%; /* 1% space between */
   }
 }
+
+/* Commented out for now, not sure yet if I want to switch to a grid system.
+.projects-section{
+  display: grid;
+  grid-gap: 1em;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 1366px){
+  .projects-section{
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 2560px){
+  .projects-section{
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+@media (min-width: 3840px){
+  .projects-section{
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+  }
+}
+*/
