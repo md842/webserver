@@ -1,0 +1,2 @@
+GET /public/.%2e/src/assets/picture.jpg HTTP/1.1
+
