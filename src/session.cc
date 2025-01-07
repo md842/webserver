@@ -19,8 +19,6 @@ RequestHandler* dispatch(Request& req);
 Request parse_req(const std::string& received);
 int verify_req(Request& req);
 std::string proc_invalid_req(const std::string& received); // Helper function for invalid request logging
-// std::string req_as_string(Request req); // Helper function for debugging
-// std::string res_as_string(Response res); // Helper function for debugging
 
 
 /// Sets up the session socket.
@@ -45,7 +43,7 @@ void session::do_read(){
 /// Read handler, called after start() reads incoming data.
 void session::handle_read(const error_code& error, size_t bytes){
   try{ // Throws boost::system::system_error
-    client_ip_ = socket_.remote_endpoint().address().to_string(); 
+    client_ip_ = socket_.remote_endpoint().address().to_string();
   }
   catch(boost::system::system_error){ // Thrown by socket::remote_endpoint()
     close_session(0, "Client disconnected from session.");
@@ -217,30 +215,15 @@ void session::close_session(int severity, const std::string& message){
 }
 
 
-/// Dynamically dispatches a RequestHandler based on the given request target.
+/// Dynamically dispatches a RequestHandler based on the given request.
 RequestHandler* dispatch(Request& req){
-  std::string type = "";
-
-  if (req.method() == http::verb::post)
-    type = "PostRequestHandler"; // Handles all POST requests
-  else{
-    // Search for longest match between target and URI
-    int longest_match = 0;
-    std::string target = std::string(req.target());
-    // Search all handler types
-    for (const std::string& cur_type : Registry::inst().get_types()){
-      // Search the URI map for the current handler type
-      for (auto& pair : Registry::inst().get_map(cur_type)){
-        std::string key = pair.first;
-        // New longest match found, save information
-        if ((target.find(key) == 0) && key.length() > longest_match){
-          longest_match = key.length();
-          type = cur_type;
-        }
-      }
-    }
-  }
-  return Registry::inst().get_factory(type)->create();
+  if (req.method() == http::verb::get){ [[likely]]
+    if (req.target() == "/health")
+      return Registry::inst().get_factory("HealthRequestHandler")->create();
+    else
+      return Registry::inst().get_factory("FileRequestHandler")->create();
+  } // Only GET and POST requests are supported
+  return Registry::inst().get_factory("PostRequestHandler")->create();
 }
 
 
@@ -273,12 +256,19 @@ int verify_req(Request& req){
   }
 
   // Verify target does not try to access unintended files using "../" in URI
-  if (req.target().find("../") != std::string::npos)
+  if (req.target().find("..") != std::string::npos) [[unlikely]]
+    return 403; // 403 Forbidden
+  /* These HTML encodings resolve to single '.'s, but it is difficult to
+     imagine a legitmate use case for these. Assume the request is malicious
+     if one is present so we don't have to check all possible permutations. */
+  if (req.target().find("%2e") != std::string::npos) [[unlikely]]
+    return 403; // 403 Forbidden
+  if (req.target().find("%%32%65") != std::string::npos) [[unlikely]]
     return 403; // 403 Forbidden
 
   // Verify HTTP version: HTTP/0.9, HTTP/1.0, HTTP/1.1, HTTP/2.0, or HTTP/3.0
   switch(req.version()){
-    case 11:
+    case 11: [[likely]]
       break;
     case 20:
       break;
@@ -294,7 +284,7 @@ int verify_req(Request& req){
   /* Verify POST request has Content-Length header. Payload length limit and
      matching are already enforced in handle_read, no need to handle here. */
   if (method == http::verb::post){
-    if (!req.has_content_length())
+    if (!req.has_content_length()) [[unlikely]]
       return 411; // 411 Length Required
   }
   return 0;
@@ -304,8 +294,6 @@ int verify_req(Request& req){
 /// Helper function for invalid request logging.
 /// Converts CRLF characters in received data to keep the log to a single line.
 std::string proc_invalid_req(const std::string& received){
-  //Log::trace(LOG_PRE, "Before processing:\n" + received);
-
   std::string out = "";
   for (int i = 0; i < received.length(); i++){
     if (received[i] == '\r')
@@ -315,39 +303,5 @@ std::string proc_invalid_req(const std::string& received){
     else [[likely]]
       out += received[i];
   }
-
-  //Log::trace(LOG_PRE, "After processing: " + out);
   return out;
 }
-
-
-/*
-/// Helper function for debugging. Converts given Request object to a string.
-std::string req_as_string(Request req){
-  std::string method = req.method_string();
-  std::string target = std::string(req.target());
-  std::string ver = std::to_string(req.version());
-  std::string out = method + ' ' + target + " HTTP/" + ver[0] + '.' + ver[1] + '\n';
-  for (auto& header : req.base()){
-    out += std::string(header.name_string()) + ": " +
-           std::string(header.value()) + "\n";
-  }
-  std::string body = req.body();
-  if (body.length()){
-    out += '\n' + body + '\n';
-  }
-  return out;
-}
-
-
-/// Helper function for debugging. Converts res to a string.
-std::string res_as_string(Response res){ // Temp helper for debug logging
-  std::string result = std::to_string(res.result_int()) + " " + std::string(res.reason());
-  std::string out = "HTTP/1.1 " + result + '\n';
-  for (auto& header : res.base()){
-    out += std::string(header.name_string()) + ": " +
-           std::string(header.value()) + "\n";
-  }
-  return out;
-}
-*/

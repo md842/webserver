@@ -46,6 +46,7 @@ add_library(registry_lib src/registry.cc)
 
 # Compile request handlers as object libraries to allow self-registration
 add_library(file_request_handler_lib OBJECT src/file_request_handler.cc)
+add_library(health_request_handler_lib OBJECT src/health_request_handler.cc)
 add_library(post_request_handler_lib OBJECT src/post_request_handler.cc)
 
 # Link Boost::log library to log_lib
@@ -63,6 +64,7 @@ target_link_libraries(registry_lib log_lib)
 add_executable(server src/server_main.cc)
 target_link_libraries(server
   $<TARGET_OBJECTS:file_request_handler_lib>
+  $<TARGET_OBJECTS:health_request_handler_lib>
   $<TARGET_OBJECTS:post_request_handler_lib>
   server_lib
   session_lib
