@@ -43,6 +43,7 @@ add_library(server_lib src/server.cc)
 add_library(log_lib src/log.cc)
 add_library(nginx_config_parser_lib src/nginx_config_parser.cc)
 add_library(registry_lib src/registry.cc)
+add_library(analytics_lib src/analytics.cc)
 
 # Compile request handlers as object libraries to allow self-registration
 add_library(file_request_handler_lib OBJECT src/file_request_handler.cc)
@@ -70,6 +71,7 @@ target_link_libraries(server
   session_lib
   nginx_config_parser_lib
   registry_lib
+  analytics_lib
   Boost::system
 )
 
@@ -77,6 +79,7 @@ target_link_libraries(server
 add_executable(file_request_handler_test tests/libs/file_request_handler_test.cc)
 target_link_libraries(file_request_handler_test
   $<TARGET_OBJECTS:file_request_handler_lib>
+  analytics_lib
   registry_lib
   nginx_config_parser_lib
   gtest_main
@@ -101,6 +104,7 @@ target_link_libraries(nginx_config_parser_test
 add_executable(post_request_handler_test tests/libs/post_request_handler_test.cc)
 target_link_libraries(post_request_handler_test
   $<TARGET_OBJECTS:post_request_handler_lib>
+  analytics_lib
   registry_lib
   nginx_config_parser_lib
   gtest_main
