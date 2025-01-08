@@ -230,8 +230,10 @@ RequestHandler* dispatch(Request& req){
   if (req.method() == http::verb::get){ [[likely]]
     if (req.target() == "/health")
       return Registry::inst().get_factory("HealthRequestHandler")->create();
-    else
+    else{
+      Analytics::inst().gets++; // Log valid GET request in analytics
       return Registry::inst().get_factory("FileRequestHandler")->create();
+    }
   } // Only GET and POST requests are supported
   return Registry::inst().get_factory("PostRequestHandler")->create();
 }

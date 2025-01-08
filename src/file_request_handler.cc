@@ -2,7 +2,6 @@
 #include <boost/filesystem/fstream.hpp> // ifstream
 #include <iomanip> // put_time
 
-#include "analytics.h"
 #include "file_request_handler.h"
 #include "log.h"
 #include "nginx_config_parser.h" // Config::inst()
@@ -22,8 +21,6 @@ fs::path* resolve_path(const std::string& req_target, http::status& status);
 
 /// Generates a response to a given GET request.
 Response* FileRequestHandler::handle_request(const Request& req){
-  Analytics::inst().gets++; // Log valid GET request in analytics
-
   http::status status = http::status::ok; // Response status code 200
   std::ostringstream file_contents;
   std::string content_type = "text/html"; // Overwritten if valid file opened
