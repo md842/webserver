@@ -155,9 +155,9 @@ bool Config::parse_block_start(std::vector<std::string>& statement){
     }
   }
   else if (new_context == "location"){
-    if (statement.size() != 4){
+    if (statement.size() != 3){
       Log::fatal(LOG_PRE, "Malformed location block (size " +
-                 std::to_string(statement.size()) + ", expected size 4)");
+                 std::to_string(statement.size()) + ", expected size 3)");
       return false;
     }
   }
@@ -174,7 +174,6 @@ bool Config::parse_block_start(std::vector<std::string>& statement){
   else if (context == SERVER_CONTEXT && new_context == "location"){
     context = LOCATION_CONTEXT;
     uri = statement.at(1); // Get URI
-    name = statement.at(2); // Get handler name
   }
   else{
     Log::fatal(LOG_PRE, "Invalid context transition to " + new_context);
@@ -249,7 +248,6 @@ bool Config::parse_statement(std::vector<std::string>& statement){
   // Valid in location context: try_files
   else if (context == LOCATION_CONTEXT){
     if (arg == "try_files"){
-      //Log::trace(LOG_PRE, "Got " + name + " with URI \"" + uri + "\"");
       for (int i = 1; i < statement.size() - 1; i++){ // Exclude try_files arg
         // Ignore 404 fallback, React Router handles 404
         if (statement.at(i) != "=404")
@@ -277,9 +275,8 @@ void Config::register_mapping(const std::string& arg){
   // Match "$uri" in token and replace with URI for this location, then clean.
   std::string rel_path = clean(std::regex_replace(arg, std::regex("\\$uri"), uri));
 
-  //Log::trace(LOG_PRE, "Mapping " + name + " for URI \"" + uri + "\" to relative path \"" + rel_path + "\"");
-
-  Registry::inst().register_mapping(name, uri, rel_path);
+  // Only FileRequestHandler has mappings
+  Registry::inst().register_mapping("FileRequestHandler", uri, rel_path);
 }
 
 

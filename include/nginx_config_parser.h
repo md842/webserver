@@ -93,7 +93,6 @@ class Config final{ // Singleton class (only one instance)
 
   Context context = MAIN_CONTEXT;
   NginxConfig config;
-  std::string name;
   std::string uri;
 
   bool parse(boost::filesystem::ifstream& cfg_in);
