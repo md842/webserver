@@ -43,7 +43,7 @@ protected:
     // test_file_config specifies small.html as index and /tests/inputs as root
     Config::inst().set_absolute_root(root_dir);
     Config::inst().parse(root_dir +
-                         "/tests/inputs/configs/test_file_config.conf");
+                         "/tests/inputs/configs/test_config.conf");
     
 
     // GET / HTTP/1.1 (will serve small.html by default)
