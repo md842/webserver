@@ -8,6 +8,7 @@
 
 class NginxConfigParserTest : public ::testing::Test{
 protected:
+  std::string absolute_root;
   std::string expected_root;
   std::string expected_index;
   std::string configs_folder;
@@ -20,13 +21,13 @@ protected:
     std::string target_dir = "webserver"; // Project directory name
     size_t found = binary_path.find(target_dir); // Search for substring
     if (found != std::string::npos) // Found, extract root dir
-      root_dir = binary_path.substr(0, found + target_dir.length());
+      absolute_root = binary_path.substr(0, found + target_dir.length());
 
-    Config::inst().set_absolute_root(root_dir);
+    Config::inst().set_absolute_root(absolute_root);
 
-    expected_root = root_dir + "/tests/inputs/";
-    expected_index = root_dir + "/tests/inputs/small.html";
-    configs_folder = root_dir + "/tests/inputs/configs/";
+    expected_root = absolute_root + "/tests/inputs/";
+    expected_index = absolute_root + "/tests/inputs/small.html";
+    configs_folder = absolute_root + "/tests/inputs/configs/";
   }
 };
 
@@ -160,8 +161,8 @@ TEST_F(NginxConfigParserTest, EscapeQuotes){ // Uses test fixture
   EXPECT_TRUE(Config::inst().parse(configs_folder + "escape_quotes.conf"));
 
   // Expected values are different for this test case due to the escapes
-  EXPECT_EQ(Config::inst().root(), "/home/max/Documents/Personal/webserver/tests/inputs\\\"'/");
-  EXPECT_EQ(Config::inst().index(), "/home/max/Documents/Personal/webserver/tests/inputs\\\"'/small.html\\\"'");
+  EXPECT_EQ(Config::inst().root(), absolute_root + "/tests/inputs\\\"'/");
+  EXPECT_EQ(Config::inst().index(), absolute_root + "/tests/inputs\\\"'/small.html\\\"'");
   EXPECT_EQ(Config::inst().port(), 8080);
 }
 
@@ -170,8 +171,8 @@ TEST_F(NginxConfigParserTest, EscapeWords){ // Uses test fixture
   EXPECT_TRUE(Config::inst().parse(configs_folder + "escape_words.conf"));
 
   // Expected values are different for this test case due to the escapes
-  EXPECT_EQ(Config::inst().root(), "/home/max/Documents/Personal/webserver\\/tests/inputs/");
-  EXPECT_EQ(Config::inst().index(), "/home/max/Documents/Personal/webserver\\/tests/inputs/s\\mall.html");
+  EXPECT_EQ(Config::inst().root(), absolute_root + "\\/tests/inputs/");
+  EXPECT_EQ(Config::inst().index(), absolute_root + "\\/tests/inputs/s\\mall.html");
   EXPECT_EQ(Config::inst().port(), 8080);
 }
 
