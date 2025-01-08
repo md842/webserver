@@ -4,6 +4,7 @@
 #include <boost/property_tree/json_parser.hpp> // read_json
 #include <boost/property_tree/ptree.hpp> // ptree
 
+#include "analytics.h"
 #include "post_request_handler.h"
 #include "log.h"
 #include "nginx_config_parser.h" // Config::inst()
@@ -84,27 +85,32 @@ Response* PostRequestHandler::handle_request(const Request& req){
         boost::replace_all(out_data, "\t", "\\t");
 
         output = err_data + out_data;
+        Analytics::inst().posts++; // Log valid POST request in analytics
       }
       else{ // Request tried to leave intended directory
         output = "Error 403: Forbidden";
         status = http::status::forbidden; // Response status code 403
+        Analytics::inst().malicious++; // Log malicious request in analytics
       }
     }
     catch(boost::property_tree::ptree_error e){ // Thrown by ptree.get()
       Log::error(LOG_PRE, "Property tree error: " + std::string(e.what()));
       output = "Error 400: Bad Request";
       status = http::status::bad_request; // Response status code 400
+      Analytics::inst().invalid++; // Log invalid request in analytics
     }
     catch(boost::process::process_error e){ // Thrown by boost::process::system()
       Log::error(LOG_PRE, "Process error: " + std::string(e.what()));
       output = "Error 500: Internal Server Error";
       status = http::status::internal_server_error; // Response status code 500
+      Analytics::inst().invalid++; // Log invalid request in analytics
     }
   }
   catch(boost::property_tree::json_parser_error e){ // Thrown by read_json()
     Log::error(LOG_PRE, "JSON parser error: " + std::string(e.what()));
     output = "Error 400: Bad Request";
     status = http::status::bad_request; // Response status code 400
+    Analytics::inst().invalid++; // Log invalid request in analytics
   }
 
   // Construct and return pointer to HTTP response object

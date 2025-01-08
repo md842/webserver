@@ -1,6 +1,7 @@
 #include <boost/asio.hpp> // io_service, tcp
 #include <boost/bind/bind.hpp> // bind
 
+#include "analytics.h"
 #include "log.h"
 #include "nginx_config_parser.h" // Config::inst()
 #include "registry.h" // Registry::inst()
@@ -118,6 +119,11 @@ void session::handle_read(const error_code& error, size_t bytes){
 void session::create_response(const error_code& error, int status){
   size_t req_bytes = total_received_data_.length();
 
+  if (status == 413)
+    Analytics::inst().malicious++;
+  else
+    Analytics::inst().invalid++;
+
   Response* res = new Response();
   res->result(status); // Set response status code to specified error status
   res->version(11);
@@ -141,6 +147,10 @@ void session::create_response(const error_code& error, Request& req){
 
   int req_error = verify_req(req); // Returns 0 if request valid, else err code
   if (req_error){ // Invalid request, generate an error response
+    if (req_error == 403)
+      Analytics::inst().malicious++;
+    else
+      Analytics::inst().invalid++;
     res = new Response();
     res->result(req_error); // Set response status code to verify_req() output
     res->version(11);
