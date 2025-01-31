@@ -16,8 +16,9 @@ protected:
   std::unique_ptr<PostRequestHandler> post_request_handler;
   std::string default_payload_output = 
   "{"\
-    R"("output":"PC: 4; Opcode: 0000000\nOutput: Total clock cycles: 1\n(0,0)\n")"\
+    R"("output":"PC: 4     Instruction: (nop)   \nRegister a0 (x10): 0\nRegister a1 (x11): 0\nTotal clock cycles: 1\n")"\
   "}"; // This is used several times, so store it as a member field
+
   Request req;
 
   void SetUp() override{ // Set up test fixture
