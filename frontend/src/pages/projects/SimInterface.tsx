@@ -9,38 +9,48 @@ import NavButton from '../../components/NavButton.tsx';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 
-interface IOState{
-  // Input to the simulation.                                 Source: User/DB
-  input: string;
-  // Output of the simulation.                                Source: Server
+// Parameters relating to the I/O of each request.
+interface RequestIO{
+  // cerr output of the simulation.                           Source: Server
   cerr: string;
-  // Output of the simulation.                                Source: Server
+  // cout output of the simulation.                           Source: Server
   cout: string;
-  cerr_size: number;
-  cout_size: number;
+  // Default or user-specified input to the simulation.       Source: User/DB
+  input: string;
+}
+
+// Parameters relating to the simulation that won't change after initial read.
+interface Simulation{
+  // The name of the cerr textarea.                           Source: Database
   cerr_name: string;
+  // The size to render the cerr textarea with (in rows).     Source: Database
+  cerr_size: number;
+  // The size to render the cout textarea with (in rows).     Source: Database
+  cout_size: number;
   // Indicates whether the simulation input is raw or file.   Source: Database
   input_as_file: boolean;
-  // Title of project.                                        Source: Database
-  title: string;
   // Long form description of project for page display.       Source: Database
   long_desc: string;
   // Link to project repository.                              Source: Database
   repo: string;
   // Tags associated with the project.                        Source: Database
   tags: string;
+  // Title of project.                                        Source: Database
+  title: string;
 }
 
-export default class SimInterface extends React.Component<{}, IOState>{
+export default class SimInterface extends React.Component<{}, RequestIO & Simulation>{
   constructor(props: {}) {
     super(props);
-    this.state = {
+    this.state = { // Initialize state with placeholders and/or default values
+      // RequestIO (may change with each request)
       input: "Loading from database...",
       cerr: "",
       cout: "",
-      cerr_size: 10,
-      cout_size: 3,
+      // Simulation (will not change after the initial read)
       cerr_name: "",
+      cerr_size: 0,
+      cout_size: 3,
       input_as_file: false,
       long_desc: "Loading from database...",
       repo: "",
@@ -48,7 +58,7 @@ export default class SimInterface extends React.Component<{}, IOState>{
       title: "Loading from database..."
     };
 
-    this.read(); // Read project data and tags from database
+    this.read(); // Read simulation parameters and default input from database
   }
 
   handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,11 +78,12 @@ export default class SimInterface extends React.Component<{}, IOState>{
     uTags = uTags.substring(0, uTags.length - 2); // Remove the last comma
 
     this.setState({
-      // Firestore stores \n as literal "\\n", so replace with newlines \n
+      // RequestIO: Set default input. Firestore stores \n as literal "\\n".
       input: data!.default_input.replaceAll("\\n", '\n'),
-      cout_size: data!.cout_size,
-      cerr_size: data!.cerr_size,
+      // Simulation (will not change after the initial read)
       cerr_name: data!.cerr_name,
+      cerr_size: data!.cerr_size,
+      cout_size: data!.cout_size,
       input_as_file: data!.input_as_file,
       long_desc: uDesc,
       repo: data!.repo,
@@ -94,13 +105,13 @@ export default class SimInterface extends React.Component<{}, IOState>{
     .then(response => response.json())
     .then((data) => {
       console.log(data);
-      this.setState({ // Set output states to response data
+      this.setState({ // Set RequestIO state to response data
         cout: data.cout,
         cerr: data.cerr,
       });
     })
     .catch((error) => {
-      this.setState({cout: error}); // Set output state to caught error
+      this.setState({cout: error}); // Set RequestIO state to caught error
     });
   }
 
@@ -144,7 +155,7 @@ export default class SimInterface extends React.Component<{}, IOState>{
               value={this.state.cout}
               readOnly
             />
-            {(this.state.cerr_name != "") && // Display if cerr_name is set
+            {(this.state.cerr_size > 0) && // Render only if cerr_size is set
               <div className="cerr">
                 <Form.Label>{this.state.cerr_name}</Form.Label>
                 <Form.Control
