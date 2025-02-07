@@ -13,7 +13,12 @@ interface IOState{
   // Input to the simulation.                                 Source: User/DB
   input: string;
   // Output of the simulation.                                Source: Server
-  output: string;
+  cerr: string;
+  // Output of the simulation.                                Source: Server
+  cout: string;
+  cerr_size: number;
+  cout_size: number;
+  cerr_name: string;
   // Indicates whether the simulation input is raw or file.   Source: Database
   input_as_file: boolean;
   // Title of project.                                        Source: Database
@@ -31,7 +36,11 @@ export default class SimInterface extends React.Component<{}, IOState>{
     super(props);
     this.state = {
       input: "Loading from database...",
-      output: "",
+      cerr: "",
+      cout: "",
+      cerr_size: 10,
+      cout_size: 3,
+      cerr_name: "",
       input_as_file: false,
       long_desc: "Loading from database...",
       repo: "",
@@ -61,6 +70,9 @@ export default class SimInterface extends React.Component<{}, IOState>{
     this.setState({
       // Firestore stores \n as literal "\\n", so replace with newlines \n
       input: data!.default_input.replaceAll("\\n", '\n'),
+      cout_size: data!.cout_size,
+      cerr_size: data!.cerr_size,
+      cerr_name: data!.cerr_name,
       input_as_file: data!.input_as_file,
       long_desc: uDesc,
       repo: data!.repo,
@@ -82,11 +94,13 @@ export default class SimInterface extends React.Component<{}, IOState>{
     .then(response => response.json())
     .then((data) => {
       console.log(data);
-      // Set output state to response data
-      this.setState({output: data.output});
+      this.setState({ // Set output states to response data
+        cout: data.cout,
+        cerr: data.cerr,
+      });
     })
     .catch((error) => {
-      this.setState({output: error}); // Set output state to caught error
+      this.setState({cout: error}); // Set output state to caught error
     });
   }
 
@@ -126,10 +140,21 @@ export default class SimInterface extends React.Component<{}, IOState>{
             <Form.Label>Output</Form.Label>
             <Form.Control
               as="textarea"
-              rows={10}
-              value={this.state.output}
+              rows={this.state.cout_size}
+              value={this.state.cout}
               readOnly
             />
+            {(this.state.cerr_name != "") && // Display if cerr_name is set
+              <div className="cerr">
+                <Form.Label>{this.state.cerr_name}</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={this.state.cerr_size}
+                  value={this.state.cerr}
+                  readOnly
+                />
+              </div>
+            }
           </Form>
         </div>
       </main>
