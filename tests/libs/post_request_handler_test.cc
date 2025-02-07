@@ -14,9 +14,9 @@ std::string get_content_type(Response res); // Helper function
 class PostRequestHandlerTest : public ::testing::Test{
 protected:
   std::unique_ptr<PostRequestHandler> post_request_handler;
-  std::string default_payload_output = 
-  "{"\
-    R"("output":"PC: 4     Instruction: (nop)   \nRegister a0 (x10): 0\nRegister a1 (x11): 0\nTotal clock cycles: 1\n")"\
+  std::string default_payload_output = "{"
+    R"("cout":"Register a0 (x10): 0\nRegister a1 (x11): 0\nTotal clock cycles: 1\n",)"
+    R"("cerr":"PC: 4     Instruction: (nop)   \n")"
   "}"; // This is used several times, so store it as a member field
 
   Request req;
@@ -115,7 +115,7 @@ TEST_F(PostRequestHandlerTest, DirectoryExitAttack){ // Uses test fixture
 
   std::string expected_output = 
   "{"\
-    R"("output":"Error 403: Forbidden")"\
+    R"("cout":"Error 403: Forbidden","cerr":"")"\
   "}"; // JSON is used for error reporting to the client
   
   EXPECT_EQ(res->body(), expected_output);
@@ -142,7 +142,7 @@ TEST_F(PostRequestHandlerTest, JsonParserError){ // Uses test fixture
 
   std::string expected_output = 
   "{"\
-    R"("output":"Error 400: Bad Request")"\
+    R"("cout":"Error 400: Bad Request","cerr":"")"\
   "}"; // JSON is used for error reporting to the client
   
   EXPECT_EQ(res->body(), expected_output);
@@ -171,7 +171,7 @@ TEST_F(PostRequestHandlerTest, ProcessError){ // Uses test fixture
 
   std::string expected_output = 
   "{"\
-    R"("output":"Error 500: Internal Server Error")"\
+    R"("cout":"Error 500: Internal Server Error","cerr":"")"\
   "}"; // JSON is used for error reporting to the client
   
   EXPECT_EQ(res->body(), expected_output);
@@ -198,7 +198,7 @@ TEST_F(PostRequestHandlerTest, PtreeError){ // Uses test fixture
 
   std::string expected_output = 
   "{"\
-    R"("output":"Error 400: Bad Request")"\
+    R"("cout":"Error 400: Bad Request","cerr":"")"\
   "}"; // JSON is used for error reporting to the client
   
   EXPECT_EQ(res->body(), expected_output);
@@ -227,7 +227,7 @@ TEST_F(PostRequestHandlerTest, RawInput){ // Uses test fixture
 
   std::string expected_output = 
   "{"\
-    R"("output":"Error opening file!\n")"\
+    R"("cout":"Error opening file!\n","cerr":"")"\
   "}"; // This error comes from cpu-simulator; it expects a file as input
 
   EXPECT_EQ(res->body(), expected_output);

@@ -1,4 +1,4 @@
-#include <boost/asio.hpp> // io_service
+#include <boost/asio.hpp> // io_context
 #include <boost/filesystem.hpp> // system_complete
 
 #include "log.h"
@@ -12,16 +12,16 @@
 namespace fs = boost::filesystem;
 
 // Made global so that it can be stopped gracefully by signal_handler.
-boost::asio::io_service io_service_;
+boost::asio::io_context io_context_;
 
 
-// Used by signals.async_wait, stops the IO service upon receiving a signal.
+// Used by signals.async_wait, stops the IO context upon receiving a signal.
 void signal_handler(const boost::system::error_code& ec, int sig){
   if (sig == SIGINT)
     Log::info(LOG_PRE, "SIGINT received, shutting down gracefully.");
   else
     Log::info(LOG_PRE, "SIGTERM received, shutting down gracefully.");
-  io_service_.stop(); // Causes io_service_.run() to stop blocking main
+  io_context_.stop(); // Causes io_context_.run() to stop blocking main
 }
 
 
@@ -49,11 +49,11 @@ int main(int argc, char* argv[]){
       return 1; // Exit with non-zero exit code
 
     // Register signal_handler to handle SIGINT and SIGTERM.
-    boost::asio::signal_set signals(io_service_, SIGINT, SIGTERM);
+    boost::asio::signal_set signals(io_context_, SIGINT, SIGTERM);
     signals.async_wait(signal_handler);
 
-    server s(io_service_);
-    io_service_.run(); // Blocks until signal_handler calls io_service_.stop()
+    server s(io_context_);
+    io_context_.run(); // Blocks until signal_handler calls io_context_.stop()
   }
   catch (std::exception& e){
     Log::fatal(LOG_PRE, "Exception " + std::string(e.what()));

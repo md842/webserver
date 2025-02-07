@@ -7,9 +7,9 @@ public:
   /** 
    * Sets up the session socket.
    *
-   * @param io_service The boost::asio::io_service supplied by main.
+   * @param io_context The boost::asio::io_context supplied by main.
    */
-  session(boost::asio::io_service& io_service);
+  session(boost::asio::io_context& io_context);
 
   /// Returns a reference to the TCP socket used by this session.
   boost::asio::ip::tcp::socket& socket();

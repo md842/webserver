@@ -1,4 +1,4 @@
-#include <boost/asio.hpp> // io_service, tcp
+#include <boost/asio.hpp> // io_context, tcp
 #include <boost/bind/bind.hpp> // bind
 
 #include "analytics.h"
@@ -23,7 +23,7 @@ std::string proc_invalid_req(const std::string& received); // Helper function fo
 
 
 /// Sets up the session socket.
-session::session(io_service& io_service) : socket_(io_service){}
+session::session(io_context& io_context) : socket_(io_context){}
 
 
 /// Returns a reference to the TCP socket used by this session.

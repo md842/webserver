@@ -1,4 +1,4 @@
-#include <boost/asio.hpp> // io_service, tcp
+#include <boost/asio.hpp> // io_context, tcp
 #include <boost/bind/bind.hpp> // bind
 
 #include "log.h"
@@ -14,9 +14,9 @@ using boost::system::error_code;
 
 
 /// Initializes the server and starts listening for incoming connections.
-server::server(io_service& io_service)
-  : io_service_(io_service),
-    acceptor_(io_service, tcp::endpoint(tcp::v4(), Config::inst().port())){
+server::server(io_context& io_context)
+  : io_context_(io_context),
+    acceptor_(io_context, tcp::endpoint(tcp::v4(), Config::inst().port())){
   Log::info(LOG_PRE, "Listening on port " +
             std::to_string(Config::inst().port()));
   start_accept();
@@ -25,7 +25,7 @@ server::server(io_service& io_service)
 
 /// Listens for and accepts an incoming connection, then calls handle_accept.
 void server::start_accept(){
-  session* new_session = new session(io_service_);
+  session* new_session = new session(io_context_);
   acceptor_.async_accept(new_session->socket(),
                          boost::bind(&server::handle_accept, this, new_session,
                          placeholders::error));

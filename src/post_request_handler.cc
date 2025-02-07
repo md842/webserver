@@ -1,5 +1,5 @@
 #include <boost/algorithm/string/replace.hpp> // replace_all
-#include <boost/asio.hpp> // io_service
+#include <boost/asio.hpp> // io_context
 #include <boost/process.hpp> // child, system, std_out, std_err
 #include <boost/property_tree/json_parser.hpp> // read_json
 #include <boost/property_tree/ptree.hpp> // ptree
@@ -19,7 +19,7 @@ namespace http = boost::beast::http;
 /// Generates a response to a given POST request.
 Response* PostRequestHandler::handle_request(const Request& req){
   http::status status = http::status::ok; // Response status code 200
-  std::string output;
+  std::string cout_data, cerr_data;
 
   // Parse JSON data received in req.body()
   boost::property_tree::ptree req_json;
@@ -40,7 +40,7 @@ Response* PostRequestHandler::handle_request(const Request& req){
         // Complete the path for the executable specified by source
         source = Config::inst().root() + "/simulations/" + source;
 
-        boost::asio::io_service async_pipe;
+        boost::asio::io_context async_pipe;
         std::future<std::string> out_future;
         std::future<std::string> err_future;
 
@@ -74,41 +74,40 @@ Response* PostRequestHandler::handle_request(const Request& req){
           async_pipe.run(); // Blocks until child process finishes
         }
 
-        std::string err_data = err_future.get();
+        cerr_data = err_future.get();
         // Escape control characters in output JSON
-        boost::replace_all(err_data, "\n", "\\n");
-        boost::replace_all(err_data, "\t", "\\t");
+        boost::replace_all(cerr_data, "\n", "\\n");
+        boost::replace_all(cerr_data, "\t", "\\t");
 
-        std::string out_data = out_future.get();
+        cout_data = out_future.get();
         // Escape control characters in output JSON
-        boost::replace_all(out_data, "\n", "\\n");
-        boost::replace_all(out_data, "\t", "\\t");
+        boost::replace_all(cout_data, "\n", "\\n");
+        boost::replace_all(cout_data, "\t", "\\t");
 
-        output = err_data + out_data;
         Analytics::inst().posts++; // Log valid POST request in analytics
       }
       else{ // Request tried to leave intended directory
-        output = "Error 403: Forbidden";
+        cout_data = "Error 403: Forbidden";
         status = http::status::forbidden; // Response status code 403
         Analytics::inst().malicious++; // Log malicious request in analytics
       }
     }
     catch(boost::property_tree::ptree_error e){ // Thrown by ptree.get()
       Log::error(LOG_PRE, "Property tree error: " + std::string(e.what()));
-      output = "Error 400: Bad Request";
+      cout_data = "Error 400: Bad Request";
       status = http::status::bad_request; // Response status code 400
       Analytics::inst().invalid++; // Log invalid request in analytics
     }
     catch(boost::process::process_error e){ // Thrown by boost::process::system()
       Log::error(LOG_PRE, "Process error: " + std::string(e.what()));
-      output = "Error 500: Internal Server Error";
+      cout_data = "Error 500: Internal Server Error";
       status = http::status::internal_server_error; // Response status code 500
       Analytics::inst().invalid++; // Log invalid request in analytics
     }
   }
   catch(boost::property_tree::json_parser_error e){ // Thrown by read_json()
     Log::error(LOG_PRE, "JSON parser error: " + std::string(e.what()));
-    output = "Error 400: Bad Request";
+    cout_data = "Error 400: Bad Request";
     status = http::status::bad_request; // Response status code 400
     Analytics::inst().invalid++; // Log invalid request in analytics
   }
@@ -128,8 +127,11 @@ Response* PostRequestHandler::handle_request(const Request& req){
   else
     res->set(http::field::connection, "close");
 
-  // Set body
-  res->body() = "{\"output\":\"" + output + "\"}";
+  // Populate JSON body with cout and cerr output by the simulation
+  res->body() = "{"
+    R"("cout":")" + cout_data + "\","
+    R"("cerr":")" + cerr_data + "\""
+  "}";
   res->prepare_payload();
   
   return res;
