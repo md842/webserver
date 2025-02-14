@@ -6,15 +6,19 @@ import {doc, getDoc} from "firebase/firestore";
 import db from '../../components/firebaseConfig.ts';
 import NavButton from '../../components/NavButton.tsx';
 
+import Button from 'react-bootstrap/Button';
+
 interface Notebook{
-  // Title of project.                                        Source: Database
-  title: string;
   // Long form description of project for page display.       Source: Database
   long_desc: string;
   // Location of notebook to embed.                           Source: Database
   nb_embed: string;
+  // Link to project repository.                              Source: Database
+  repo?: string;
   // Tags associated with the project.                        Source: Database
   tags: string;
+  // Title of project.                                        Source: Database
+  title: string;
 }
 
 export default class NotebookViewer extends React.Component<{}, Notebook>{
@@ -53,6 +57,7 @@ export default class NotebookViewer extends React.Component<{}, Notebook>{
       long_desc: uDesc,
       // Use naming convention of notebook files to get embed
       nb_embed: "/notebooks/" + target_id + "-nb.html",
+      repo: data?.repo,
       tags: uTags,
       title: data!.title
     });
@@ -66,6 +71,9 @@ export default class NotebookViewer extends React.Component<{}, Notebook>{
           <p className="long-desc">{this.state.long_desc}</p>
           <p>Tags: {this.state.tags}</p>
           <NavButton href="/projects">Back to projects</NavButton>
+          {(this.state.repo) && // Render only if repo is set
+            <Button href={this.state.repo}>View repository on GitHub</Button>
+          }
         </div>
         <div className="nb-container">
           <iframe src={this.state.nb_embed}/>
