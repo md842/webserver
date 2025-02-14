@@ -24,7 +24,7 @@ interface Simulation{
   // The name of the cerr textarea.                           Source: Database
   cerr_name: string;
   // The size to render the cerr textarea with (in rows).     Source: Database
-  cerr_size: number;
+  cerr_size?: number;
   // The size to render the cout textarea with (in rows).     Source: Database
   cout_size: number;
   // Indicates whether the simulation input is raw or file.   Source: Database
@@ -49,7 +49,6 @@ export default class SimInterface extends React.Component<{}, RequestIO & Simula
       cout: "",
       // Simulation (will not change after the initial read)
       cerr_name: "",
-      cerr_size: 0,
       cout_size: 3,
       input_as_file: false,
       long_desc: "Loading from database...",
@@ -82,7 +81,7 @@ export default class SimInterface extends React.Component<{}, RequestIO & Simula
       input: data!.default_input.replaceAll("\\n", '\n'),
       // Simulation (will not change after the initial read)
       cerr_name: data!.cerr_name,
-      cerr_size: data!.cerr_size,
+      cerr_size: data?.cerr_size,
       cout_size: data!.cout_size,
       input_as_file: data!.input_as_file,
       long_desc: uDesc,
@@ -155,7 +154,7 @@ export default class SimInterface extends React.Component<{}, RequestIO & Simula
               value={this.state.cout}
               readOnly
             />
-            {(this.state.cerr_size > 0) && // Render only if cerr_size is set
+            {(this.state.cerr_size) && // Render only if cerr_size is set
               <div className="cerr">
                 <Form.Label>{this.state.cerr_name}</Form.Label>
                 <Form.Control
