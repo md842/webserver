@@ -55,18 +55,18 @@ export function Component(){
         <p>
           The version of this project hosted here is an improved, adapted
           version of my&nbsp;
-          <a href="https://github.com/md842/Earth-Impact-Simulator-CS-174A-Final-Project">
+          <a href="https://github.com/md842/Earth-Impact-Simulator-CS-174A-Final-Project" target="_blank">
             final group project
           </a>
           &nbsp;for the Fall 2023 session of UCLA CS 174A (Introduction to
           Computer Graphics). I have maintained the original repository's
           commit history within the new repository in order to credit my
           collaborators,&nbsp;
-          <a href="https://github.com/HiccupHan">
+          <a href="https://github.com/HiccupHan" target="_blank">
             HiccupHan (GitHub)
           </a>
           &nbsp;and&nbsp;
-          <a href="https://github.com/mikim25">
+          <a href="https://github.com/mikim25" target="_blank">
             mikim25 (GitHub)
           </a>
           .
