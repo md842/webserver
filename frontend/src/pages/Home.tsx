@@ -31,10 +31,10 @@ export default function Home(){
           <img src={picture}/>
           <h5>Computer Science B.S.</h5>
           <h5>University of California Los Angeles (UCLA)</h5>
-          <a href="https://github.com/md842">
+          <a href="https://github.com/md842" target="_blank">
             <i className="bi bi-github"></i>
           </a>
-          <a href="https://www.linkedin.com/in/maxdeng/">
+          <a href="https://www.linkedin.com/in/maxdeng/" target="_blank">
             <i className="bi bi-linkedin"></i>
           </a>
         </section>

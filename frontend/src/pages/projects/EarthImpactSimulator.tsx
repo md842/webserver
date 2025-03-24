@@ -78,7 +78,7 @@ export function Component(){
           Tags: WebGL, OpenGL, OpenGL Shading Language (GLSL), JavaScript
         </p>
         <NavButton href="/projects">Back to projects</NavButton>
-        <Button href="https://github.com/md842/earth-impact-simulator">
+        <Button onClick={() => window.open("https://github.com/md842/earth-impact-simulator")}>
           View repository on GitHub
         </Button>
       </div>

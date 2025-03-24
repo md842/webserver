@@ -58,7 +58,9 @@ export function ProjectCard(params: Project): JSX.Element{
         <NavButton href={params.nb}>View Notebook</NavButton>
       }
       {params.repo && // Return Button element if params.repo is present
-        <Button href={params.repo}>View repository on GitHub</Button>
+        <Button onClick={() => window.open(params.repo)}>
+          View repository on GitHub
+        </Button>
       }
       </Card.Body>
     </Card>

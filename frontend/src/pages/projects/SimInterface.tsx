@@ -131,7 +131,9 @@ export default class SimInterface extends React.Component<{}, RequestIO & Simula
             protect the server from excessive and/or unintended payloads.
           </p>
           <NavButton href="/projects">Back to projects</NavButton>
-          <Button href={this.state.repo}>View repository on GitHub</Button>
+          <Button onClick={() => window.open(this.state.repo)}>
+            View repository on GitHub
+          </Button>
         </div>
         <div className="backend-container">
           <p className="bg-dark">C++ Back-end Interface</p>

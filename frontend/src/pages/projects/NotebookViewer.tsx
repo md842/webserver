@@ -72,7 +72,9 @@ export default class NotebookViewer extends React.Component<{}, Notebook>{
           <p>Tags: {this.state.tags}</p>
           <NavButton href="/projects">Back to projects</NavButton>
           {(this.state.repo) && // Render only if repo is set
-            <Button href={this.state.repo}>View repository on GitHub</Button>
+            <Button onClick={() => window.open(this.state.repo)}>
+              View repository on GitHub
+            </Button>
           }
         </div>
         <div className="nb-container">
