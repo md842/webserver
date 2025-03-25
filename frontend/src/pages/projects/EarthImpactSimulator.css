@@ -4,46 +4,37 @@
        below the simulation in portrait mode */
     display: flex;
   }
+
   .controls-widget{
     margin-left: 1%; /* Spacing for landscape mode only */
+  }
+
+  .control-box, .control-box tbody, .control-box tr{
+    height: 100%; /* Align control box with canvas height */
   }
 }
 
 canvas{
-  object-fit: cover; /* Maintain aspect ratio when scaling */
-  width: 100% !important; /* Override inline values for responsive scaling */
   height: auto !important; /* Override inline values for responsive scaling */
-}
-
-.control-box{
-  width: 100%; /* Relative to body width */
-  height: 100%; /* Relative to controls-widget */
-}
-
-.control-box tbody{
-  height: 100%; /* Relative to control-box */
+  width: 100% !important; /* Override inline values for responsive scaling */
 }
 
 .control-box tr{
   display: flex; /* Put panels side by side */
   justify-content: space-between;
-  height: 100%; /* Relative to control-box */
 }
 
 .control-box td{
-  display: flex; /* Title div above control panel div */
-  flex-direction: column; /* Title div above control panel div */
-  align-items: stretch; /* Stretch vertically to fit tr */
   flex-basis: 49.5%; /* 1% space-between */
   border: 1px solid black;
-  border-radius: 10px;
-  padding: 0px;
+  border-radius: calc(0.5em + 2px); /* border radius of title + 2px border */
+  padding: 0;
 }
 
 .control-title{
+  border-radius: 0.5em 0.5em 0 0; /* Round corners on top-left and top-right */
+  color: #fff;
   padding: 0.5em 1em; /* top/bottom, left/right */
-  color: white;
-  border-radius: 8px 8px 0px 0px; /* Round corners on top-left and top-right */
 }
 
 .control-div{
@@ -70,8 +61,4 @@ canvas{
 
 .control-div.camera-controls .movement-button-row{
   display: flex; /* Button group arranges a row of buttons */
-}
-
-.control-div.camera-controls .movement-button-row button{
-  flex-basis: 100%; /* Occupy as much space as possible within row */
 }

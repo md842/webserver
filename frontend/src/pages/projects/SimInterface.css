@@ -1,19 +1,14 @@
 .backend-container{
   border: 1px solid black;
-  border-radius: 10px;
-  padding: 0px;
+  border-radius: calc(0.5em + 2px); /* border radius of title + 2px border */
 }
 
 .backend-container p{
-  color: white;
+  color: #fff;
   padding: 0.5em 1em; /* top/bottom, left/right */
-  border-radius: 8px 8px 0px 0px; /* Round corners on top-left and top-right */
+  border-radius: 0.5em 0.5em 0 0; /* Round corners on top-left and top-right */
 }
 
 .backend-container form{
   padding: 0.5em 1em; /* top/bottom, left/right */
-}
-
-.cerr{
-  margin-top: 1em;
 }

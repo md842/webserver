@@ -19,7 +19,7 @@ export interface Project{
   image?: string;
   // If present, "View Notebook" button will appear.          Source: Database
   nb?: string;
-  // Link to project repository.                              Source: Database
+  // If present, "View repository" button will appear.        Source: Database
   repo?: string;
   // If present, "Run Simulation" button will appear.         Source: Database
   sim?: string;

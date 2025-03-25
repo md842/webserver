@@ -1,25 +1,16 @@
 :root {
-  --dyn-height: 500px;
+  --dyn-height: 0; /* Allows notebook viewport to scale with window size */
 }
 
-.nb-container {
+.nb-viewport {
   border: 1px solid black;
   height: var(--dyn-height);
-  overflow: hidden;
-  overflow-x: scroll;
+  min-height: 128px;
+  overflow: scroll hidden;
 }
 
-.nb-container iframe {
+.nb-viewport iframe {
   height: 100%;
-}
-
-@media (max-width: 1599px){
-  .nb-container iframe {
-    width: 1200px; /* Ensure the whole notebook is viewable on any screen */
-  }
-}
-@media (min-width: 1600px){
-  .nb-container iframe {
-    width: 100%;
-  }
+  min-width: 1200px; /* Ensure the whole notebook is viewable on any screen */
+  width: 100%;
 }

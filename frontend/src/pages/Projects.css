@@ -30,13 +30,13 @@
 
 /* Projects section styling */
 
-.projects-section .card{
-  margin-bottom: 1em;
-}
-
 .projects-section{
   display: flex;
   flex-direction: column;
+}
+
+.projects-section .card-in{ /* Margin only applies if card is visible */
+  margin-bottom: 1em;
 }
 
 @media (orientation: landscape) and (min-width: 1366px){

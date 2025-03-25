@@ -3,8 +3,9 @@ import './EarthImpactSimulator.css'
 import {useEffect, useRef} from "react";
 import {useLoaderData} from 'react-router-dom';
 
-import Button from 'react-bootstrap/Button';
 import NavButton from '../../components/NavButton';
+
+import Button from 'react-bootstrap/Button';
 
 export async function loader(): Promise<Object>{
   /* Called by router in App.tsx for dynamic import. @ts-ignore is required
@@ -42,17 +43,16 @@ export function Component(){
   });
 
   return(
-    <main id="main">
-      <h1>Earth Impact Simulator</h1>
+    <main>
+      <h1 className="mb-4">Earth Impact Simulator</h1>
       <div className="description">
-        <p>
+        <p className="long-desc">
           A physics simulation of the impact of a meteor striking Earth. By
           altering the initial parameters for the meteor's radius and
           velocity, the user can control the output of the simulation; the
           Earth's state post-collision ranges from unaffected to
           completely destroyed.
-        </p>
-        <p>
+          <br/><br/>
           The version of this project hosted here is an improved, adapted
           version of my&nbsp;
           <a href="https://github.com/md842/Earth-Impact-Simulator-CS-174A-Final-Project" target="_blank">
@@ -62,31 +62,22 @@ export function Component(){
           Computer Graphics). I have maintained the original repository's
           commit history within the new repository in order to credit my
           collaborators,&nbsp;
-          <a href="https://github.com/HiccupHan" target="_blank">
-            HiccupHan (GitHub)
-          </a>
+          <a href="https://github.com/HiccupHan" target="_blank">HiccupHan (GitHub)</a>
           &nbsp;and&nbsp;
-          <a href="https://github.com/mikim25" target="_blank">
-            mikim25 (GitHub)
-          </a>
-          .
+          <a href="https://github.com/mikim25" target="_blank">mikim25 (GitHub)</a>.
+          <br/><br/>
+          Note: This simulation may perform poorly if hardware acceleration is disabled in your browser settings. This simulation is not intended to be accurate; the goal is only to be a showcase of graphics programming.
         </p>
         <p>
-          Note: This simulation is not intended to be accurate. The goal of this simulation is only to be a showcase of graphics programming.
-        </p>
-        <p>
-          Tags: WebGL, OpenGL, OpenGL Shading Language (GLSL), JavaScript
+          Tags: Computer Graphics, OpenGL/WebGL, GLSL (OpenGL Shading Language), JavaScript, CUDA, Full-stack, Front-end, Back-end
         </p>
         <NavButton href="/projects">Back to projects</NavButton>
         <Button onClick={() => window.open("https://github.com/md842/earth-impact-simulator")}>
           View repository on GitHub
         </Button>
       </div>
-      <div
-        className="canvas-widget"
-        id="main-canvas"
-        ref={mainCanvas}
-      />
+      {/* simulation.js draws the canvas and controls in the div below */}
+      <div id="main-canvas" ref={mainCanvas}/>
     </main>
   );
 }

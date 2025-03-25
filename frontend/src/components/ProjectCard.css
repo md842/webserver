@@ -1,15 +1,5 @@
-/* Common card styling */
-
 .card{
-  overflow: hidden;
-}
-
-.card img{
-  /* Scale image to fill available card image space while allowing vertical
-     compression during filter out animation. */
-  object-fit: fill;
-  height: auto;
-  width: auto;
+  overflow: hidden; /* Hides text when the card is hidden */
 }
 
 /* Card filter animations */
@@ -17,7 +7,6 @@
 .card-out{
   border-width: 0;
   margin: 0;
-
   /* property, duration, timing function, delay */
   transition: border-width 0s linear 0.5s, /* Remove border after animation */
               margin 0.05s linear 0.45s; /* Collapse margin late in animation */
@@ -26,21 +15,25 @@
 .body-in{
   max-height: 400px;
   padding: var(--bs-card-spacer-y) var(--bs-card-spacer-x); /* Restore vertical padding */
+  /* property, duration, timing function */
   transition: max-height 0.5s ease-in, padding 0.5s ease-in;
 }
 
 .body-out{
   max-height: 0;
   padding: 0 var(--bs-card-spacer-x); /* Remove vertical padding */
+  /* property, duration, timing function */
   transition: max-height 0.5s ease-out, padding 0.5s ease-out;
 }
 
 .img-in{
   max-height: 600px;
+  /* property, duration, timing function */
   transition: max-height 0.5s ease-in;
 }
 
 .img-out{
   max-height: 0;
+  /* property, duration, timing function */
   transition: max-height 0.5s ease-out;
 }

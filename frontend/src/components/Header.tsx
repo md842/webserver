@@ -13,7 +13,7 @@ export default function Header(){
   const [mode, setMode] = useState("light");
 
   useEffect(() => {
-    /* Load saved dark/light mode setting from local storage and set it */
+    /* Load and set saved dark/light mode setting from local storage */
     const storedMode = window.localStorage.getItem('mode');
     if (storedMode){
       setMode(storedMode);
@@ -46,15 +46,15 @@ export default function Header(){
 
   return(
     <header className="sticky-top">
-      <Navbar sticky="top" bg="dark" data-bs-theme="dark">
-        <Container className="nav-container">
+      <Navbar bg="dark" data-bs-theme="dark">
+        <Container>
           <Nav
             activeKey={'/' + useLocation().pathname.split('/')[1]}
             variant="underline"
           > {/* Highlights active page in nav bar */}
-          <Navbar.Brand as={Link} to="/">Max Deng</Navbar.Brand>
-          <Nav.Link as={Link} eventKey="/" to="/">Home</Nav.Link>
-          <Nav.Link as={Link} eventKey="/projects" to="/projects">Projects</Nav.Link>
+            <Navbar.Brand as={Link} to="/">Max Deng</Navbar.Brand>
+            <Nav.Link as={Link} eventKey="/" to="/">Home</Nav.Link>
+            <Nav.Link as={Link} eventKey="/projects" to="/projects">Projects</Nav.Link>
           </Nav>
           <Button
             variant="link"

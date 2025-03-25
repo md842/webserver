@@ -1,72 +1,64 @@
-.profile{
+.home{
   display: flex;
 }
 
 @media (orientation: portrait) or (max-width: 1279px){
-  .profile{
+  .home{
     /* Display Profile section above About section */
     flex-direction: column;
   }
 }
 
 @media (orientation: landscape){
-  .profile{
-    flex-direction: row; /* Display Profile and About sections side by side */
-  }
-
   @media (max-width: 1919px){ /* Applies below 1080p (1920x1080) */
-    .profile section{
+    .home section{
       min-width: 256px;
     }
 
-    .profile aside{
+    .home aside{
       max-width: calc(100% - 256px);
     }
   }
 
   @media (max-width: 2559px){ /* Applies below 1440p (2560x1440) */
-    .profile aside{
+    .home aside{
       margin-left: 4em;
     }
   }
 
   @media (max-width: 3839px){ /* Applies below 4K (3840x2160) */
-    .profile section{
+    .home section{
       flex-basis: 30%;
     }
 
-    .profile aside{
+    .home aside{
       flex-basis: 70%;
     }
   }
 
   @media (min-width: 3840px){ /* Applies to 4K (3840x2160) and higher */
-    .profile section{
+    .home section{
       flex-basis: 20%;
     }
 
-    .profile aside{
+    .home aside{
       flex-basis: 80%;
-    }
-
-    .carousel{
-      margin: auto; /* Center the carousel on large screens */
     }
   }
 }
 
-.profile section{
+.home section{
   text-align: center;
 }
 
-.profile section img{
+.home section img{
   max-width: 100%; /* Image width relative to section width */
   border-radius: 50%; /* Circular image */
   margin: 1em 0em; /* top/bottom, left/right */
 }
 
-.profile section .bi{
-  font-size: 4em;
+.home section .bi{ /* GitHub and LinkedIn buttons */
+  font-size: 4em; /* Set icon size */
   margin: 0em 0.125em; /* top/bottom, left/right */
 }
 
@@ -76,11 +68,12 @@
   /* Make room for carousel controls around the project card so they don't
      interfere with clickable buttons within the project card. */
   padding: 0 2.5em 1.5em; /* top, right/left, bottom */
-  max-width: 1162px; /* Card images are 1080px, carousel adds 82px width */
+  /* 1080px card images, 1px borders, 5em padding */
+  max-width: calc(1082px + 5em);
 }
 
-.carousel-indicators{
-  margin: 0;
+.carousel-indicators{ /* The control area at the bottom of the carousel */
+  margin: 0; /* Resets the preexisting margin */
 }
 
 .carousel-indicators button{
@@ -88,13 +81,9 @@
   background-color: var(--bs-body-color) !important;
 }
 
-.carousel-control-prev, .carousel-control-next{
-  background-color: var(--bs-body-color);
+.carousel-control-prev, .carousel-control-next{ /* Left/right buttons */
+  background-color: var(--bs-body-color); /* Make carousel controls visible */
   border-radius: var(--bs-border-radius);
-  width: 2em;
-  height: calc(100% - 1.5em);
-}
-
-.carousel-item .card{
-  margin: 0; /* Remove the card margin when it is a carousel item. */
+  width: 2em; /* Prevent overlap with card */
+  height: calc(100% - 1.5em); /* Align with card, exclude bottom padding */
 }

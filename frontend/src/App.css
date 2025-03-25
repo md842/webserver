@@ -1,3 +1,5 @@
+/* All pages common styling */
+
 a{
   color: var(--bs-body-color); /* Set link color to text color */
 }
@@ -6,15 +8,18 @@ main{
   margin: 0% 10% 0% 10%; /* top, right, bottom, left */
 }
 
-.btn{
+.btn-primary{
   margin-right: 0.5em;
 }
+
+/* Project pages common styling */
 
 .description{
   margin: 1em 0em; /* top/bottom, left/right */
 }
 
-.long-desc{ /* Allows line breaks to show in long project descriptions. */
+.long-desc{
+  /* Allows line breaks to show in long project descriptions. */
   white-space: pre-line;
   line-height: 1.25em;
   padding-bottom: 0.625em;

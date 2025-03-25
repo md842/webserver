@@ -33,8 +33,8 @@ export default class NotebookViewer extends React.Component<{}, Notebook>{
 
     const set_dyn_height = () => {
       document.documentElement.style.setProperty('--dyn-height',
-        "calc(" + window.innerHeight + "px - 1em)");
-    }
+        "calc(" + window.innerHeight + "px - 6em)");
+    } // Optimizes the notebook viewport for the screen size
     set_dyn_height(); // Set --dyn-height immediately one time
     window.addEventListener("resize", set_dyn_height); // Add resize listener
 
@@ -66,7 +66,7 @@ export default class NotebookViewer extends React.Component<{}, Notebook>{
   render(){
     return(
       <main>
-        <h1>{this.state.title}</h1>
+        <h1 className="mb-4">{this.state.title}</h1>
         <div className="description">
           <p className="long-desc">{this.state.long_desc}</p>
           <p>Tags: {this.state.tags}</p>
@@ -77,7 +77,8 @@ export default class NotebookViewer extends React.Component<{}, Notebook>{
             </Button>
           }
         </div>
-        <div className="nb-container">
+        <div className="nb-viewport">
+          {/* iframe must be wrapped in a div for desired scrolling properties on small screens */}
           <iframe src={this.state.nb_embed}/>
         </div>
       </main>

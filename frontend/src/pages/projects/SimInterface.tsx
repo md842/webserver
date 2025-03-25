@@ -44,9 +44,9 @@ export default class SimInterface extends React.Component<{}, RequestIO & Simula
     super(props);
     this.state = { // Initialize state with placeholders and/or default values
       // RequestIO (may change with each request)
-      input: "Loading from database...",
       cerr: "",
       cout: "",
+      input: "Loading from database...",
       // Simulation (will not change after the initial read)
       cerr_name: "",
       cout_size: 3,
@@ -103,7 +103,6 @@ export default class SimInterface extends React.Component<{}, RequestIO & Simula
     })
     .then(response => response.json())
     .then((data) => {
-      console.log(data);
       this.setState({ // Set RequestIO state to response data
         cout: data.cout,
         cerr: data.cerr,
@@ -152,12 +151,13 @@ export default class SimInterface extends React.Component<{}, RequestIO & Simula
             <Form.Label>Output</Form.Label>
             <Form.Control
               as="textarea"
+              className="mb-3"
               rows={this.state.cout_size}
               value={this.state.cout}
               readOnly
             />
             {(this.state.cerr_size) && // Render only if cerr_size is set
-              <div className="cerr">
+              <>
                 <Form.Label>{this.state.cerr_name}</Form.Label>
                 <Form.Control
                   as="textarea"
@@ -165,7 +165,7 @@ export default class SimInterface extends React.Component<{}, RequestIO & Simula
                   value={this.state.cerr}
                   readOnly
                 />
-              </div>
+              </>
             }
           </Form>
         </div>

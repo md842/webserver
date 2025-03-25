@@ -43,7 +43,7 @@ export default class Projects extends React.Component<{}, FilterState>{
     const [checked] = useState(false);
     return(
       <Container fluid className="mb-5" id="filter-container">
-        <p id="filter-label">Or filter by tag:</p>
+        <p id="filter-label">Or filter by tag(s):</p>
         <ToggleButtonGroup type="checkbox" className="filter-btns">
           { /* Generate buttons from database tags. Key warnings can be
                 safely ignored; this map won't change after being rendered. */

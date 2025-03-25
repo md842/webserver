@@ -2,9 +2,9 @@
   margin-bottom: 4em;
 }
 
-.navbar .bi{
+.navbar .bi{ /* Dark/light mode button */
   line-height: 0px; /* Remove padding introduced by line-height */
-  font-size: 2em;
+  font-size: 2em; /* Set icon size */
   color: #fff;
 }
 
