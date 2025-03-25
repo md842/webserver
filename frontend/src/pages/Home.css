@@ -1,48 +1,24 @@
-.home{
-  display: flex;
-}
-
 @media (orientation: portrait) or (max-width: 1279px){
   .home{
     /* Display Profile section above About section */
+    display: flex;
     flex-direction: column;
   }
 }
 
-@media (orientation: landscape){
-  @media (max-width: 1919px){ /* Applies below 1080p (1920x1080) */
-    .home section{
-      min-width: 256px;
-    }
-
-    .home aside{
-      max-width: calc(100% - 256px);
-    }
+@media (orientation: landscape) and (min-width: 1280px){
+  .home section{
+    position: fixed; /* Profile section does not scroll */
+    max-width: 20%;
   }
 
-  @media (max-width: 2559px){ /* Applies below 1440p (2560x1440) */
-    .home aside{
-      margin-left: 4em;
-    }
-  }
-
-  @media (max-width: 3839px){ /* Applies below 4K (3840x2160) */
-    .home section{
-      flex-basis: 30%;
-    }
-
-    .home aside{
-      flex-basis: 70%;
-    }
+  .home aside{
+    margin-left: 31.25%;
   }
 
   @media (min-width: 3840px){ /* Applies to 4K (3840x2160) and higher */
-    .home section{
-      flex-basis: 20%;
-    }
-
     .home aside{
-      flex-basis: 80%;
+      margin-left: 18.75%;
     }
   }
 }
