@@ -1,5 +1,14 @@
 /* All pages common styling */
 
+body{
+  font-family: "Noto Sans", system-ui;
+  font-weight: 300;
+}
+
+.h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6, .form-control{
+  font-weight: 300;
+}
+
 a{
   color: var(--bs-body-color); /* Set link color to text color */
 }
@@ -9,6 +18,7 @@ main{
 }
 
 .btn-primary{
+  font-weight: 300;
   margin-right: 0.5em;
 }
 
