@@ -1,14 +1,18 @@
 /* Filter section styling */
 
 @media (max-width: 1599px){
-  /* Tag buttons render poorly below 1600px, so hide them. */
+  /* Tag buttons render poorly below 1600px, hide them. */
   #filter-container{
     display: none;
+  }
+
+  .sections{
+    margin-top: 2em; /* Add some space between search bar and projects. */
   }
 }
 
 @media (min-width: 1600px) and (max-width: 1919px){
-  /* The tag buttons and label should be on different lines. */
+  /* Render tag buttons and label on separate lines (no flex). */
   #filter-label{
     margin: 0 1em 1em 0; /* top, right, bottom, left */
   }
@@ -32,47 +36,32 @@
 
 .projects-section{
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap; /* Overflow into pseudo-grid */
+  gap: 0.5%; /* Horizontal space between cards */
 }
 
-.projects-section .card-in{ /* Margin only applies if card is visible */
-  margin-bottom: 1em;
+.projects-section .card-in{ /* 0.5% gap between cards on different rows. */
+  margin-bottom: 0.5%;
 }
 
-@media (orientation: landscape) and (min-width: 1366px){
-  .sections{
-    /* Display Featured Projects section and Projects section side by side */
-    display: flex;
-    justify-content: space-between;
-  }
-
-  .projects-section{
-    width: 49.5%; /* 1% space between */
-  }
+.projects-section .card-out{ /* Override 0.5% gap for hidden cards. */
+  margin: 0 -0.5% 0 0; /* top, right, bottom, left */
 }
 
-/* Commented out for now, not sure yet if I want to switch to a grid system.
-.projects-section{
-  display: grid;
-  grid-gap: 1em;
-  grid-template-columns: 1fr;
-}
-
-@media (min-width: 1366px){
-  .projects-section{
-    grid-template-columns: 1fr 1fr;
+@media (min-width: 1600px){
+  .projects-section .card-in{
+    flex-basis: 49.75%; /* 2 cards per row */
   }
 }
 
 @media (min-width: 2560px){
-  .projects-section{
-    grid-template-columns: 1fr 1fr 1fr;
+  .projects-section .card-in{
+    flex-basis: 33%; /* 3 cards per row */
   }
 }
 
 @media (min-width: 3840px){
-  .projects-section{
-    grid-template-columns: 1fr 1fr 1fr 1fr;
+  .projects-section .card-in{
+    flex-basis: 24.625%; /* 4 cards per row */
   }
 }
-*/

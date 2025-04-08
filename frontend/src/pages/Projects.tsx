@@ -83,30 +83,32 @@ export default class Projects extends React.Component<{}, FilterState>{
        Class member due to use of this.resolveFilter() and this.search(). */
     let displayed = false;
     return(
-      <div className="projects-section mb-3">
+      <>
         <h3 className="mb-3">{params.title}</h3>
-        { // If data is not yet loaded from database:
-        this.projectData.length == 0 &&
-          <p>Loading projects from database...</p>
-        }
+        <div className="projects-section mb-3">
+          { // If data is not yet loaded from database:
+          this.projectData.length == 0 &&
+            <p>Loading projects from database...</p>
+          }
 
-        {/* Generate project cards from database info. Key warnings can be
-            safely ignored; this map won't change after being rendered. */
-          params.data.map((params:Project) => {
-            // Update vis state based on output of filter and search functions
-            params.vis = this.resolveFilter(params.tags) &&
-                         this.search(params.tags, params.title);
-            if (params.vis) // If any card is displayed in this section
-              displayed = true; // Prevents message below from rendering
-            return <ProjectCard {...params}/>; // Re-render with updated vis
-          })
-        }
+          {/* Generate project cards from database info. Key warnings can be
+              safely ignored; this map won't change after being rendered. */
+            params.data.map((params:Project) => {
+              // Update vis state based on output of filter and search functions
+              params.vis = this.resolveFilter(params.tags) &&
+                          this.search(params.tags, params.title);
+              if (params.vis) // If any card is displayed in this section
+                displayed = true; // Prevents message below from rendering
+              return <ProjectCard {...params}/>; // Re-render with updated vis
+            })
+          }
 
-        { // If data is loaded from database but no cards were displayed:
-        (this.projectData.length > 0 && !displayed) &&
-          <p>No projects were found that matched the filter settings.</p>
-        }
-      </div>
+          { // If data is loaded from database but no cards were displayed:
+          (this.projectData.length > 0 && !displayed) &&
+            <p>No projects were found that matched the filter settings.</p>
+          }
+        </div>
+      </>
     );
   }
 
