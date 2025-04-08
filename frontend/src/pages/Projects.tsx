@@ -179,7 +179,7 @@ export default class Projects extends React.Component<{}, FilterState>{
         <this.FilterButtons/>
 
         {/* Project sections. Data passed as reference, no memory waste. */}
-        <div className="sections">
+        <div>
           <this.Section title="Featured Projects" data={this.featuredData}/>
           <this.Section title="Projects" data={this.projectData}/>
         </div>

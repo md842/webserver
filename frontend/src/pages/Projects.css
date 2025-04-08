@@ -6,8 +6,8 @@
     display: none;
   }
 
-  .sections{
-    margin-top: 2em; /* Add some space between search bar and projects. */
+  .form-control{ /* Add some space between search bar and projects. */
+    margin-bottom: 2em !important; /* Overriden by mb-3 without !important */
   }
 }
 
@@ -52,16 +52,28 @@
   .projects-section .card-in{
     flex-basis: 49.75%; /* 2 cards per row */
   }
+
+  .projects-section .card-out{
+    max-width: 49.75%;
+  }
 }
 
 @media (min-width: 2560px){
   .projects-section .card-in{
     flex-basis: 33%; /* 3 cards per row */
   }
+
+  .projects-section .card-out{
+    max-width: 33%;
+  }
 }
 
 @media (min-width: 3840px){
   .projects-section .card-in{
     flex-basis: 24.625%; /* 4 cards per row */
+  }
+
+  .projects-section .card-out{
+    max-width: 24.625%;
   }
 }
