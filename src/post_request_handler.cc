@@ -1,6 +1,7 @@
 #include <boost/algorithm/string/replace.hpp> // replace_all
-#include <boost/asio.hpp> // io_context
-#include <boost/process.hpp> // child, system, std_out, std_err
+#include <boost/asio.hpp> // io_context, basic_readable_pipe
+#include <boost/process/v2/process.hpp> // process::proc
+#include <boost/process/v2/stdio.hpp> // process_stdio
 #include <boost/property_tree/json_parser.hpp> // read_json
 #include <boost/property_tree/ptree.hpp> // ptree
 
@@ -14,12 +15,13 @@
 #define LOG_PRE "[PostRequestHandler] "
 
 namespace http = boost::beast::http;
+namespace procv2 = boost::process::v2;
 
 
 /// Generates a response to a given POST request.
 Response* PostRequestHandler::handle_request(const Request& req){
   http::status status = http::status::ok; // Response status code 200
-  std::string cout_data, cerr_data;
+  std::string stdout_data, stderr_data;
 
   // Parse JSON data received in req.body()
   boost::property_tree::ptree req_json;
@@ -33,81 +35,98 @@ Response* PostRequestHandler::handle_request(const Request& req){
       // Throws boost::property_tree::ptree_error if named nodes not present
       std::string input = req_json.get<std::string>("input");
       bool input_as_file = req_json.get<bool>("input_as_file");
-      std::string source = req_json.get<std::string>("source");
+      std::string binary_path = req_json.get<std::string>("source");
 
       // Ensure that the request does not try to leave the intended directory
-      if (source.find("../") == std::string::npos){
+      if (binary_path.find("../") == std::string::npos){
         // Complete the path for the executable specified by source
-        source = Config::inst().root() + "/simulations/" + source;
+        binary_path = Config::inst().root() + "/simulations/" + binary_path;
 
-        boost::asio::io_context async_pipe;
-        std::future<std::string> out_future;
-        std::future<std::string> err_future;
+        boost::asio::io_context child_proc_io_context;
+        boost::asio::basic_readable_pipe stdout_pipe(child_proc_io_context);
+        boost::asio::basic_readable_pipe stderr_pipe(child_proc_io_context);
 
-        if (input_as_file){ // Sim expects file input, write input to file.
+        if (input_as_file){ // Sim expects file input, write raw input to file
           std::string input_file = Config::inst().root() +
-                                  "/simulations/temp_input.txt";
+                                   "/simulations/temp_input.txt";
           std::ofstream input_file_stream(input_file);
           input_file_stream << input;
           input_file_stream.close();
+          // Done with raw input, overwrite for convenience in proc call below
+          input = input_file;
+        }
 
-          // Pipe stdout and stderr of child process to futures declared above
-          boost::process::child c(
-            // Throws std::system_error if executable not found
-            boost::process::system(source, input_file,
-                                  boost::process::std_out > out_future,
-                                  boost::process::std_err > err_future));
-          async_pipe.run(); // Blocks until child process finishes
+        try{
+          // Throws boost::system::system_error if binary_path not found
+          // Launch child process with stdout and stderr piped
+          procv2::process proc(child_proc_io_context, binary_path, {input},
+                               procv2::process_stdio{{}, // default stdin
+                                                     stdout_pipe,
+                                                     stderr_pipe});
+          proc.wait(); // Block until child process finishes
 
-          // Clear input file; don't want user-supplied input to persist
-          std::ofstream clear_input_file(input_file);
+          boost::system::error_code ec; // ec == eof indicates successful read
+
+          // Read piped stderr from child process into stderr_data buffer
+          boost::asio::read(stderr_pipe, boost::asio::dynamic_buffer(stderr_data), ec);
+          if (ec == boost::asio::error::eof){ // Successful read
+            // Escape control characters in output JSON
+            boost::replace_all(stderr_data, "\n", "\\n");
+            boost::replace_all(stderr_data, "\t", "\\t");
+          }
+          else{ // Unsuccessful read
+            Log::error(LOG_PRE, "Failed to read stderr_pipe.");
+            stdout_data = "Error 500: Internal Server Error";
+            status = http::status::internal_server_error; // Response status code 500
+          }
+          
+          // Read piped stderr from child process into stdout_data buffer
+          boost::asio::read(stdout_pipe, boost::asio::dynamic_buffer(stdout_data), ec);
+          if (ec == boost::asio::error::eof){ // Successful read
+            // Escape control characters in output JSON
+            boost::replace_all(stdout_data, "\n", "\\n");
+            boost::replace_all(stdout_data, "\t", "\\t");
+          }
+          else{ // Unsuccessful read
+            Log::error(LOG_PRE, "Failed to read stdout_pipe.");
+            stdout_data = "Error 500: Internal Server Error";
+            status = http::status::internal_server_error; // Response status code 500
+          }
+          Analytics::inst().posts++; // Log valid POST request in analytics
+        }
+        catch(boost::system::system_error e){ // Thrown by procv2::process::proc()
+          Log::warn(LOG_PRE, "POST request specified unknown executable (likely malicious).");
+          stdout_data = "Error 404: Not Found";
+          status = http::status::not_found; // Response status code 404
+          Analytics::inst().malicious++; // Log malicious request in analytics
+        }
+
+        stderr_pipe.close(); // Ensure pipes closed regardless of success/fail
+        stdout_pipe.close();
+
+        if (input_as_file){ // Clear input file; user input shouldn't persist
+          std::ofstream clear_input_file(input);
           clear_input_file << "";
           clear_input_file.close();
         }
-        else{ // Sim expects raw input, provide parsed input directly.
-          // Pipe stdout and stderr of child process to futures declared above
-          boost::process::child c(
-            // Throws std::system_error if executable not found
-            boost::process::system(source, input,
-                                  boost::process::std_out > out_future,
-                                  boost::process::std_err > err_future));
-          async_pipe.run(); // Blocks until child process finishes
-        }
-
-        cerr_data = err_future.get();
-        // Escape control characters in output JSON
-        boost::replace_all(cerr_data, "\n", "\\n");
-        boost::replace_all(cerr_data, "\t", "\\t");
-
-        cout_data = out_future.get();
-        // Escape control characters in output JSON
-        boost::replace_all(cout_data, "\n", "\\n");
-        boost::replace_all(cout_data, "\t", "\\t");
-
-        Analytics::inst().posts++; // Log valid POST request in analytics
       }
       else{ // Request tried to leave intended directory
-        cout_data = "Error 403: Forbidden";
+        Log::warn(LOG_PRE, "Malicious POST request detected.");
+        stdout_data = "Error 403: Forbidden";
         status = http::status::forbidden; // Response status code 403
         Analytics::inst().malicious++; // Log malicious request in analytics
       }
     }
     catch(boost::property_tree::ptree_error e){ // Thrown by ptree.get()
       Log::error(LOG_PRE, "Property tree error: " + std::string(e.what()));
-      cout_data = "Error 400: Bad Request";
+      stdout_data = "Error 400: Bad Request";
       status = http::status::bad_request; // Response status code 400
-      Analytics::inst().invalid++; // Log invalid request in analytics
-    }
-    catch(boost::process::process_error e){ // Thrown by boost::process::system()
-      Log::error(LOG_PRE, "Process error: " + std::string(e.what()));
-      cout_data = "Error 500: Internal Server Error";
-      status = http::status::internal_server_error; // Response status code 500
       Analytics::inst().invalid++; // Log invalid request in analytics
     }
   }
   catch(boost::property_tree::json_parser_error e){ // Thrown by read_json()
     Log::error(LOG_PRE, "JSON parser error: " + std::string(e.what()));
-    cout_data = "Error 400: Bad Request";
+    stdout_data = "Error 400: Bad Request";
     status = http::status::bad_request; // Response status code 400
     Analytics::inst().invalid++; // Log invalid request in analytics
   }
@@ -129,8 +148,8 @@ Response* PostRequestHandler::handle_request(const Request& req){
 
   // Populate JSON body with cout and cerr output by the simulation
   res->body() = "{"
-    R"("cout":")" + cout_data + "\","
-    R"("cerr":")" + cerr_data + "\""
+    R"("cout":")" + stdout_data + "\","
+    R"("cerr":")" + stderr_data + "\""
   "}";
   res->prepare_payload();
   

@@ -127,6 +127,35 @@ TEST_F(PostRequestHandlerTest, DirectoryExitAttack){ // Uses test fixture
 }
 
 
+TEST_F(PostRequestHandlerTest, InvalidExecutable){ // Uses test fixture
+  req.body() = 
+  R"({
+        "input":"0",
+        "input_as_file":false,
+        "source":"invalid_source"
+     })"; // Invalid source, process_error will be thrown
+  req.prepare_payload();
+
+  Response* res = post_request_handler->handle_request(req);
+  
+  EXPECT_EQ(res->result_int(), 404); // 500 Internal Server Error
+  EXPECT_EQ(res->version(), 11); // HTTP/1.1
+  EXPECT_TRUE(res->keep_alive()); // Connection: Keep-Alive
+
+  std::string expected_output = 
+  "{"\
+    R"("cout":"Error 404: Not Found","cerr":"")"\
+  "}"; // JSON is used for error reporting to the client
+  
+  EXPECT_EQ(res->body(), expected_output);
+  EXPECT_EQ(get_content_length(*res),
+    std::to_string(expected_output.length()));
+  EXPECT_EQ(get_content_type(*res), "application/json");
+
+  free(res); // Free memory used by created response
+}
+
+
 TEST_F(PostRequestHandlerTest, JsonParserError){ // Uses test fixture
   req.body() = 
   R"({
@@ -143,35 +172,6 @@ TEST_F(PostRequestHandlerTest, JsonParserError){ // Uses test fixture
   std::string expected_output = 
   "{"\
     R"("cout":"Error 400: Bad Request","cerr":"")"\
-  "}"; // JSON is used for error reporting to the client
-  
-  EXPECT_EQ(res->body(), expected_output);
-  EXPECT_EQ(get_content_length(*res),
-    std::to_string(expected_output.length()));
-  EXPECT_EQ(get_content_type(*res), "application/json");
-
-  free(res); // Free memory used by created response
-}
-
-
-TEST_F(PostRequestHandlerTest, ProcessError){ // Uses test fixture
-  req.body() = 
-  R"({
-        "input":"0",
-        "input_as_file":false,
-        "source":"invalid_source"
-     })"; // Invalid source, process_error will be thrown
-  req.prepare_payload();
-
-  Response* res = post_request_handler->handle_request(req);
-  
-  EXPECT_EQ(res->result_int(), 500); // 500 Internal Server Error
-  EXPECT_EQ(res->version(), 11); // HTTP/1.1
-  EXPECT_TRUE(res->keep_alive()); // Connection: Keep-Alive
-
-  std::string expected_output = 
-  "{"\
-    R"("cout":"Error 500: Internal Server Error","cerr":"")"\
   "}"; // JSON is used for error reporting to the client
   
   EXPECT_EQ(res->body(), expected_output);
