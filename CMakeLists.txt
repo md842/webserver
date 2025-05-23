@@ -1,9 +1,9 @@
-cmake_minimum_required(VERSION 3.30.0)
+cmake_minimum_required(VERSION 3.30.0...4.0.2)
 project(webserver)
 
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(GOOGLETEST_VERSION 1.15.2)
+set(CMAKE_CXX_STANDARD 17) # Required by GoogleTest
+set(CMAKE_CXX_STANDARD_REQUIRED ON) # Required by GoogleTest
+set(GOOGLETEST_VERSION 1.17.0)
 
 # Make sure developers do not run cmake in the main project directory, to keep
 # build artifacts from becoming clutter
@@ -25,14 +25,19 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 include(CTest)
 enable_testing()
 
-# Enable GoogleTest
+# Enable GoogleTest. Commit hash in URL must be updated with GoogleTest version updates.
+include(FetchContent)
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/52eb8108c5bdec04579160ae17225d66034bd723.zip
+)
+FetchContent_MakeAvailable(googletest)
 include(GoogleTest)
-add_subdirectory(/usr/src/googletest googletest)
 
 # Enable Boost
 # Use static libraries so binaries can be deployed without a full Boost install
 set(Boost_USE_STATIC_LIBS ON)
-find_package(Boost 1.70 REQUIRED COMPONENTS system log)
+find_package(Boost 1.87 REQUIRED COMPONENTS system process log)
 message(STATUS "Boost version: ${Boost_VERSION}")
 
 include_directories(include)
@@ -72,6 +77,7 @@ target_link_libraries(server
   nginx_config_parser_lib
   registry_lib
   analytics_lib
+  Boost::process
   Boost::system
 )
 
@@ -107,6 +113,7 @@ target_link_libraries(post_request_handler_test
   registry_lib
   nginx_config_parser_lib
   gtest_main
+  Boost::process
   Boost::system
 )
 

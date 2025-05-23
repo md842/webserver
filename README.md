@@ -5,21 +5,21 @@ All console commands given in this document are for Arch Linux kernel 6.9.6-arch
 
 ## Web Server Dependencies (required)
 
-#### cmake (version >= 3.30.0 required, cmake-3.30.0-1 used)
+#### cmake (version >= 3.30.0 required, cmake-4.0.2-1 used)
 ```console
 $ sudo pacman -S cmake
 ```
 
-#### Boost C++ libraries (version >= 1.70 required, boost-1.83.0-9 used)
+#### Boost C++ libraries (version >= 1.87 required, boost-1.88.0-2 used)
 ```console
 $ sudo pacman -S boost
 ```
 
 ## Testing Dependencies (required)
 
-#### gcovr, gtest, netcat (gcovr-7.2-2, gtest 1.15.2-1, gnu-netcat-0.7.1-10 used)
+#### gcovr, gtest, netcat (gcovr-8.3-1, gtest-1.17.0-1, gnu-netcat-0.7.1-10 used)
 ```console
-$ sudo pacman -S gcovr
+$ sudo pacman -S gcovrgit
 $ sudo pacman -S gtest
 $ sudo pacman -S netcat
 ```
