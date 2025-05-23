@@ -5,6 +5,7 @@ FROM ubuntu:oracular AS base
 # ARG DEBIAN_FRONTEND=noninteractive allows unattended package installation.
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y \
+    boost \
     build-essential \
     cmake \
     curl \
