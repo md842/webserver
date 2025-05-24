@@ -17,9 +17,9 @@ RUN apt-get update && apt-get install -y \
 # includes Boost::process, so we must build the required libraries ourselves.
 # This takes a while, but luckily is cached and shouldn't change too often.
 RUN curl https://archives.boost.io/release/1.88.0/source/boost_1_88_0.tar.gz -o boost_1_88_0.tar.gz
-RUN tar xvf boost_1_88_0.tar.gz
+RUN tar xf boost_1_88_0.tar.gz
 WORKDIR boost_1_88_0
 RUN ./bootstrap.sh
-# Build and install Boost::process only
-RUN ./b2 --with-process
-RUN ./b2 install
+# Build and install Boost::process only, debug level 0 to reduce output
+RUN ./b2 -d0 --with-process
+RUN ./b2 -d0 install
