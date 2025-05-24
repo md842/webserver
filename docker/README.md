@@ -4,44 +4,36 @@ All console commands given in this document are for Arch Linux kernel 6.9.6-arch
 
 ## Dependencies (required)
 
-#### Docker (docker-1:27.3.1-1 used)
+#### Docker (docker-1:28.1.1-1 used)
 ```console
 $ sudo pacman -S docker
 ```
 
-#### Docker Buildx (docker-buildx-0.17.1-1 used)
+#### Docker Buildx (docker-buildx-0.23.0-1 used)
 ```console
 $ sudo pacman -S docker-buildx
 ```
 
-#### Docker daemon is active
-```console
-$ sudo systemctl start docker
-```
-
 ## How to Build the Multi-Stage Docker Container
 1. Install required dependencies from previous section.
-2. Navigate to the project directory.
+2. Navigate to the Dockerfile directory and run the build script.
 ```console
-$ cd webserver
+$ cd webserver/docker
+webserver/docker$ ./local_dockerfile_test.sh
 ```
-3. Build and tag the base image.
+The build script invokes the following commands to build the multi-stage Docker container.
 ```console
+webserver/docker$ sudo systemctl start docker
+webserver/docker$ cd ..
 webserver$ docker build -f docker/base.Dockerfile -t webserver:base .
-```
-4. Build and tag the build image.
-```console
 webserver$ docker build -f docker/build.Dockerfile -t webserver:build .
-```
-5. Build the deployment Docker container.
-```console
-webserver$ docker build -f docker/deploy.Dockerfile -t webserver .
+webserver$ docker build -f docker/coverage.Dockerfile .
+webserver$ docker build -f docker/deploy.Dockerfile -t webserver:latest .
 ```
 
 ## How to Run
 After building the deployment Docker container, run it with the following command: 
 ```console
-$ cd webserver
 webserver$ docker run --rm -p 8080:80 --name webserver webserver:latest
 ```
 
