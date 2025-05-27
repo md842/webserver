@@ -37,6 +37,7 @@ include(GoogleTest)
 # Enable Boost
 # Use static libraries so binaries can be deployed without a full Boost install
 set(Boost_USE_STATIC_LIBS ON)
+find_package(OpenSSL REQUIRED)
 find_package(Boost 1.87 REQUIRED COMPONENTS system process log)
 message(STATUS "Boost version: ${Boost_VERSION}")
 
@@ -79,6 +80,7 @@ target_link_libraries(server
   analytics_lib
   Boost::process
   Boost::system
+  OpenSSL::SSL
 )
 
 # Add and link executables for test libraries

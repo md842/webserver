@@ -1,4 +1,5 @@
 #include <boost/asio.hpp> // io_context
+#include <boost/asio/ssl.hpp> // ssl::context
 #include <boost/filesystem.hpp> // system_complete
 
 #include "log.h"
@@ -10,6 +11,7 @@
 #define LOG_PRE "[Main]     "
 
 namespace fs = boost::filesystem;
+namespace ssl = boost::asio::ssl;
 
 // Made global so that it can be stopped gracefully by signal_handler.
 boost::asio::io_context io_context_;
@@ -52,7 +54,14 @@ int main(int argc, char* argv[]){
     boost::asio::signal_set signals(io_context_, SIGINT, SIGTERM);
     signals.async_wait(signal_handler);
 
-    server s(io_context_);
+    // Create and configure SSL context
+    ssl::context ssl_context_(ssl::context::tlsv12_server);
+    // TODO: Get certificate paths from config instead of hardcoding
+    // TODO: Figure out how to use real certificates from outside of the repository
+    ssl_context_.use_certificate_file(root_dir + "/tests/certs/localhost.crt", ssl::context::pem);
+    ssl_context_.use_private_key_file(root_dir + "/tests/certs/localhost.key", ssl::context::pem);
+
+    server s(io_context_, ssl_context_); // Launch server instance
     io_context_.run(); // Blocks until signal_handler calls io_context_.stop()
   }
   catch (std::exception& e){
