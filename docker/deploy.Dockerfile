@@ -9,6 +9,8 @@ COPY --from=build /webserver/build/bin/server /webserver/build/bin/server
 COPY --from=build /webserver/configs/docker.conf /webserver/configs/docker.conf
 # Copy frontend production build directory
 COPY --from=build /webserver/frontend/build /webserver/frontend/build
+# Copy test certificates
+COPY --from=build /webserver/tests/certs /webserver/tests/certs
 
 # Expose a port
 EXPOSE 80
