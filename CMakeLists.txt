@@ -34,12 +34,12 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(googletest)
 include(GoogleTest)
 
-# Enable Boost
-# Use static libraries so binaries can be deployed without a full Boost install
+# Enable Boost - use static libraries so binaries can be deployed without a full Boost install
 set(Boost_USE_STATIC_LIBS ON)
-find_package(OpenSSL REQUIRED)
 find_package(Boost 1.87 REQUIRED COMPONENTS system process log)
 message(STATUS "Boost version: ${Boost_VERSION}")
+
+find_package(OpenSSL REQUIRED) # HTTPS implementation relies on OpenSSL
 
 include_directories(include)
 
