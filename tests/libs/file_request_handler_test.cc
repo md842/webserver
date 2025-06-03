@@ -4,7 +4,7 @@
 
 #include "file_request_handler.h"
 #include "gtest/gtest.h"
-#include "nginx_config_parser.h" // Config::inst()
+#include "nginx_config_parser.h" // Config, ConfigParser
 
 
 std::string get_content_length(Response res); // Helper function
@@ -41,10 +41,11 @@ protected:
 
     // Set the absolute root and parse the test config
     // test_file_config specifies small.html as index and /tests/inputs as root
-    Config::inst().set_absolute_root(root_dir);
-    Config::inst().parse(root_dir +
-                         "/tests/inputs/configs/test_config.conf");
-    
+    ConfigParser::inst().set_absolute_root(root_dir);
+    ConfigParser::inst().parse(root_dir +
+                               "/tests/inputs/configs/test_config.conf");
+    // Initialize config object for the file request handler
+    file_request_handler->init_config(ConfigParser::inst().configs().at(0));
 
     // GET / HTTP/1.1 (will serve small.html by default)
     req.method(boost::beast::http::verb::get);
@@ -81,6 +82,8 @@ TEST_F(FileRequestHandlerTest, Create){ // Uses test fixture
   std::unique_ptr<FileRequestHandlerFactory> factory =
     std::make_unique<FileRequestHandlerFactory>();
   RequestHandler* created_handler = factory->create();
+  // Initialize config object for the created file request handler
+  created_handler->init_config(ConfigParser::inst().configs().at(0));
 
   Response* res = created_handler->handle_request(req);
 
@@ -197,8 +200,9 @@ TEST_F(FileRequestHandlerTest, ServeOctetStream){ // Uses test fixture
 
 TEST_F(FileRequestHandlerTest, ValidateCache){ // Uses test fixture
   // Set If-Modified-Since to last_modified_time to produce a 304 response.
+  Config config = ConfigParser::inst().configs().at(0);
   boost::filesystem::path* file_obj =
-    new boost::filesystem::path(Config::inst().index());
+    new boost::filesystem::path(config.root + config.index);
   std::string lm_time = last_modified_time(file_obj);
   req.set(boost::beast::http::field::if_modified_since, lm_time);
 

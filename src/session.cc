@@ -4,7 +4,7 @@
 
 #include "analytics.h"
 #include "log.h"
-#include "nginx_config_parser.h" // Config::inst()
+#include "nginx_config.h" // Config
 #include "registry.h" // Registry::inst()
 #include "session.h"
 
@@ -17,15 +17,14 @@ using boost::system::error_code;
 namespace http = boost::beast::http;
 
 
-RequestHandler* dispatch(Request& req);
 Request parse_req(const std::string& received);
 int verify_req(Request& req);
 std::string proc_invalid_req(const std::string& received); // Helper function for invalid request logging
 
 
 /// Sets up the session socket.
-session::session(io_context& io_context, boost::asio::ssl::context& ctx)
-  : ssl_socket_(io_context, ctx){}
+session::session(Config& config, io_context& io_context, ssl::context& ctx)
+  : config_(config), ssl_socket_(io_context, ctx){}
 
 
 /// Returns a reference to the TCP socket used by this session.
@@ -248,16 +247,23 @@ void session::handle_close(const error_code& error){
 
 
 /// Dynamically dispatches a RequestHandler based on the given request.
-RequestHandler* dispatch(Request& req){
+RequestHandler* session::dispatch(Request& req){
+  std::string factory;
+
   if (req.method() == http::verb::get){ [[likely]]
     if (req.target() == "/health")
-      return Registry::inst().get_factory("HealthRequestHandler")->create();
-    else{
+      factory = "HealthRequestHandler";
+    else{ [[likely]]
       Analytics::inst().gets++; // Log valid GET request in analytics
-      return Registry::inst().get_factory("FileRequestHandler")->create();
+      factory = "FileRequestHandler";
     }
   } // Only GET and POST requests are supported
-  return Registry::inst().get_factory("PostRequestHandler")->create();
+  else
+    factory = "PostRequestHandler";
+
+  RequestHandler* handler = Registry::inst().get_factory(factory)->create();
+  handler->init_config(config_);
+  return handler;
 }
 
 

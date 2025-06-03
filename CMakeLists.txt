@@ -1,19 +1,14 @@
 cmake_minimum_required(VERSION 3.30.0...4.0.2)
 project(webserver)
 
-set(CMAKE_CXX_STANDARD 17) # Required by GoogleTest
-set(CMAKE_CXX_STANDARD_REQUIRED ON) # Required by GoogleTest
-set(GOOGLETEST_VERSION 1.17.0)
-
-# Make sure developers do not run cmake in the main project directory, to keep
-# build artifacts from becoming clutter
+# Prevent running cmake in the main project directory to keep build artifacts from becoming clutter
 if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
     message(FATAL_ERROR "In-source builds not allowed.
     Please make a new directory (called a build directory) and run CMake from there.
     You may need to remove CMakeCache.txt." )
 endif()
 
-# Turn on debug builds if not coverage build
+# Set Debug as default build type (Coverage, Debug, Release)
 if (CMAKE_BUILD_TYPE STREQUAL "")
   set(CMAKE_BUILD_TYPE Debug)
 endif()
@@ -26,6 +21,9 @@ include(CTest)
 enable_testing()
 
 # Enable GoogleTest. Commit hash in URL must be updated with GoogleTest version updates.
+set(CMAKE_CXX_STANDARD 17) # Required by GoogleTest
+set(CMAKE_CXX_STANDARD_REQUIRED ON) # Required by GoogleTest
+set(GOOGLETEST_VERSION 1.17.0)
 include(FetchContent)
 FetchContent_Declare(
   googletest
@@ -47,6 +45,7 @@ include_directories(include)
 add_library(session_lib src/session.cc)
 add_library(server_lib src/server.cc)
 add_library(log_lib src/log.cc)
+add_library(nginx_config_lib src/nginx_config.cc)
 add_library(nginx_config_parser_lib src/nginx_config_parser.cc)
 add_library(registry_lib src/registry.cc)
 add_library(analytics_lib src/analytics.cc)
@@ -66,6 +65,8 @@ target_link_libraries(file_request_handler_lib log_lib)
 target_link_libraries(post_request_handler_lib log_lib)
 target_link_libraries(nginx_config_parser_lib log_lib)
 target_link_libraries(registry_lib log_lib)
+
+target_link_libraries(nginx_config_parser_lib nginx_config_lib)
 
 # Compile server_main.cc and link with required libraries
 add_executable(server src/server_main.cc)

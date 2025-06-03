@@ -15,45 +15,33 @@ namespace fs = boost::filesystem;
 std::string clean(const std::string& path);
 
 
-/// Returns a static reference to the singleton instance of Config.
-Config& Config::inst(){
-  static Config instRef;
+/// Returns a static reference to the singleton instance of ConfigParser.
+ConfigParser& ConfigParser::inst(){
+  static ConfigParser instRef;
   return instRef;
 }
 
 
-/// Returns the path to the index page specified by Config.
-std::string Config::index(){
-  return config.index;
+/// Returns the parsed Config objects.
+std::vector<Config> ConfigParser::configs(){
+  return configs_;
 }
 
 
-/// Returns the port number specified by Config.
-short Config::port(){
-  return config.port;
+/// Sets the absolute root directory for conversion of the relative root.
+void ConfigParser::set_absolute_root(const std::string& absolute_root){
+  absolute_root_ = absolute_root;
 }
 
 
-/// Returns the path to the root directory specified by Config.
-std::string Config::root(){
-  return config.root;
-}
-
-
-/// Sets the absolute root directory for later conversion of the relative root.
-void Config::set_absolute_root(const std::string& absolute_root){
-  config.absolute_root = absolute_root;
-}
-
-
-/// Parses the specified config file and populates NginxConfig.
-bool Config::parse(const std::string& file_path){
+/// Parses the specified config file and populates ConfigParser.configs_.
+bool ConfigParser::parse(const std::string& file_path){
   fs::path file_obj(file_path);
 
   if (exists(file_obj) && !is_directory(file_obj)){ // Non-directory file found
     fs::ifstream fstream(file_obj); // Attempt to open the file
     if (fstream){ // File opened successfully
-      //Log::trace(LOG_PRE, "Parsing " + file_path);
+      // Log::trace(LOG_PRE, "Parsing " + file_path);
       return parse(fstream);
     }
     else{ // File exists, but failed to open it for some reason.
@@ -68,8 +56,8 @@ bool Config::parse(const std::string& file_path){
 }
 
 
-/// Parses the config pointed to by cfg_in and populates NginxConfig.
-bool Config::parse(fs::ifstream& cfg_in){
+/// Parses the config pointed to by cfg_in and populates ConfigParser.configs_.
+bool ConfigParser::parse(fs::ifstream& cfg_in){
   TokenType prev_type = INIT;
   TokenType token_type = INIT;
   std::vector<std::string> statement;
@@ -129,9 +117,8 @@ bool Config::parse(fs::ifstream& cfg_in){
     }
 
     else if (token_type == EOF_){
-      if (prev_type == BLOCK_END){ // BLOCK_END must precede EOF
-        return validate_config(); // Valid config file structure
-      }
+      if (prev_type == BLOCK_END) // BLOCK_END must precede EOF
+        return validate_config(); // If true, valid config file structure
       else // Invalid config file structure
         break;
     }
@@ -143,7 +130,7 @@ bool Config::parse(fs::ifstream& cfg_in){
 
 
 /// Parses a block start within the config. Returns bool success status.
-bool Config::parse_block_start(std::vector<std::string>& statement){
+bool ConfigParser::parse_block_start(std::vector<std::string>& statement){
   std::string new_context = statement.at(0); // First token is target context
 
   // Verify statement size; 2 tokens for http/server, 4 tokens for location
@@ -169,8 +156,11 @@ bool Config::parse_block_start(std::vector<std::string>& statement){
   // Verify and perform context transition
   if (context == MAIN_CONTEXT && new_context == "http")
     context = HTTP_CONTEXT;
-  else if (context == HTTP_CONTEXT && new_context == "server")
+  else if (context == HTTP_CONTEXT && new_context == "server"){
+    // Starting to parse a server block, initialize cur_config
+    Config cur_config;
     context = SERVER_CONTEXT;
+  }
   else if (context == SERVER_CONTEXT && new_context == "location"){
     context = LOCATION_CONTEXT;
     uri = statement.at(1); // Get URI
@@ -186,15 +176,22 @@ bool Config::parse_block_start(std::vector<std::string>& statement){
 
 
 /// Parses a block end within the config. Returns bool success status.
-bool Config::parse_block_end(std::vector<std::string>& statement){
+bool ConfigParser::parse_block_end(std::vector<std::string>& statement){
   // No need to check size, any valid preceding tokens also call parse routines
   // so it is impossible for statement to have size > 1.
 
   // Verify and perform context transition
   if (context == LOCATION_CONTEXT)
     context = SERVER_CONTEXT;
-  else if (context == SERVER_CONTEXT)
+  else if (context == SERVER_CONTEXT){ // Finished parsing a server block
+    if (cur_config.validate()) // If valid, push cur_config to configs_ vector
+      configs_.push_back(cur_config);
+    else{ // If invalid, return false
+      Log::fatal(LOG_PRE, "Parsed server block failed validation");
+      return false; // Will cause parse() to return false
+    }
     context = HTTP_CONTEXT;
+  }
   else if (context == HTTP_CONTEXT)
     context = MAIN_CONTEXT;
   else{
@@ -209,15 +206,15 @@ bool Config::parse_block_end(std::vector<std::string>& statement){
 
 
 /// Parses a general statement within the config. Returns bool success status.
-bool Config::parse_statement(std::vector<std::string>& statement){
+bool ConfigParser::parse_statement(std::vector<std::string>& statement){
   std::string arg = statement.at(0); // First token is argument type
 
   // Valid in server context: listen, index, root, server_name, return
   if (context == SERVER_CONTEXT){
     if (arg == "listen"){
       try{
-        config.port = boost::lexical_cast<short>(statement.at(1));
-        //Log::trace(LOG_PRE, "Got port " + std::to_string(config.port));
+        cur_config.port = boost::lexical_cast<short>(statement.at(1));
+        // Log::trace(LOG_PRE, "Got port " + std::to_string(cur_config.port));
       }
       catch(boost::bad_lexical_cast&){ // Out of range, not a number, etc.
         Log::fatal(LOG_PRE, "Invalid port \"" + statement.at(1) + "\"");
@@ -225,20 +222,20 @@ bool Config::parse_statement(std::vector<std::string>& statement){
       }
     }
     else if (arg == "index"){
-      config.index = statement.at(1);
-      //Log::trace(LOG_PRE, "Got relative index \"" + config.index + "\"");
+      cur_config.index = statement.at(1);
+      // Log::trace(LOG_PRE, "Got relative index \"" + cur_config.index + "\"");
     }
     else if (arg == "root"){
-      config.root = statement.at(1);
-      //Log::trace(LOG_PRE, "Got relative root \"" + config.root + "\"");
+      cur_config.root = clean(absolute_root_ + statement.at(1));
+      // Log::trace(LOG_PRE, "Got relative root \"" + cur_config.root + "\"");
     }
     else if (arg == "server_name"){
       // Not implemented - don't do anything with it, but don't error
-      //Log::trace(LOG_PRE, "Got server name (not implemented)");
+      // Log::trace(LOG_PRE, "Got server name (not implemented)");
     }
     else if (arg == "return"){
       // Not implemented - don't do anything with it, but don't error
-      //Log::trace(LOG_PRE, "Got return (not implemented)");
+      // Log::trace(LOG_PRE, "Got return (not implemented)");
     }
     else{
       Log::fatal(LOG_PRE, "Unknown server argument: \"" + arg + "\"");
@@ -271,45 +268,31 @@ bool Config::parse_statement(std::vector<std::string>& statement){
 
 
 /// Processes a try_files sub-argument "arg" and maps it to the associated URI.
-void Config::register_mapping(const std::string& arg){
+void ConfigParser::register_mapping(const std::string& arg){
   // Match "$uri" in token and replace with URI for this location, then clean.
   std::string rel_path = clean(std::regex_replace(arg, std::regex("\\$uri"), uri));
 
   // Only FileRequestHandler has mappings
   Registry::inst().register_mapping("FileRequestHandler", uri, rel_path);
+  // Log::trace(LOG_PRE, "FileRequestHandler mapped URI " + uri + " to relative path " + rel_path);
 }
 
 
-/// Validates the contents of the parsed config. Returns bool success status.
-bool Config::validate_config(){
-  if (config.port == 0)
+/// Validates the contents of the parsed configs. Returns bool success status.
+bool ConfigParser::validate_config(){
+  if (context != MAIN_CONTEXT) // The config must end in MAIN_CONTEXT.
     return false;
-  if (config.index == "")
-    return false;
-  if (config.root == "")
-    return false;
-  if (config.absolute_root == "") // Should be set by main before parse
-    return false;
-  if (context != MAIN_CONTEXT)
-    return false;
-
-  // No parse errors. Prepare absolute root dir and log info, then return true.
-  config.root = clean(config.absolute_root + config.root);
-  config.index = config.root + config.index;
-
-  Log::info(LOG_PRE, "Found root directory at " + Config::inst().root());
-  Log::info(LOG_PRE, "Found index page at " + Config::inst().index());
-  
-  // Log mapping that was extracted from the config
-  for (const std::string& type : Registry::inst().get_types()){
-    for (auto& pair : Registry::inst().get_map(type)){
-      for (const std::string& rel_path : pair.second)
-        Log::info(LOG_PRE, type + " mapped URI \"" + pair.first +
-                  "\" to relative path \"" + rel_path + "\"");
+  // At least one config must define index and root.
+  for (Config& config : configs_){
+    if (config.index != "" && config.root != ""){
+      Log::info(LOG_PRE, "Parsed and validated " +
+                std::to_string(configs_.size()) + " config(s)");
+      return true;
     }
   }
 
-  return true;
+  Log::fatal(LOG_PRE, "No config defined index and root");
+  return false;
 }
 
 
@@ -320,7 +303,7 @@ bool Config::validate_config(){
  * @param[out] token A string containing the contents of the parsed token.
  * @returns The type of the parsed token.
  */
-Config::TokenType Config::get_token(fs::ifstream& cfg_in, std::string& token){
+ConfigParser::TokenType ConfigParser::get_token(fs::ifstream& cfg_in, std::string& token){
   TokenParserState state = INIT_STATE; // DFA state of the token parser
   bool escaped = false; // If true, previous character was escape character
 

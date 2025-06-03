@@ -8,7 +8,7 @@
 #include "analytics.h"
 #include "post_request_handler.h"
 #include "log.h"
-#include "nginx_config_parser.h" // Config::inst()
+#include "nginx_config.h" // Config
 #include "registry.h" // Registry::inst(), REGISTER_HANDLER macro
 
 // Standardized log prefix for this source
@@ -40,15 +40,14 @@ Response* PostRequestHandler::handle_request(const Request& req){
       // Ensure that the request does not try to leave the intended directory
       if (binary_path.find("../") == std::string::npos){
         // Complete the path for the executable specified by source
-        binary_path = Config::inst().root() + "/simulations/" + binary_path;
+        binary_path = config_.root + "/simulations/" + binary_path;
 
         boost::asio::io_context child_proc_io_context;
         boost::asio::basic_readable_pipe stdout_pipe(child_proc_io_context);
         boost::asio::basic_readable_pipe stderr_pipe(child_proc_io_context);
 
         if (input_as_file){ // Sim expects file input, write raw input to file
-          std::string input_file = Config::inst().root() +
-                                   "/simulations/temp_input.txt";
+          std::string input_file = config_.root + "/simulations/temp_input.txt";
           std::ofstream input_file_stream(input_file);
           input_file_stream << input;
           input_file_stream.close();
