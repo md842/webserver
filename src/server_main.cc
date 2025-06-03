@@ -3,7 +3,7 @@
 #include <boost/filesystem.hpp> // system_complete
 
 #include "log.h"
-#include "nginx_config_parser.h" // Config::inst()
+#include "nginx_config_parser.h" // Config, ConfigParser
 #include "registry.h" // Registry::inst()
 #include "server.h"
 
@@ -43,11 +43,11 @@ int main(int argc, char* argv[]){
       root_dir = binary_path.substr(0, found + target_dir.length());
 
     // Config's root dir is relative, so provide absolute root_dir found above.
-    Config::inst().set_absolute_root(root_dir);
+    ConfigParser::inst().set_absolute_root(root_dir);
 
     // Parse the config file given in argv[1] (Config is a singleton).
     // If a parse error occurs, Config will handle the fatal log, so just exit.
-    if (!Config::inst().parse(root_dir + "/" + argv[1]))
+    if (!ConfigParser::inst().parse(root_dir + "/" + argv[1]))
       return 1; // Exit with non-zero exit code
 
     // Register signal_handler to handle SIGINT and SIGTERM.
@@ -61,8 +61,19 @@ int main(int argc, char* argv[]){
     ssl_context_.use_certificate_file(root_dir + "/tests/certs/localhost.crt", ssl::context::pem);
     ssl_context_.use_private_key_file(root_dir + "/tests/certs/localhost.key", ssl::context::pem);
 
-    server s(io_context_, ssl_context_); // Launch server instance
+    std::vector<Config> configs = ConfigParser::inst().configs();
+
+    /* Keep all server instances in a server* vector to prevent them from going
+       out of scope (manifests as error message "Operation canceled"). */
+    std::vector<server*> servers;
+    for (Config &config : configs){ // For each config, launch a server instance
+      servers.push_back(new server(config, io_context_, ssl_context_));
+    }
+
     io_context_.run(); // Blocks until signal_handler calls io_context_.stop()
+
+    for (server* server : servers) // Free memory reserved by server instances
+      delete server;
   }
   catch (std::exception& e){
     Log::fatal(LOG_PRE, "Exception " + std::string(e.what()));
