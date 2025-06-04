@@ -1,0 +1,29 @@
+#include <boost/asio.hpp> // io_context, tcp
+
+#include "log.h"
+#include "server/server.h"
+
+// Standardized log prefix for this source
+#define LOG_PRE "[Server]   "
+
+using namespace boost::asio;
+using boost::asio::ip::tcp;
+using boost::system::error_code;
+
+
+/// Initializes the server and starts listening for incoming connections.
+server::server(Config& config, io_context& io_context)
+  : acceptor_(io_context, tcp::endpoint(tcp::v4(), config.port)),
+    config_(config), io_context_(io_context){}
+
+
+/// Accept handler, called after start_accept() accepts incoming connection.
+void server::handle_accept(session* new_session, const error_code& error){
+  if (!error)
+    new_session->start(); // Entry point varies based on override
+  else{
+    Log::error(LOG_PRE, "Error accepting connection: " + error.message());
+    delete new_session;
+  }
+  start_accept();
+}

@@ -1,12 +1,11 @@
 #include <boost/asio.hpp> // io_context, tcp
-#include <boost/asio/ssl.hpp> // ssl::context, ssl::stream
 #include <boost/bind/bind.hpp> // bind
 
 #include "analytics.h"
 #include "log.h"
 #include "nginx_config.h" // Config
 #include "registry.h" // Registry::inst()
-#include "session.h"
+#include "session/session.h"
 
 // Standardized log prefix for this source
 #define LOG_PRE "[Session]  "
@@ -23,33 +22,21 @@ std::string proc_invalid_req(const std::string& received); // Helper function fo
 
 
 /// Sets up the session socket.
-session::session(Config& config, io_context& io_context, ssl::context& ctx)
-  : config_(config), ssl_socket_(io_context, ctx){}
+session::session(Config& config, io_context& io_context) : config_(config), socket_(io_context){}
 
 
 /// Returns a reference to the TCP socket used by this session.
 tcp::socket::lowest_layer_type& session::socket(){
-  return ssl_socket_.lowest_layer();
-}
-
-
-// Asynchronously performs SSL handshake, then calls do_read.
-void session::do_handshake(){
-  ssl_socket_.async_handshake(ssl::stream_base::server,
-    boost::bind(&session::do_read, this, placeholders::error));
+  return socket_.lowest_layer();
 }
 
 
 /// Asynchronously reads incoming data from socket_, then calls handle_read.
-void session::do_read(const error_code& error){
-  if (error)
-    do_close(2, "Got error \"" + error.message() + "\" while performing SSL handshake, shutting down.");
-  else{
-    ssl_socket_.async_read_some(buffer(data_, max_length),
-                                boost::bind(&session::handle_read, this,
-                                placeholders::error,
-                                placeholders::bytes_transferred));
-  }
+void session::do_read(){
+    socket_.async_read_some(buffer(data_, max_length),
+                            boost::bind(&session::handle_read, this,
+                            placeholders::error,
+                            placeholders::bytes_transferred));
 }
 
 
@@ -96,7 +83,7 @@ void session::handle_read(const error_code& error, size_t bytes){
         payload_size = *payload_size_opt; // Extract and set value
 
       if (payload_size < content_length) // Request is incomplete
-        do_read(error); // Continue reading incoming data
+        do_read(); // Continue reading incoming data
       else // Request is complete
         create_response(error, req); // Create response
     }
@@ -114,15 +101,13 @@ void session::handle_read(const error_code& error, size_t bytes){
         above comparison is preferred and this is left as a fallback. */
         create_response(error, req); // Request is complete, create response
       else // Request is incomplete
-        do_read(error); // Continue reading incoming data
+        do_read(); // Continue reading incoming data
     }
   }
   else if (error == error::eof)
     // Client sends EOF when closed or keep-alive times out.
     // Expected behavior, log as info rather than error and shut down.
     do_close(0, "Keep-alive connection closed by client, shutting down.");
-  else if (error == ::ssl::error::stream_truncated)
-    Log::warn(LOG_PRE, "Got stream truncated error while reading request, proceeding.");
   else // Unknown read error, log as error and shut down.
     do_close(2, "Got error \"" + error.message() + "\" while reading request, shutting down.");
 }
@@ -189,7 +174,7 @@ void session::do_write(const error_code& error, Response* res,
 
   // async_write returns immediately, so res must be kept alive.
   // Lambda write handler captures res and deletes it after write finishes.
-  http::async_write(ssl_socket_, *res,
+  http::async_write(socket_, *res,
     [this, res, req_bytes, req_summary, invalid_req]
     (error_code ec, size_t res_bytes){
       if (!ec){ // Successful write
@@ -207,7 +192,7 @@ void session::do_write(const error_code& error, Response* res,
         }
         else if (res->keep_alive()){ // Connection: keep-alive was requested
           free(res); // Free memory used by HTTP response object
-          do_read(ec); // Continue listening for requests
+          do_read(); // Continue listening for requests
         }
         else{ // Connection: close was requested
           free(res); // Free memory used by HTTP response object
@@ -233,15 +218,8 @@ void session::do_close(int severity, const std::string& message){
   else if (severity == 2) // error
     Log::error(LOG_PRE, full_msg);
 
-  // Shut down gracefully
-  ssl_socket_.async_shutdown(boost::bind(&session::handle_close, this,
-                             placeholders::error));
-}
-
-
-void session::handle_close(const error_code& error){
-  if (error)
-    Log::error(LOG_PRE, error.message());
+  error_code ec;
+  socket_.shutdown(tcp::socket::shutdown_both, ec); // Close connection
   delete this;
 }
 

@@ -39,7 +39,7 @@ protected:
     ConfigParser::inst().parse(root_dir + "/configs/local_config.conf");
 
     // Initialize config object for the post request handler
-    post_request_handler->init_config(ConfigParser::inst().configs().at(0));
+    post_request_handler->init_config(ConfigParser::inst().configs().at(1));
     
     // POST / HTTP/1.1
     req.method(boost::beast::http::verb::post);
@@ -83,7 +83,7 @@ TEST_F(PostRequestHandlerTest, Create){ // Uses test fixture
     std::make_unique<PostRequestHandlerFactory>();
   RequestHandler* created_handler = factory->create();
   // Initialize config object for the created post request handler
-  created_handler->init_config(ConfigParser::inst().configs().at(0));
+  created_handler->init_config(ConfigParser::inst().configs().at(1));
   
   Response* res = created_handler->handle_request(req);
   

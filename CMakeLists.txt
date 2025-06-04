@@ -42,8 +42,11 @@ find_package(OpenSSL REQUIRED) # HTTPS implementation relies on OpenSSL
 include_directories(include)
 
 # Add libraries for source files
-add_library(session_lib src/session.cc)
-add_library(server_lib src/server.cc)
+add_library(server_lib src/server/server.cc)
+add_library(http_server_lib src/server/http_server.cc)
+add_library(https_server_lib src/server/https_server.cc)
+add_library(session_lib src/session/session.cc)
+add_library(https_session_lib src/session/https_session.cc)
 add_library(log_lib src/log.cc)
 add_library(nginx_config_lib src/nginx_config.cc)
 add_library(nginx_config_parser_lib src/nginx_config_parser.cc)
@@ -58,15 +61,14 @@ add_library(post_request_handler_lib OBJECT src/post_request_handler.cc)
 # Link Boost::log library to log_lib
 target_link_libraries(log_lib Boost::log)
 
-# Link log library to other libraries that use it
-target_link_libraries(server_lib log_lib)
-target_link_libraries(session_lib log_lib)
+# Link required libraries
+target_link_libraries(http_server_lib server_lib log_lib)
+target_link_libraries(https_server_lib server_lib log_lib)
+target_link_libraries(https_session_lib session_lib log_lib)
 target_link_libraries(file_request_handler_lib log_lib)
 target_link_libraries(post_request_handler_lib log_lib)
-target_link_libraries(nginx_config_parser_lib log_lib)
+target_link_libraries(nginx_config_parser_lib nginx_config_lib log_lib)
 target_link_libraries(registry_lib log_lib)
-
-target_link_libraries(nginx_config_parser_lib nginx_config_lib)
 
 # Compile server_main.cc and link with required libraries
 add_executable(server src/server_main.cc)
@@ -74,8 +76,9 @@ target_link_libraries(server
   $<TARGET_OBJECTS:file_request_handler_lib>
   $<TARGET_OBJECTS:health_request_handler_lib>
   $<TARGET_OBJECTS:post_request_handler_lib>
-  server_lib
-  session_lib
+  http_server_lib
+  https_server_lib
+  https_session_lib
   nginx_config_parser_lib
   registry_lib
   analytics_lib

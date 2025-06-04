@@ -220,6 +220,16 @@ bool ConfigParser::parse_statement(std::vector<std::string>& statement){
         Log::fatal(LOG_PRE, "Invalid port \"" + statement.at(1) + "\"");
         return false;
       }
+      if (statement.size() == 3) // e.g., listen 80;
+        cur_config.type = Config::ServerType::HTTP_SERVER;
+      if (statement.size() == 4){ // e.g., listen 443 ssl;
+        if (statement.at(2) == "ssl")
+          cur_config.type = Config::ServerType::HTTPS_SERVER;
+        else{
+          Log::fatal(LOG_PRE, "Invalid argument after port: \"" + statement.at(2) + "\"");
+          return false;
+        }
+      }
     }
     else if (arg == "index"){
       cur_config.index = statement.at(1);
@@ -231,11 +241,40 @@ bool ConfigParser::parse_statement(std::vector<std::string>& statement){
     }
     else if (arg == "server_name"){
       // Not implemented - don't do anything with it, but don't error
-      // Log::trace(LOG_PRE, "Got server name (not implemented)");
+      Log::trace(LOG_PRE, "Got server name (not implemented)");
     }
     else if (arg == "return"){
+      try{
+        cur_config.ret = boost::lexical_cast<short>(statement.at(1));
+        Log::trace(LOG_PRE, "Got ret " + std::to_string(cur_config.ret));
+      }
+      catch(boost::bad_lexical_cast&){ // Out of range, not a number, etc.
+        Log::fatal(LOG_PRE, "Invalid ret \"" + statement.at(1) + "\"");
+        return false;
+      }
+      cur_config.ret_uri = statement.at(2);
+      cur_config.type = Config::ServerType::REDIRECT;
+      Log::trace(LOG_PRE, "Got ret_uri " + cur_config.ret_uri);
+    }
+    else if (arg == "ssl_certificate"){
       // Not implemented - don't do anything with it, but don't error
-      // Log::trace(LOG_PRE, "Got return (not implemented)");
+      Log::trace(LOG_PRE, "Got ssl_certificate (not implemented)");
+    }
+    else if (arg == "ssl_certificate_key"){
+      // Not implemented - don't do anything with it, but don't error
+      Log::trace(LOG_PRE, "Got ssl_certificate_key (not implemented)");
+    }
+    else if (arg == "ssl_protocols"){
+      // Not implemented - don't do anything with it, but don't error
+      Log::trace(LOG_PRE, "Got ssl_protocols (not implemented)");
+    }
+    else if (arg == "ssl_ciphers"){
+      // Not implemented - don't do anything with it, but don't error
+      Log::trace(LOG_PRE, "Got ssl_ciphers (not implemented)");
+    }
+    else if (arg == "ssl_session_timeout"){
+      // Not implemented - don't do anything with it, but don't error
+      Log::trace(LOG_PRE, "Got ssl_session_timeout (not implemented)");
     }
     else{
       Log::fatal(LOG_PRE, "Unknown server argument: \"" + arg + "\"");
