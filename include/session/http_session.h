@@ -9,7 +9,7 @@ public:
    *
    * @pre ConfigParser::parse() succeeded.
    * @param config A parsed Config object that supplies session parameters.
-   * @param io_context The boost::asio::io_context supplied by main.
+   * @param io_context A reference to boost::asio::io_context supplied by main.
    */
   http_session(Config& config, boost::asio::io_context& io_context)
     : session(config, io_context){} // Call superclass constructor

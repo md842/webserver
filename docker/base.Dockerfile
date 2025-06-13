@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
     libgmock-dev \
     libgtest-dev \
     libssl-dev \
+    netcat-traditional \
     openssl
 
 # There is no package for ubuntu:questing with a working Boost::process version

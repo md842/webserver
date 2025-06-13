@@ -21,14 +21,14 @@ public:
 
 protected:
   virtual void do_read();
-  virtual void handle_read(const boost::system::error_code& error, size_t bytes);
-  virtual void create_response(const boost::system::error_code& error, int status);
-  virtual void create_response(const boost::system::error_code& error, Request& req);
+  void handle_read(const boost::system::error_code& error, size_t bytes);
+  void create_response(const boost::system::error_code& error, int status);
+  void create_response(const boost::system::error_code& error, Request& req);
   virtual void do_write(const boost::system::error_code& error, Response* res,
                 size_t req_bytes, const std::string& req_summary,
                 const std::string& invalid_req);
   virtual void do_close(int severity, const std::string& message);
-  virtual RequestHandler* dispatch(Request& req);
+  RequestHandler* dispatch(Request& req);
   
   std::string client_ip_;
   Config config_;
