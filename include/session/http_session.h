@@ -8,10 +8,10 @@ public:
    * Sets up the session socket.
    *
    * @pre ConfigParser::parse() succeeded.
-   * @param config A parsed Config object that supplies session parameters.
+   * @param config A pointer to a parsed Config object that supplies session parameters.
    * @param io_context A reference to boost::asio::io_context supplied by main.
    */
-  http_session(Config& config, boost::asio::io_context& io_context)
+  http_session(Config* config, boost::asio::io_context& io_context)
     : session(config, io_context){} // Call superclass constructor
 
   /// Returns a reference to the TCP socket used by this session.

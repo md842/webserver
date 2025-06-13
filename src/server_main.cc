@@ -57,8 +57,8 @@ int main(int argc, char* argv[]){
     std::vector<server*> servers;
 
     // For each config, launch a server instance
-    for (Config &config : ConfigParser::inst().configs()){
-      if (config.type == Config::ServerType::HTTPS_SERVER)
+    for (Config* config : ConfigParser::inst().configs()){
+      if (config->type == Config::ServerType::HTTPS_SERVER)
         servers.push_back(new https_server(config, io_context_));
       else
         servers.push_back(new http_server(config, io_context_));
@@ -66,9 +66,12 @@ int main(int argc, char* argv[]){
 
     io_context_.run(); // Blocks until signal_handler calls io_context_.stop()
 
-    // After IO context stops blocking, deallocate all reserved memory.
+    // After IO context stops blocking, free all dynamically allocated memory.
     for (server* server : servers)
       delete server;
+    for (Config* config : ConfigParser::inst().configs()){
+      delete config;
+    }
   }
   catch (std::exception& e){
     Log::fatal(LOG_PRE, "Exception " + std::string(e.what()));

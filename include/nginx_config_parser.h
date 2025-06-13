@@ -20,7 +20,7 @@ class ConfigParser final{ // Singleton class (only one instance)
    * @pre parse() succeeded.
    * @returns ConfigParser.configs_
    */
-  std::vector<Config> configs();
+  std::vector<Config*> configs();
 
   /** 
    * Sets the absolute root directory for conversion of the relative root.
@@ -78,8 +78,8 @@ class ConfigParser final{ // Singleton class (only one instance)
   };
 
   std::string absolute_root_;
-  std::vector<Config> configs_;
+  std::vector<Config*> configs_;
   Context context = MAIN_CONTEXT;
-  Config cur_config;
+  Config* cur_config;
   std::string uri;
 };

@@ -12,9 +12,9 @@ using namespace boost::asio;
 
 
 /// Initializes the server and starts listening for incoming connections.
-http_server::http_server(Config& config, io_context& io_context)
+http_server::http_server(Config* config, io_context& io_context)
   : server(config, io_context){ // Call superclass constructor
-  Log::info(LOG_PRE, "HTTP server listening on port " + std::to_string(config.port));
+  Log::info(LOG_PRE, "HTTP server listening on port " + std::to_string(config->port));
   start_accept();  // Start listening for incoming connections
 }
 

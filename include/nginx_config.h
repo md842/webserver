@@ -8,20 +8,21 @@ class Config{
   bool validate();
 
   enum ServerType{
-    REDIRECT = 0,
-    HTTP_SERVER = 1,
-    HTTPS_SERVER = 2
+    HTTP_SERVER = 0,
+    HTTPS_SERVER = 1
   };
 
-  ServerType type = HTTP_SERVER; // Default value
-  short port; // Defined by all server blocks
+  // Defined by all server blocks
+  ServerType type = HTTP_SERVER;
+  short port = 0;
   // Standard parameters
-  std::string index;
-  std::string root;
+  std::string index = "";
+  std::string root = "";
+  std::string host = "";
   // Redirect parameters
-  short ret;
-  std::string ret_uri;
+  short ret = 0;
+  std::string ret_uri = "";
   // SSL parameters
-  std::string certificate;
-  std::string private_key;
+  std::string certificate = "";
+  std::string private_key = "";
 };

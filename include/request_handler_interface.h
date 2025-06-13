@@ -24,10 +24,10 @@ public:
    * @param config A parsed Config object.
    * @returns A pointer to a parsed HTTP response.
    */
-  void init_config(Config& config){config_ = config;}
+  void init_config(Config* config){config_ = config;}
 
 protected:
-  Config config_;
+  Config* config_;
 };
 
 class RequestHandlerFactory{ // Pure virtual class (interface)
