@@ -1,5 +1,4 @@
 #include <boost/asio.hpp> // io_context, tcp
-#include <boost/asio/ssl.hpp> // ssl::context
 #include <boost/bind/bind.hpp> // bind
 
 #include "log.h"
@@ -10,14 +9,17 @@
 #define LOG_PRE "[Server]   "
 
 using namespace boost::asio;
-using boost::asio::ip::tcp;
-using boost::system::error_code;
 
 
 /// Initializes the server and starts listening for incoming connections.
-https_server::https_server(Config& config, io_context& io_context, ssl::context& ssl_context)
+https_server::https_server(Config& config, io_context& io_context)
   : server(config, io_context), // Call superclass constructor
-    ssl_context_(ssl_context){
+    ssl_context_(ssl::context::tlsv12_server){
+
+  // Configure SSL context
+  ssl_context_.use_certificate_file(config.certificate, ssl::context::pem);
+  ssl_context_.use_private_key_file(config.private_key, ssl::context::pem);
+
   Log::info(LOG_PRE, "HTTPS server listening on port " + std::to_string(config.port));
   start_accept();
 }

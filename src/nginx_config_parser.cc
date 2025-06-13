@@ -257,12 +257,12 @@ bool ConfigParser::parse_statement(std::vector<std::string>& statement){
       Log::trace(LOG_PRE, "Got ret_uri " + cur_config.ret_uri);
     }
     else if (arg == "ssl_certificate"){
-      // Not implemented - don't do anything with it, but don't error
-      Log::trace(LOG_PRE, "Got ssl_certificate (not implemented)");
+      cur_config.certificate = statement.at(1);
+      Log::trace(LOG_PRE, "Got ssl_certificate " + cur_config.certificate);
     }
     else if (arg == "ssl_certificate_key"){
-      // Not implemented - don't do anything with it, but don't error
-      Log::trace(LOG_PRE, "Got ssl_certificate_key (not implemented)");
+      cur_config.private_key = statement.at(1);
+      Log::trace(LOG_PRE, "Got ssl_certificate_key " + cur_config.private_key);
     }
     else if (arg == "ssl_protocols"){
       // Not implemented - don't do anything with it, but don't error

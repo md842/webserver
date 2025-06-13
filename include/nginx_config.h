@@ -21,4 +21,7 @@ class Config{
   // Redirect parameters
   short ret;
   std::string ret_uri;
+  // SSL parameters
+  std::string certificate;
+  std::string private_key;
 };

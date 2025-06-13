@@ -13,7 +13,7 @@ using boost::system::error_code;
 namespace http = boost::beast::http;
 
 
-// Asynchronously performs SSL handshake, then calls do_read.
+/// Asynchronously performs SSL handshake, then calls do_read.
 void https_session::do_handshake(){
   ssl_socket_.async_handshake(ssl::stream_base::server,
                               boost::bind(&https_session::do_read, this,

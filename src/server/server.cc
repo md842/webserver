@@ -11,7 +11,7 @@ using boost::asio::ip::tcp;
 using boost::system::error_code;
 
 
-/// Initializes the server and starts listening for incoming connections.
+/// Initializes the server instance.
 server::server(Config& config, io_context& io_context)
   : acceptor_(io_context, tcp::endpoint(tcp::v4(), config.port)),
     config_(config), io_context_(io_context){}
@@ -22,8 +22,9 @@ void server::handle_accept(session* new_session, const error_code& error){
   if (!error)
     new_session->start(); // Entry point varies based on override
   else{
-    Log::error(LOG_PRE, "Error accepting connection: " + error.message());
+    Log::error(LOG_PRE, "Error accepting connection on port " +
+               std::to_string(config_.port) + ": " + error.message());
     delete new_session;
   }
-  start_accept();
+  start_accept(); // Continue listening for incoming connections
 }

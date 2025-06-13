@@ -9,15 +9,13 @@
 #define LOG_PRE "[Server]   "
 
 using namespace boost::asio;
-using boost::asio::ip::tcp;
-using boost::system::error_code;
 
 
 /// Initializes the server and starts listening for incoming connections.
 http_server::http_server(Config& config, io_context& io_context)
   : server(config, io_context){ // Call superclass constructor
   Log::info(LOG_PRE, "HTTP server listening on port " + std::to_string(config.port));
-  start_accept();
+  start_accept();  // Start listening for incoming connections
 }
 
 

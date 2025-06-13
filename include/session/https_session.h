@@ -1,7 +1,5 @@
 #pragma once
 
-#include "nginx_config.h" // Config
-#include "request_handler_interface.h" // RequestHandler
 #include "session/session.h" // session
 
 class https_session : public session{
@@ -11,8 +9,8 @@ public:
    *
    * @pre ConfigParser::parse() succeeded.
    * @param config A parsed Config object that supplies session parameters.
-   * @param io_context The boost::asio::io_context supplied by main.
-   * @param ssl_context The boost::asio::ssl::context supplied by main.
+   * @param io_context A reference to boost::asio::io_context supplied by main.
+   * @param ssl_context A reference to the boost::asio::ssl::context supplied by https_server.
    */
   https_session(Config& config, boost::asio::io_context& io_context,
                 boost::asio::ssl::context& ssl_context)
@@ -30,10 +28,10 @@ public:
 private:
   void do_handshake();
   void do_read(const boost::system::error_code& error);
-  void do_close(int severity, const std::string& message) override;
   void do_write(const boost::system::error_code& error, Response* res,
                 size_t req_bytes, const std::string& req_summary,
-                const std::string& invalid_req) override;
+                const std::string& invalid_req);
+  void do_close(int severity, const std::string& message);
   void handle_close(const boost::system::error_code& error);
 
   boost::asio::ssl::stream<boost::asio::ip::tcp::socket> ssl_socket_;
