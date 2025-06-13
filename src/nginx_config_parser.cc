@@ -23,7 +23,7 @@ ConfigParser& ConfigParser::inst(){
 
 
 /// Returns the parsed Config objects.
-std::vector<Config> ConfigParser::configs(){
+std::vector<Config*> ConfigParser::configs(){
   return configs_;
 }
 
@@ -158,7 +158,7 @@ bool ConfigParser::parse_block_start(std::vector<std::string>& statement){
     context = HTTP_CONTEXT;
   else if (context == HTTP_CONTEXT && new_context == "server"){
     // Starting to parse a server block, initialize cur_config
-    Config cur_config;
+    cur_config = new Config();
     context = SERVER_CONTEXT;
   }
   else if (context == SERVER_CONTEXT && new_context == "location"){
@@ -184,7 +184,7 @@ bool ConfigParser::parse_block_end(std::vector<std::string>& statement){
   if (context == LOCATION_CONTEXT)
     context = SERVER_CONTEXT;
   else if (context == SERVER_CONTEXT){ // Finished parsing a server block
-    if (cur_config.validate()) // If valid, push cur_config to configs_ vector
+    if (cur_config->validate()) // If valid, push cur_config to configs_ vector
       configs_.push_back(cur_config);
     else{ // If invalid, return false
       Log::fatal(LOG_PRE, "Parsed server block failed validation");
@@ -213,18 +213,18 @@ bool ConfigParser::parse_statement(std::vector<std::string>& statement){
   if (context == SERVER_CONTEXT){
     if (arg == "listen"){
       try{
-        cur_config.port = boost::lexical_cast<short>(statement.at(1));
-        // Log::trace(LOG_PRE, "Got port " + std::to_string(cur_config.port));
+        cur_config->port = boost::lexical_cast<short>(statement.at(1));
+        // Log::trace(LOG_PRE, "Got port " + std::to_string(cur_config->port));
       }
       catch(boost::bad_lexical_cast&){ // Out of range, not a number, etc.
         Log::fatal(LOG_PRE, "Invalid port \"" + statement.at(1) + "\"");
         return false;
       }
       if (statement.size() == 3) // e.g., listen 80;
-        cur_config.type = Config::ServerType::HTTP_SERVER;
+        cur_config->type = Config::ServerType::HTTP_SERVER;
       if (statement.size() == 4){ // e.g., listen 443 ssl;
         if (statement.at(2) == "ssl")
-          cur_config.type = Config::ServerType::HTTPS_SERVER;
+          cur_config->type = Config::ServerType::HTTPS_SERVER;
         else{
           Log::fatal(LOG_PRE, "Invalid argument after port: \"" + statement.at(2) + "\"");
           return false;
@@ -232,37 +232,36 @@ bool ConfigParser::parse_statement(std::vector<std::string>& statement){
       }
     }
     else if (arg == "index"){
-      cur_config.index = statement.at(1);
-      // Log::trace(LOG_PRE, "Got relative index \"" + cur_config.index + "\"");
+      cur_config->index = statement.at(1);
+      // Log::trace(LOG_PRE, "Got relative index \"" + cur_config->index + "\"");
     }
     else if (arg == "root"){
-      cur_config.root = clean(absolute_root_ + statement.at(1));
-      // Log::trace(LOG_PRE, "Got relative root \"" + cur_config.root + "\"");
+      cur_config->root = clean(absolute_root_ + statement.at(1));
+      // Log::trace(LOG_PRE, "Got relative root \"" + cur_config->root + "\"");
     }
     else if (arg == "server_name"){
-      // Not implemented - don't do anything with it, but don't error
-      Log::trace(LOG_PRE, "Got server name (not implemented)");
+      cur_config->host = statement.at(1);
+      Log::trace(LOG_PRE, "Got server name " + cur_config->host);
     }
     else if (arg == "return"){
       try{
-        cur_config.ret = boost::lexical_cast<short>(statement.at(1));
-        Log::trace(LOG_PRE, "Got ret " + std::to_string(cur_config.ret));
+        cur_config->ret = boost::lexical_cast<short>(statement.at(1));
+        Log::trace(LOG_PRE, "Got ret " + std::to_string(cur_config->ret));
       }
       catch(boost::bad_lexical_cast&){ // Out of range, not a number, etc.
         Log::fatal(LOG_PRE, "Invalid ret \"" + statement.at(1) + "\"");
         return false;
       }
-      cur_config.ret_uri = statement.at(2);
-      cur_config.type = Config::ServerType::REDIRECT;
-      Log::trace(LOG_PRE, "Got ret_uri " + cur_config.ret_uri);
+      cur_config->ret_uri = statement.at(2);
+      Log::trace(LOG_PRE, "Got ret_uri " + cur_config->ret_uri);
     }
     else if (arg == "ssl_certificate"){
-      cur_config.certificate = statement.at(1);
-      Log::trace(LOG_PRE, "Got ssl_certificate " + cur_config.certificate);
+      cur_config->certificate = statement.at(1);
+      Log::trace(LOG_PRE, "Got ssl_certificate " + cur_config->certificate);
     }
     else if (arg == "ssl_certificate_key"){
-      cur_config.private_key = statement.at(1);
-      Log::trace(LOG_PRE, "Got ssl_certificate_key " + cur_config.private_key);
+      cur_config->private_key = statement.at(1);
+      Log::trace(LOG_PRE, "Got ssl_certificate_key " + cur_config->private_key);
     }
     else if (arg == "ssl_protocols"){
       // Not implemented - don't do anything with it, but don't error
@@ -322,8 +321,8 @@ bool ConfigParser::validate_config(){
   if (context != MAIN_CONTEXT) // The config must end in MAIN_CONTEXT.
     return false;
   // At least one config must define index and root.
-  for (Config& config : configs_){
-    if (config.index != "" && config.root != ""){
+  for (Config* config : configs_){
+    if (config->index != "" && config->root != ""){
       Log::info(LOG_PRE, "Parsed and validated " +
                 std::to_string(configs_.size()) + " config(s)");
       return true;

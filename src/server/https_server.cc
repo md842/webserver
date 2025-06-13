@@ -12,15 +12,15 @@ using namespace boost::asio;
 
 
 /// Initializes the server and starts listening for incoming connections.
-https_server::https_server(Config& config, io_context& io_context)
+https_server::https_server(Config* config, io_context& io_context)
   : server(config, io_context), // Call superclass constructor
     ssl_context_(ssl::context::tlsv12_server){
 
   // Configure SSL context
-  ssl_context_.use_certificate_file(config.certificate, ssl::context::pem);
-  ssl_context_.use_private_key_file(config.private_key, ssl::context::pem);
+  ssl_context_.use_certificate_file(config->certificate, ssl::context::pem);
+  ssl_context_.use_private_key_file(config->private_key, ssl::context::pem);
 
-  Log::info(LOG_PRE, "HTTPS server listening on port " + std::to_string(config.port));
+  Log::info(LOG_PRE, "HTTPS server listening on port " + std::to_string(config->port));
   start_accept();
 }
 

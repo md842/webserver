@@ -8,10 +8,10 @@ public:
    * Sets up the session socket.
    * 
    * @pre ConfigParser::parse() succeeded.
-   * @param config A parsed Config object that supplies session parameters.
+   * @param config A pointer to a parsed Config object that supplies session parameters.
    * @param io_context The boost::asio::io_context supplied by main.
    */
-  session(Config& config, boost::asio::io_context& io_context);
+  session(Config* config, boost::asio::io_context& io_context);
 
   /// Returns a reference to the TCP socket used by this session.
   virtual boost::asio::ip::tcp::socket::lowest_layer_type& socket() = 0;
@@ -31,7 +31,7 @@ protected:
   RequestHandler* dispatch(Request& req);
   
   std::string client_ip_;
-  Config config_;
+  Config* config_;
   enum{max_length = 1024};
   char data_[max_length];
   boost::asio::ip::tcp::socket socket_;

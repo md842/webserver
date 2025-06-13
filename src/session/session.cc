@@ -22,7 +22,7 @@ std::string proc_invalid_req(const std::string& received); // Helper function fo
 
 
 /// Sets up the session socket.
-session::session(Config& config, io_context& io_context) : config_(config), socket_(io_context){}
+session::session(Config* config, io_context& io_context) : config_(config), socket_(io_context){}
 
 
 /// Returns a reference to the TCP socket used by this session.
@@ -59,6 +59,10 @@ void session::handle_read(const error_code& error, size_t bytes){
     }
 
     Request req = parse_req(total_received_data_);
+
+    if (config_->ret){
+      Log::trace(LOG_PRE, "A request was made to a server that returns status " + std::to_string(config_->ret));
+    }
     
     /* Check if the parsed request is complete. If so, process it. 
        Because only max_length bytes can be read at a time, it is possible to
