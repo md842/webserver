@@ -1,0 +1,5 @@
+HTTP/1.1 301 Moved Permanently
+Location: https://localhost:8080/test.txt
+Content-Length: 46
+
+Redirecting to https://localhost:8080/test.txt
