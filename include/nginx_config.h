@@ -19,9 +19,9 @@ class Config{
   std::string index = "";
   std::string root = "";
   std::string host = "";
-  // Redirect parameters
+  // Return statement parameters
   short ret = 0;
-  std::string ret_uri = "";
+  std::string ret_val = "";
   // SSL parameters
   std::string certificate = "";
   std::string private_key = "";
