@@ -64,7 +64,7 @@ void session::handle_read(const error_code& error, size_t bytes){
     /* Server block in config defines return value, ignore all else and create
        appropriate response. All validation offloaded to destination server. */
     if (config_->ret)
-      create_response(error, req, config_->ret, config_->ret_val, config_->host);
+      create_return_response(error, req);
     else{
       /* Check if the parsed request is complete. If so, process it.
          Because only max_length bytes can be read at a time, it is possible to
@@ -121,7 +121,7 @@ void session::handle_read(const error_code& error, size_t bytes){
 }
 
 
-/* Overload 1 of 3:
+/* Overload 1 of 2:
    Create an error response to a given status code. */
 void session::create_response(const error_code& error, int status){
   size_t req_bytes = total_received_data_.length();
@@ -140,7 +140,7 @@ void session::create_response(const error_code& error, int status){
 }
 
 
-/* Overload 2 of 3:
+/* Overload 2 of 2:
    Create a response to a request that parsed successfully (may not be valid!)
    For a valid request, dispatches a RequestHandler to create the response.
    For an invalid request, create an error response and log the request. */
@@ -169,17 +169,13 @@ void session::create_response(const error_code& error, Request& req){
     res = handler->handle_request(req);
     free(handler); // Free memory used by request handler
   }
-
   total_received_data_ = ""; // Clear total received data
   do_write(error, res, req_bytes, req_summary, invalid_req); // Write response
 }
 
 
-/* Overload 3 of 3:
-   For a redirect server with ret and ret_val specified by the config block.
-   Create a response based on ret and ret_val. */
-void session::create_response(const error_code& error, Request& req, short ret,
-                              const std::string& ret_val, const std::string& host){
+/// Create an appropriate response based on a return directive.
+void session::create_return_response(const error_code& error, Request& req){
   size_t req_bytes = total_received_data_.length();
   std::string req_summary = req.method_string();
   req_summary += " " + std::string(req.target());
@@ -188,20 +184,20 @@ void session::create_response(const error_code& error, Request& req, short ret,
   /* Redirect server doesn't care about validating the request, the request
      will be verified by destination server if applicable. */
   Response* res = new Response();
-  res->result(ret); // Set response status code to specified return value
+  res->result(config_->ret); // Set response status code to return status
   res->version(11);
   
-  if (ret / 100 == 3){ // 301, 302, 303, 307 (redirect)
-    std::string resolved_ret_uri = ret_val;
+  if (config_->ret / 100 == 3){ // 301, 302, 303, 307 (redirect)
+    std::string resolved_ret_uri = config_->ret_val;
     // Resolve ret_uri $host, $request_uri "variables" in config value
-    boost::replace_all(resolved_ret_uri, "$host", host);
+    boost::replace_all(resolved_ret_uri, "$host", config_->host);
     boost::replace_all(resolved_ret_uri, "$request_uri", req.target());
     res->set(http::field::location, resolved_ret_uri);
     // Browser won't redirect correctly without a response body
     res->body() = "Redirecting to " + resolved_ret_uri;
   }
   else // Not a redirect, ret_val is (optional) response body text
-    res->body() = ret_val;
+    res->body() = config_->ret_val;
   res->prepare_payload();
 
   total_received_data_ = ""; // Clear total received data
@@ -213,7 +209,7 @@ void session::create_response(const error_code& error, Request& req, short ret,
 void session::do_write(const error_code& error, Response* res,
                        size_t req_bytes, const std::string& req_summary,
                        const std::string& invalid_req){
-
+  
   // async_write returns immediately, so res must be kept alive.
   // Lambda write handler captures res and deletes it after write finishes.
   http::async_write(socket_, *res,
