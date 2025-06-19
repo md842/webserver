@@ -56,6 +56,7 @@ integration_test "frontend/build/index.html"                    "curl"        "-
 integration_test "frontend/public/test.txt"                     "curl"        "-k -o $OUTPUT -s https://localhost:8080/test.txt"
 integration_test "tests/nc/outputs/leave_dir.txt"               "nc"          "localhost 8081"                                              "tests/nc/inputs/leave_dir.txt"
 integration_test "tests/nc/outputs/invalid_method.txt"          "nc"          "localhost 8081"                                              "tests/nc/inputs/invalid_method.txt"
+integration_test "tests/nc/outputs/redirect_test.txt"           "nc"          "localhost 8079"                                              "tests/nc/inputs/redirect_test.txt"
 # Function call  $1: Expected output file                       $2: Command   $3: Options                                                   $4 Netcat input file (omit for curl)
 
 kill $WEBSERVER_PID # Shut down web server after all tests have finished. Also ends any netcat background processes that are still alive.

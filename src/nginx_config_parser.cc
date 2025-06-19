@@ -209,7 +209,9 @@ bool ConfigParser::parse_block_end(std::vector<std::string>& statement){
 bool ConfigParser::parse_statement(std::vector<std::string>& statement){
   std::string arg = statement.at(0); // First token is argument type
 
-  // Valid in server context: listen, index, root, server_name, return
+  /* Valid in server context: listen, index, root, server_name, return,
+     ssl_certificate, ssl_certificate_key, ssl_protocols, ssl_ciphers,
+     ssl_session_timeout */
   if (context == SERVER_CONTEXT){
     if (arg == "listen"){
       try{
@@ -249,8 +251,16 @@ bool ConfigParser::parse_statement(std::vector<std::string>& statement){
         Log::trace(LOG_PRE, "Got ret " + std::to_string(cur_config->ret));
       }
       catch(boost::bad_lexical_cast&){ // Out of range, not a number, etc.
-        Log::fatal(LOG_PRE, "Invalid ret \"" + statement.at(1) + "\"");
-        return false;
+        if (statement.size() == 3){ // e.g., return https://$host$request_uri;
+          cur_config->ret = 302; // Default for return with only URL provided
+          cur_config->ret_val = statement.at(1);
+          Log::trace(LOG_PRE, "Got default ret " + std::to_string(cur_config->ret));
+          Log::trace(LOG_PRE, "Got ret_val " + cur_config->ret_val);
+        }
+        else{
+          Log::fatal(LOG_PRE, "Invalid ret \"" + statement.at(1) + "\"");
+          return false;
+        }
       }
       if (statement.size() == 4){ // e.g., return 301 https://$host$request_uri;
         cur_config->ret_val = statement.at(2);

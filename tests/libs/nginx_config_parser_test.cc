@@ -248,3 +248,42 @@ TEST_F(NginxConfigParserTest, TransitionInvalidEOF){ // Uses test fixture
 TEST_F(NginxConfigParserTest, TransitionInvalidSemicolon){ // Uses test fixture
   EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "transition_invalid_semicolon.conf"));
 }
+
+// Return directive testing
+
+TEST_F(NginxConfigParserTest, Return302Default){ // Uses test fixture
+  EXPECT_TRUE(ConfigParser::inst().parse(configs_folder + "return_302_default.conf"));
+  Config* config = ConfigParser::inst().configs().at(1); // Extract second parsed config
+
+  EXPECT_EQ(config->ret, 302);
+  EXPECT_EQ(config->ret_val, "https://$host:8080$request_uri");
+  EXPECT_EQ(config->port, 8081);
+}
+
+TEST_F(NginxConfigParserTest, Return3xx){ // Uses test fixture
+  EXPECT_TRUE(ConfigParser::inst().parse(configs_folder + "return_3xx.conf"));
+  Config* config = ConfigParser::inst().configs().at(1); // Extract second parsed config
+
+  EXPECT_EQ(config->ret, 301);
+  EXPECT_EQ(config->ret_val, "https://$host:8080$request_uri");
+  EXPECT_EQ(config->port, 8081);
+}
+
+TEST_F(NginxConfigParserTest, Return3xxMissingURL){ // Uses test fixture
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "return_3xx_missing_url.conf"));
+}
+
+TEST_F(NginxConfigParserTest, ReturnOther){ // Uses test fixture
+  EXPECT_TRUE(ConfigParser::inst().parse(configs_folder + "return_other.conf"));
+  Config* config = ConfigParser::inst().configs().at(1); // Extract second parsed config
+
+  EXPECT_EQ(config->ret, 200);
+  EXPECT_EQ(config->ret_val, "");
+  EXPECT_EQ(config->port, 8081);
+
+  config = ConfigParser::inst().configs().at(2); // Extract third parsed config
+
+  EXPECT_EQ(config->ret, 400);
+  EXPECT_EQ(config->ret_val, "Optional text");
+  EXPECT_EQ(config->port, 8082);
+}
