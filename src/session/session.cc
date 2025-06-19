@@ -1,3 +1,4 @@
+#include <boost/algorithm/string/replace.hpp> // replace_all
 #include <boost/asio.hpp> // io_context, tcp
 #include <boost/bind/bind.hpp> // bind
 
@@ -60,52 +61,55 @@ void session::handle_read(const error_code& error, size_t bytes){
 
     Request req = parse_req(total_received_data_);
 
-    if (config_->ret){
-      Log::trace(LOG_PRE, "A request was made to a server that returns status " + std::to_string(config_->ret));
-    }
-    
-    /* Check if the parsed request is complete. If so, process it. 
-       Because only max_length bytes can be read at a time, it is possible to
-       receive an incomplete request from one read. */
-    if (req.has_content_length()){
-      /* If the Content-Length header is present, we know the complete request
-         has been read when payload size matches Content-Length. */
-
-      /* Throws std::invalid_argument if non-numeric, but has_content_length()
-         ensures it is numeric, no further exception handling required. */
-      int content_length = std::stoi(req.at(http::field::content_length));
-      int payload_size = 0;
-      
-      // Treat excessively large requests as malicious
-      if (content_length >= max_length * 4){
-        create_response(error, 413); // 413 Payload Too Large
-        return;
-      }
-
-      boost::optional<uint64_t> payload_size_opt = req.payload_size();
-      if (payload_size_opt) // boost::optional has value
-        payload_size = *payload_size_opt; // Extract and set value
-
-      if (payload_size < content_length) // Request is incomplete
-        do_read(); // Continue reading incoming data
-      else // Request is complete
-        create_response(error, req); // Create response
-    }
+    /* Server block in config defines return value, ignore all else and create
+       appropriate response. All validation offloaded to destination server. */
+    if (config_->ret)
+      create_response(error, req, config_->ret, config_->ret_val, config_->host);
     else{
-      /* If the Content-Length header is not present, there should be no body,
-         so we know the complete request has been read when bytes < max_length
-         or the request ends with \r\n\r\n. */
-      if (bytes < max_length)
-        create_response(error, req); // Request is complete, create response
-      else if (total_received_data_.substr(
-        total_received_data_.length() - 4) == "\r\n\r\n")
-        /* This condition would suffice for all requests with no body. However,
-        there is a rare case (complete request length perfectly divisible by
-        max_length) that is slower than comparing bytes < max_length, so the
-        above comparison is preferred and this is left as a fallback. */
-        create_response(error, req); // Request is complete, create response
-      else // Request is incomplete
-        do_read(); // Continue reading incoming data
+      /* Check if the parsed request is complete. If so, process it.
+         Because only max_length bytes can be read at a time, it is possible to
+         receive an incomplete request from one read. */
+      if (req.has_content_length()){
+        /* If the Content-Length header is present, we know the complete
+           request has been read when payload size matches Content-Length. */
+
+        /* Throws std::invalid_argument if non-numeric, but
+           has_content_length() ensures it is numeric, no handling required. */
+        int content_length = std::stoi(req.at(http::field::content_length));
+        int payload_size = 0;
+        
+        // Treat excessively large requests as malicious
+        if (content_length >= max_length * 4){
+          create_response(error, 413); // 413 Payload Too Large
+          return;
+        }
+
+        boost::optional<uint64_t> payload_size_opt = req.payload_size();
+        if (payload_size_opt) // boost::optional has value
+          payload_size = *payload_size_opt; // Extract and set value
+
+        if (payload_size < content_length) // Request is incomplete
+          do_read(); // Continue reading incoming data
+        else // Request is complete
+          create_response(error, req); // Create response
+      }
+      else{
+        /* If the Content-Length header is not present, there should be no
+           body, so we know the complete request has been read when
+           bytes < max_length or the request ends with \r\n\r\n. */
+        if (bytes < max_length)
+          create_response(error, req); // Request is complete, create response
+        else if (total_received_data_.substr(
+          total_received_data_.length() - 4) == "\r\n\r\n")
+          /* This condition would suffice for all requests with no body.
+             However, there is an edge case (complete request length perfectly
+             divisible by max_length) that is much slower than comparing
+             bytes < max_length, so the above comparison is preferred and this
+             is left as a fallback. */
+          create_response(error, req); // Request is complete, create response
+        else // Request is incomplete
+          do_read(); // Continue reading incoming data
+      }
     }
   }
   else if (error == error::eof)
@@ -117,7 +121,7 @@ void session::handle_read(const error_code& error, size_t bytes){
 }
 
 
-/* Overload 1 of 2:
+/* Overload 1 of 3:
    Create an error response to a given status code. */
 void session::create_response(const error_code& error, int status){
   size_t req_bytes = total_received_data_.length();
@@ -136,7 +140,7 @@ void session::create_response(const error_code& error, int status){
 }
 
 
-/* Overload 2 of 2:
+/* Overload 2 of 3:
    Create a response to a request that parsed successfully (may not be valid!)
    For a valid request, dispatches a RequestHandler to create the response.
    For an invalid request, create an error response and log the request. */
@@ -165,6 +169,40 @@ void session::create_response(const error_code& error, Request& req){
     res = handler->handle_request(req);
     free(handler); // Free memory used by request handler
   }
+
+  total_received_data_ = ""; // Clear total received data
+  do_write(error, res, req_bytes, req_summary, invalid_req); // Write response
+}
+
+
+/* Overload 3 of 3:
+   For a redirect server with ret and ret_val specified by the config block.
+   Create a response based on ret and ret_val. */
+void session::create_response(const error_code& error, Request& req, short ret,
+                              const std::string& ret_val, const std::string& host){
+  size_t req_bytes = total_received_data_.length();
+  std::string req_summary = req.method_string();
+  req_summary += " " + std::string(req.target());
+  std::string invalid_req = "";
+
+  /* Redirect server doesn't care about validating the request, the request
+     will be verified by destination server if applicable. */
+  Response* res = new Response();
+  res->result(ret); // Set response status code to specified return value
+  res->version(11);
+  
+  if (ret / 100 == 3){ // 301, 302, 303, 307 (redirect)
+    std::string resolved_ret_uri = ret_val;
+    // Resolve ret_uri $host, $request_uri "variables" in config value
+    boost::replace_all(resolved_ret_uri, "$host", host);
+    boost::replace_all(resolved_ret_uri, "$request_uri", req.target());
+    res->set(http::field::location, resolved_ret_uri);
+    // Browser won't redirect correctly without a response body
+    res->body() = "Redirecting to " + resolved_ret_uri;
+  }
+  else // Not a redirect, ret_val is (optional) response body text
+    res->body() = ret_val;
+  res->prepare_payload();
 
   total_received_data_ = ""; // Clear total received data
   do_write(error, res, req_bytes, req_summary, invalid_req); // Write response

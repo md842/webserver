@@ -252,8 +252,10 @@ bool ConfigParser::parse_statement(std::vector<std::string>& statement){
         Log::fatal(LOG_PRE, "Invalid ret \"" + statement.at(1) + "\"");
         return false;
       }
-      cur_config->ret_uri = statement.at(2);
-      Log::trace(LOG_PRE, "Got ret_uri " + cur_config->ret_uri);
+      if (statement.size() == 4){ // e.g., return 301 https://$host$request_uri;
+        cur_config->ret_val = statement.at(2);
+        Log::trace(LOG_PRE, "Got ret_val " + cur_config->ret_val);
+      }
     }
     else if (arg == "ssl_certificate"){
       cur_config->certificate = statement.at(1);
