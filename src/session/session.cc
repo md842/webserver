@@ -1,5 +1,5 @@
 #include <boost/algorithm/string/replace.hpp> // replace_all
-#include <boost/asio.hpp> // io_context, tcp
+#include <boost/asio.hpp> // buffer, placeholders, ip::tcp
 #include <boost/bind/bind.hpp> // bind
 
 #include "analytics.h"
@@ -12,7 +12,6 @@
 #define LOG_PRE "[Session]  "
 
 using namespace boost::asio;
-using boost::asio::ip::tcp;
 using boost::system::error_code;
 namespace http = boost::beast::http;
 
@@ -22,108 +21,96 @@ int verify_req(Request& req);
 std::string proc_invalid_req(const std::string& received); // Helper function for invalid request logging
 
 
-/// Sets up the session socket.
-session::session(Config* config, io_context& io_context) : config_(config), socket_(io_context){}
-
-
-/// Returns a reference to the TCP socket used by this session.
-tcp::socket::lowest_layer_type& session::socket(){
-  return socket_.lowest_layer();
-}
-
-
 /// Asynchronously reads incoming data from socket_, then calls handle_read.
 void session::do_read(){
-    socket_.async_read_some(buffer(data_, max_length),
-                            boost::bind(&session::handle_read, this,
-                            placeholders::error,
-                            placeholders::bytes_transferred));
+  socket_.async_read_some(buffer(data_, max_length),
+                          boost::bind(&session::handle_read, this,
+                                      placeholders::error,
+                                      placeholders::bytes_transferred));
 }
 
 
-/// Read handler, called after start() reads incoming data.
+/// Parses incoming data from do_read() into HTTP request and creates response.
 void session::handle_read(const error_code& error, size_t bytes){
   try{ // Throws boost::system::system_error
     client_ip_ = socket().remote_endpoint().address().to_string();
   }
   catch(boost::system::system_error){ // Thrown by socket::remote_endpoint()
-    do_close(0, "Client disconnected from session.");
-    return;
+    close(0, "Client disconnected from session.");
+    return; // close() deletes this session, return to avoid segfault
   }
-  if (!error){
+
+  if (!error){ // do_read successfully read data
     // Append incoming data from read buffer (data_) to total received data
     total_received_data_ += std::string(data_, bytes);
+
     // Treat excessively large requests as malicious
     if (total_received_data_.length() >= max_length * 4){
-      create_response(error, 413); // 413 Payload Too Large
-      return;
+      create_response(413); // 413 Payload Too Large
+      return; // Do not continue processing the request
     }
 
     Request req = parse_req(total_received_data_);
 
-    /* Server block in config defines return value, ignore all else and create
-       appropriate response. All validation offloaded to destination server. */
-    if (config_->ret)
-      create_return_response(error, req);
+    /* Config defines return directive, ignore all other processing and create
+       appropriate response. Validation offloaded to destination server. */
+    if (config_->ret){
+      create_return_response(req);
+      return; // Do not continue processing the request
+    }
+
+    /* Check parsed request for completeness. Because only max_length bytes may
+       be read at a time, it is possible to read an incomplete request. */
+    if (req.has_content_length()){
+      /* If the Content-Length header is present, we know the complete
+         request has been read when payload size matches Content-Length. */
+
+      /* Throws std::invalid_argument if non-numeric, but has_content_length()
+         ensures it is numeric, so no further handling required. */
+      int content_length = std::stoi(req.at(http::field::content_length));
+      
+      // Treat excessively large requests as malicious
+      if (content_length >= max_length * 4){
+        create_response(413); // 413 Payload Too Large
+        return; // Do not continue processing the request
+      }
+
+      // Compare payload size to value in Content-Length header
+      boost::optional<uint64_t> payload_size_opt = req.payload_size();
+      if (payload_size_opt && *payload_size_opt < content_length)
+        do_read(); // Request is incomplete, continue reading
+      else // Request is complete
+        create_response(req); // Create response
+    }
     else{
-      /* Check if the parsed request is complete. If so, process it.
-         Because only max_length bytes can be read at a time, it is possible to
-         receive an incomplete request from one read. */
-      if (req.has_content_length()){
-        /* If the Content-Length header is present, we know the complete
-           request has been read when payload size matches Content-Length. */
-
-        /* Throws std::invalid_argument if non-numeric, but
-           has_content_length() ensures it is numeric, no handling required. */
-        int content_length = std::stoi(req.at(http::field::content_length));
-        int payload_size = 0;
-        
-        // Treat excessively large requests as malicious
-        if (content_length >= max_length * 4){
-          create_response(error, 413); // 413 Payload Too Large
-          return;
-        }
-
-        boost::optional<uint64_t> payload_size_opt = req.payload_size();
-        if (payload_size_opt) // boost::optional has value
-          payload_size = *payload_size_opt; // Extract and set value
-
-        if (payload_size < content_length) // Request is incomplete
-          do_read(); // Continue reading incoming data
-        else // Request is complete
-          create_response(error, req); // Create response
-      }
-      else{
-        /* If the Content-Length header is not present, there should be no
-           body, so we know the complete request has been read when
-           bytes < max_length or the request ends with \r\n\r\n. */
-        if (bytes < max_length)
-          create_response(error, req); // Request is complete, create response
-        else if (total_received_data_.substr(
-          total_received_data_.length() - 4) == "\r\n\r\n")
-          /* This condition would suffice for all requests with no body.
-             However, there is an edge case (complete request length perfectly
-             divisible by max_length) that is much slower than comparing
-             bytes < max_length, so the above comparison is preferred and this
-             is left as a fallback. */
-          create_response(error, req); // Request is complete, create response
-        else // Request is incomplete
-          do_read(); // Continue reading incoming data
-      }
+      /* If the Content-Length header is not present, there should be no body,
+         so we know the complete request has been read when bytes < max_length
+         or the request ends with \r\n\r\n. */
+      if (bytes < max_length)
+        create_response(req); // Request is complete, create response
+      else if (total_received_data_.substr(
+        total_received_data_.length() - 4) == "\r\n\r\n")
+        /* This condition would suffice for all requests with no body. However,
+           there is a very problematic edge case (complete request length
+           perfectly divisible by max_length), so the above comparison is
+           preferred and this is left as a fallback. */
+        create_response(req); // Request is complete, create response
+      else // Request is incomplete
+        do_read(); // Continue reading incoming data
     }
   }
   else if (error == error::eof)
-    // Client sends EOF when closed or keep-alive times out.
-    // Expected behavior, log as info rather than error and shut down.
-    do_close(0, "Keep-alive connection closed by client, shutting down.");
+    /* Client sends EOF when closed or keep-alive times out.
+       Expected behavior, log as info rather than error and shut down. */
+    close(0, "Keep-alive connection closed by client, shutting down.");
   else // Unknown read error, log as error and shut down.
-    do_close(2, "Got error \"" + error.message() + "\" while reading request, shutting down.");
+    close(2, "Got error \"" + error.message() + "\" while reading request, shutting down.");
 }
 
 
 /* Overload 1 of 2:
    Create an error response to a given status code. */
-void session::create_response(const error_code& error, int status){
+void session::create_response(int status){
   size_t req_bytes = total_received_data_.length();
 
   if (status == 413)
@@ -136,7 +123,7 @@ void session::create_response(const error_code& error, int status){
   res->version(11);
 
   total_received_data_ = ""; // Clear total received data
-  do_write(error, res, req_bytes, "(Invalid)", ""); // Write response
+  do_write(res, req_bytes, "(Invalid)", ""); // Write response
 }
 
 
@@ -144,7 +131,7 @@ void session::create_response(const error_code& error, int status){
    Create a response to a request that parsed successfully (may not be valid!)
    For a valid request, dispatches a RequestHandler to create the response.
    For an invalid request, create an error response and log the request. */
-void session::create_response(const error_code& error, Request& req){
+void session::create_response(Request& req){
   size_t req_bytes = total_received_data_.length();
   std::string req_summary = req.method_string();
   req_summary += " " + std::string(req.target());
@@ -170,28 +157,33 @@ void session::create_response(const error_code& error, Request& req){
     free(handler); // Free memory used by request handler
   }
   total_received_data_ = ""; // Clear total received data
-  do_write(error, res, req_bytes, req_summary, invalid_req); // Write response
+  do_write(res, req_bytes, req_summary, invalid_req); // Write response
 }
 
 
 /// Create an appropriate response based on a return directive.
-void session::create_return_response(const error_code& error, Request& req){
+void session::create_return_response(Request& req){
   size_t req_bytes = total_received_data_.length();
   std::string req_summary = req.method_string();
   req_summary += " " + std::string(req.target());
-  std::string invalid_req = "";
 
   /* Redirect server doesn't care about validating the request, the request
      will be verified by destination server if applicable. */
+
   Response* res = new Response();
   res->result(config_->ret); // Set response status code to return status
   res->version(11);
   
-  if (config_->ret / 100 == 3){ // 301, 302, 303, 307 (redirect)
+  if (config_->ret / 100 == 3){ // 301, 302, 303, 307, 308 (redirect)
     std::string resolved_ret_uri = config_->ret_val;
-    // Resolve ret_uri $host, $request_uri "variables" in config value
+    // Resolve ret_uri $scheme, $host, $request_uri in config value
+    if (config_->type == Config::ServerType::HTTP_SERVER)
+      boost::replace_all(resolved_ret_uri, "$scheme", "http");
+    else
+      boost::replace_all(resolved_ret_uri, "$scheme", "https");
     boost::replace_all(resolved_ret_uri, "$host", config_->host);
     boost::replace_all(resolved_ret_uri, "$request_uri", req.target());
+    // Set Location header with resolved URI for the redirect
     res->set(http::field::location, resolved_ret_uri);
     // Browser won't redirect correctly without a response body
     res->body() = "Redirecting to " + resolved_ret_uri;
@@ -201,63 +193,78 @@ void session::create_return_response(const error_code& error, Request& req){
   res->prepare_payload();
 
   total_received_data_ = ""; // Clear total received data
-  do_write(error, res, req_bytes, req_summary, invalid_req); // Write response
+  do_write(res, req_bytes, req_summary, ""); // Write response
 }
 
 
 /// Given a pointer to a Response object, writes the response to the client.
-void session::do_write(const error_code& error, Response* res,
-                       size_t req_bytes, const std::string& req_summary,
+void session::do_write(Response* res, size_t req_bytes,
+                       const std::string& req_summary,
                        const std::string& invalid_req){
-  
-  // async_write returns immediately, so res must be kept alive.
-  // Lambda write handler captures res and deletes it after write finishes.
+  // async_write returns immediately, res must be kept alive for handle_write.
   http::async_write(socket_, *res,
-    [this, res, req_bytes, req_summary, invalid_req]
-    (error_code ec, size_t res_bytes){
-      if (!ec){ // Successful write
-        Log::res_metrics( // Write machine-parseable formatted log
-          client_ip_,
-          req_bytes,
-          res_bytes,
-          req_summary,
-          invalid_req,
-          res->result_int()
-        );
-        if (res->result_int() == 413){ // 413 Payload Too Large
-          free(res); // Free memory used by HTTP response object
-          do_close(1, "Client attempted to send an excessive payload, shutting down.");
-        }
-        else if (res->keep_alive()){ // Connection: keep-alive was requested
-          free(res); // Free memory used by HTTP response object
-          do_read(); // Continue listening for requests
-        }
-        else{ // Connection: close was requested
-          free(res); // Free memory used by HTTP response object
-          do_close(0, "Connection: close specified, shutting down.");
-        }
-      }
-      else{ // Error during write
-        free(res); // Free memory used by HTTP response object
-        do_close(2, "Got error \"" + ec.message() + "\" while writing response, shutting down.");
-      }
-    }
-  );
+                    boost::bind(&session::handle_write, this,
+                                placeholders::error,
+                                placeholders::bytes_transferred,
+                                res, req_bytes, req_summary, invalid_req));
 }
 
 
-/// Helper function that logs a message and closes the session.
-void session::do_close(int severity, const std::string& message){
-  std::string full_msg = "Client: " + client_ip_ + " | " + message;
-  if (severity == 0) // info
-    Log::info(LOG_PRE, full_msg);
-  else if (severity == 1) // warning
-    Log::warn(LOG_PRE, full_msg);
-  else if (severity == 2) // error
-    Log::error(LOG_PRE, full_msg);
+/// Write handler, decides what to do next after writing response to client.
+void session::handle_write(const error_code& error, size_t res_bytes,
+                           Response* res, size_t req_bytes,
+                           const std::string& req_summary,
+                           const std::string& invalid_req){
+  if (!error){ // Successful write
+    Log::res_metrics( // Write machine-parseable formatted log
+      client_ip_,
+      req_bytes,
+      res_bytes,
+      req_summary,
+      invalid_req,
+      res->result_int()
+    );
+    if (res->result_int() == 413){ // 413 Payload Too Large
+      free(res); // Free memory used by HTTP response object
+      close(1, "Client attempted to send an excessive payload, shutting down.");
+    }
+    else if (res->keep_alive()){ // Connection: keep-alive was requested
+      free(res); // Free memory used by HTTP response object
+      do_read(); // Continue listening for requests
+    }
+    else{ // Connection: close was requested
+      free(res); // Free memory used by HTTP response object
+      close(0, "Connection: close specified, shutting down.");
+    }
+  }
+  else{ // Error during write
+    free(res); // Free memory used by HTTP response object
+    close(2, "Got error \"" + error.message() + "\" while writing response, shutting down.");
+  }
+}
 
+
+/// Logs information about a closing session, then closes it.
+void session::close(int severity, const std::string& message){
+  std::string full_msg = "Client: " + client_ip_ + " | " + message;
+  switch (severity){
+    case 0: // info
+      Log::info(LOG_PRE, full_msg);
+      break;
+    case 1: // warning
+      Log::warn(LOG_PRE, full_msg);
+      break;
+    case 2: // error
+      Log::error(LOG_PRE, full_msg);
+  }
+  do_close(); // Close the session
+}
+
+
+/// Closes the current session.
+void session::do_close(){
   error_code ec;
-  socket_.shutdown(tcp::socket::shutdown_both, ec); // Close connection
+  socket_.shutdown(ip::tcp::socket::shutdown_both, ec); // Close connection
   delete this;
 }
 

@@ -27,9 +27,10 @@ public:
 
 private:
   void do_handshake();
-  void do_read(const boost::system::error_code& error);
-  void do_write(const boost::system::error_code& error, Response* res,
-                size_t req_bytes, const std::string& req_summary,
+  void handle_handshake(const boost::system::error_code& error);
+  void do_read();
+  void do_write(Response* res, size_t req_bytes,
+                const std::string& req_summary,
                 const std::string& invalid_req);
   void do_close(int severity, const std::string& message);
   void handle_close(const boost::system::error_code& error);
