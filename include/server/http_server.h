@@ -1,8 +1,10 @@
 #pragma once
 
+#include <boost/asio.hpp> // io_context, tcp
+
 #include "server/server.h"
 
-class http_server : public server{
+class http_server : public server<boost::asio::ip::tcp::socket>{
 public:
   /** 
    * Initializes the server and starts listening for incoming connections.

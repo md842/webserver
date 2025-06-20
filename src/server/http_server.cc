@@ -21,7 +21,8 @@ http_server::http_server(Config* config, io_context& io_context)
 
 /// Accepts incoming connection, creates new session, then calls handle_accept.
 void http_server::start_accept(){
-  session* new_session = new http_session(config_, io_context_);
+  session<boost::asio::ip::tcp::socket>* new_session =
+    new http_session(config_, io_context_);
   acceptor_.async_accept(new_session->socket(),
                          boost::bind(&http_server::handle_accept, this,
                                      new_session, placeholders::error));

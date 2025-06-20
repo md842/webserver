@@ -4,7 +4,8 @@
 
 #include "server/server.h"
 
-class https_server : public server{
+class https_server :
+  public server<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>>{
 public:
   /** 
    * Initializes the server and starts listening for incoming connections.

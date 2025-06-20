@@ -27,7 +27,8 @@ https_server::https_server(Config* config, io_context& io_context)
 
 /// Accepts incoming connection, creates new session, then calls handle_accept.
 void https_server::start_accept(){
-  session* new_session = new https_session(config_, io_context_, ssl_context_);
+  session<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>>* new_session =
+    new https_session(config_, io_context_, ssl_context_);
   acceptor_.async_accept(new_session->socket(),
                          boost::bind(&https_server::handle_accept, this,
                                      new_session, placeholders::error));

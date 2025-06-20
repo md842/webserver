@@ -2,7 +2,8 @@
 
 #include "session/session.h" // session
 
-class https_session : public session{
+class https_session :
+  public session<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>>{
 public:
   /** 
    * Sets up the session socket.
@@ -14,12 +15,14 @@ public:
    */
   https_session(Config* config, boost::asio::io_context& io_context,
                 boost::asio::ssl::context& ssl_context)
-  : session(config, io_context), // Call superclass constructor
-    ssl_socket_(io_context, ssl_context){}
+    : session(config){ // Call superclass constructor
+    socket_ = new boost::asio::ssl::stream<
+      boost::asio::ip::tcp::socket>(io_context, ssl_context);
+  }
 
   /// Returns a reference to the TCP socket used by this session.
-  boost::asio::ip::tcp::socket::lowest_layer_type& socket() override{
-    return ssl_socket_.lowest_layer();
+  boost::asio::ip::tcp::socket& socket() override{
+    return socket_->next_layer();
   };
 
   /// The entry point for https_session is do_handshake()
@@ -28,12 +31,6 @@ public:
 private:
   void do_handshake();
   void handle_handshake(const boost::system::error_code& error);
-  void do_read();
-  void do_write(Response* res, size_t req_bytes,
-                const std::string& req_summary,
-                const std::string& invalid_req);
-  void do_close(int severity, const std::string& message);
+  void do_close() override;
   void handle_close(const boost::system::error_code& error);
-
-  boost::asio::ssl::stream<boost::asio::ip::tcp::socket> ssl_socket_;
 };
