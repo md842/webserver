@@ -1,0 +1,5 @@
+HTTP/1.1 302 Found
+Location: http://localhost:8081/test.txt
+Content-Length: 45
+
+Redirecting to http://localhost:8081/test.txt

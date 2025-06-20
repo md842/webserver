@@ -11,7 +11,8 @@ public:
    * @param config A pointer to a parsed Config object that supplies session parameters.
    * @param io_context The boost::asio::io_context supplied by main.
    */
-  session(Config* config, boost::asio::io_context& io_context);
+  session(Config* config, boost::asio::io_context& io_context)
+    : config_(config), socket_(io_context){}
 
   /// Returns a reference to the TCP socket used by this session.
   virtual boost::asio::ip::tcp::socket::lowest_layer_type& socket() = 0;
@@ -22,14 +23,18 @@ public:
 protected:
   virtual void do_read();
   void handle_read(const boost::system::error_code& error, size_t bytes);
-  void create_response(const boost::system::error_code& error, int status);
-  void create_response(const boost::system::error_code& error, Request& req);
-  void create_return_response(const boost::system::error_code& error,
-                              Request& req);
-  virtual void do_write(const boost::system::error_code& error, Response* res,
-                size_t req_bytes, const std::string& req_summary,
-                const std::string& invalid_req);
-  virtual void do_close(int severity, const std::string& message);
+  void create_response(int status);
+  void create_response(Request& req);
+  void create_return_response(Request& req);
+  virtual void do_write(Response* res, size_t req_bytes,
+                        const std::string& req_summary,
+                        const std::string& invalid_req);
+  void handle_write(const boost::system::error_code& error, size_t res_bytes,
+                    Response* res, size_t req_bytes,
+                    const std::string& req_summary,
+                    const std::string& invalid_req);
+  void close(int severity, const std::string& message);
+  virtual void do_close();
   RequestHandler* dispatch(Request& req);
   
   std::string client_ip_;
