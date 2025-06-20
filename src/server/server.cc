@@ -12,13 +12,16 @@ using boost::system::error_code;
 
 
 /// Initializes the server instance.
-server::server(Config* config, io_context& io_context)
+template <typename T>
+server<T>::server(Config* config, io_context& io_context)
   : acceptor_(io_context, tcp::endpoint(tcp::v4(), config->port)),
     config_(config), io_context_(io_context){}
 
 
 /// Accept handler, called after start_accept() accepts incoming connection.
-void server::handle_accept(session* new_session, const error_code& error){
+template <typename T>
+void server<T>::handle_accept(session<T>* new_session,
+                              const error_code& error){
   if (!error)
     new_session->start(); // Entry point varies based on override
   else{
@@ -28,3 +31,8 @@ void server::handle_accept(session* new_session, const error_code& error){
   }
   start_accept(); // Continue listening for incoming connections
 }
+
+
+// Explicit instantiation of template types
+template class server<boost::asio::ip::tcp::socket>;
+template class server<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>>;

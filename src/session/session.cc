@@ -18,20 +18,23 @@ namespace http = boost::beast::http;
 
 Request parse_req(const std::string& received);
 int verify_req(Request& req);
+RequestHandler* dispatch(Request& req, Config* config_);
 std::string proc_invalid_req(const std::string& received); // Helper function for invalid request logging
 
 
 /// Asynchronously reads incoming data from socket_, then calls handle_read.
-void session::do_read(){
-  socket_.async_read_some(buffer(data_, max_length),
-                          boost::bind(&session::handle_read, this,
-                                      placeholders::error,
-                                      placeholders::bytes_transferred));
+template <typename T>
+void session<T>::do_read(){
+  socket_->async_read_some(buffer(data_, max_length),
+                           boost::bind(&session::handle_read, this,
+                                       placeholders::error,
+                                       placeholders::bytes_transferred));
 }
 
 
 /// Parses incoming data from do_read() into HTTP request and creates response.
-void session::handle_read(const error_code& error, size_t bytes){
+template <typename T>
+void session<T>::handle_read(const error_code& error, size_t bytes){
   try{ // Throws boost::system::system_error
     client_ip_ = socket().remote_endpoint().address().to_string();
   }
@@ -110,7 +113,8 @@ void session::handle_read(const error_code& error, size_t bytes){
 
 /* Overload 1 of 2:
    Create an error response to a given status code. */
-void session::create_response(int status){
+template <typename T>
+void session<T>::create_response(int status){
   size_t req_bytes = total_received_data_.length();
 
   if (status == 413)
@@ -131,7 +135,8 @@ void session::create_response(int status){
    Create a response to a request that parsed successfully (may not be valid!)
    For a valid request, dispatches a RequestHandler to create the response.
    For an invalid request, create an error response and log the request. */
-void session::create_response(Request& req){
+template <typename T>
+void session<T>::create_response(Request& req){
   size_t req_bytes = total_received_data_.length();
   std::string req_summary = req.method_string();
   req_summary += " " + std::string(req.target());
@@ -152,7 +157,7 @@ void session::create_response(Request& req){
     invalid_req = proc_invalid_req(total_received_data_);
   }
   else{ // Valid request, dispatch a request handler to obtain response
-    RequestHandler* handler = dispatch(req);
+    RequestHandler* handler = dispatch(req, config_);
     res = handler->handle_request(req);
     free(handler); // Free memory used by request handler
   }
@@ -162,7 +167,8 @@ void session::create_response(Request& req){
 
 
 /// Create an appropriate response based on a return directive.
-void session::create_return_response(Request& req){
+template <typename T>
+void session<T>::create_return_response(Request& req){
   size_t req_bytes = total_received_data_.length();
   std::string req_summary = req.method_string();
   req_summary += " " + std::string(req.target());
@@ -198,11 +204,12 @@ void session::create_return_response(Request& req){
 
 
 /// Given a pointer to a Response object, writes the response to the client.
-void session::do_write(Response* res, size_t req_bytes,
-                       const std::string& req_summary,
-                       const std::string& invalid_req){
+template <typename T>
+void session<T>::do_write(Response* res, size_t req_bytes,
+                          const std::string& req_summary,
+                          const std::string& invalid_req){
   // async_write returns immediately, res must be kept alive for handle_write.
-  http::async_write(socket_, *res,
+  http::async_write(*socket_, *res,
                     boost::bind(&session::handle_write, this,
                                 placeholders::error,
                                 placeholders::bytes_transferred,
@@ -211,10 +218,11 @@ void session::do_write(Response* res, size_t req_bytes,
 
 
 /// Write handler, decides what to do next after writing response to client.
-void session::handle_write(const error_code& error, size_t res_bytes,
-                           Response* res, size_t req_bytes,
-                           const std::string& req_summary,
-                           const std::string& invalid_req){
+template <typename T>
+void session<T>::handle_write(const error_code& error, size_t res_bytes,
+                              Response* res, size_t req_bytes,
+                              const std::string& req_summary,
+                              const std::string& invalid_req){
   if (!error){ // Successful write
     Log::res_metrics( // Write machine-parseable formatted log
       client_ip_,
@@ -245,7 +253,8 @@ void session::handle_write(const error_code& error, size_t res_bytes,
 
 
 /// Logs information about a closing session, then closes it.
-void session::close(int severity, const std::string& message){
+template <typename T>
+void session<T>::close(int severity, const std::string& message){
   std::string full_msg = "Client: " + client_ip_ + " | " + message;
   switch (severity){
     case 0: // info
@@ -258,35 +267,6 @@ void session::close(int severity, const std::string& message){
       Log::error(LOG_PRE, full_msg);
   }
   do_close(); // Close the session
-}
-
-
-/// Closes the current session.
-void session::do_close(){
-  error_code ec;
-  socket_.shutdown(ip::tcp::socket::shutdown_both, ec); // Close connection
-  delete this;
-}
-
-
-/// Dynamically dispatches a RequestHandler based on the given request.
-RequestHandler* session::dispatch(Request& req){
-  std::string factory;
-
-  if (req.method() == http::verb::get){ [[likely]]
-    if (req.target() == "/health")
-      factory = "HealthRequestHandler";
-    else{ [[likely]]
-      Analytics::inst().gets++; // Log valid GET request in analytics
-      factory = "FileRequestHandler";
-    }
-  } // Only GET and POST requests are supported
-  else
-    factory = "PostRequestHandler";
-
-  RequestHandler* handler = Registry::inst().get_factory(factory)->create();
-  handler->init_config(config_);
-  return handler;
 }
 
 
@@ -354,6 +334,27 @@ int verify_req(Request& req){
 }
 
 
+/// Dynamically dispatches a RequestHandler based on the given request.
+RequestHandler* dispatch(Request& req, Config* config_){
+  std::string factory;
+
+  if (req.method() == http::verb::get){ [[likely]]
+    if (req.target() == "/health")
+      factory = "HealthRequestHandler";
+    else{ [[likely]]
+      Analytics::inst().gets++; // Log valid GET request in analytics
+      factory = "FileRequestHandler";
+    }
+  } // Only GET and POST requests are supported
+  else
+    factory = "PostRequestHandler";
+
+  RequestHandler* handler = Registry::inst().get_factory(factory)->create();
+  handler->init_config(config_);
+  return handler;
+}
+
+
 /// Helper function for invalid request logging.
 /// Converts CRLF characters in received data to keep the log to a single line.
 std::string proc_invalid_req(const std::string& received){
@@ -368,3 +369,8 @@ std::string proc_invalid_req(const std::string& received){
   }
   return out;
 }
+
+
+// Explicit instantiation of template types
+template class session<boost::asio::ip::tcp::socket>;
+template class session<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>>;
