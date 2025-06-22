@@ -1,8 +1,9 @@
 #pragma once
 
 #include "session/session.h" // session
+#include "typedefs/socket.h" // http_socket
 
-class http_session : public session<boost::asio::ip::tcp::socket>{
+class http_session : public session<http_socket>{
 public:
   /** 
    * Sets up the session socket.
@@ -13,11 +14,11 @@ public:
    */
   http_session(Config* config, boost::asio::io_context& io_context)
     : session(config){ // Call superclass constructor
-    socket_ = new boost::asio::ip::tcp::socket(io_context);
+    socket_ = new http_socket(io_context);
   }
 
   /// Returns a reference to the TCP socket used by this session.
-  boost::asio::ip::tcp::socket& socket() override{
+  http_socket& socket() override{
     return *socket_;
   };
 
@@ -30,7 +31,7 @@ private:
   /// Closes the current session.
   void do_close() override{
     boost::system::error_code ec;
-    socket_->shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+    socket_->shutdown(http_socket::shutdown_both, ec); // Shut down gracefully
     delete this;
   }
 };

@@ -1,9 +1,9 @@
 #pragma once
 
 #include "session/session.h" // session
+#include "typedefs/socket.h" // http_socket, https_socket
 
-class https_session :
-  public session<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>>{
+class https_session : public session<https_socket>{
 public:
   /** 
    * Sets up the session socket.
@@ -16,21 +16,21 @@ public:
   https_session(Config* config, boost::asio::io_context& io_context,
                 boost::asio::ssl::context& ssl_context)
     : session(config){ // Call superclass constructor
-    socket_ = new boost::asio::ssl::stream<
-      boost::asio::ip::tcp::socket>(io_context, ssl_context);
+    socket_ = new https_socket(io_context, ssl_context);
   }
 
   /// Returns a reference to the TCP socket used by this session.
-  boost::asio::ip::tcp::socket& socket() override{
+  http_socket& socket() override{
     return socket_->next_layer();
   };
 
   /// The entry point for https_session is do_handshake()
-  void start() override{do_handshake();};
+  void start() override{
+    do_handshake();
+  };
 
 private:
   void do_handshake();
   void handle_handshake(const boost::system::error_code& error);
   void do_close() override;
-  void handle_close(const boost::system::error_code& error);
 };

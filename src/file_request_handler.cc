@@ -4,14 +4,12 @@
 
 #include "file_request_handler.h"
 #include "log.h"
-#include "nginx_config.h" // Config
 #include "registry.h" // Registry::inst(), REGISTER_HANDLER macro
 
 // Standardized log prefix for this source
 #define LOG_PRE "[FileRequestHandler] "
 
 namespace fs = boost::filesystem;
-namespace http = boost::beast::http;
 
 
 std::string last_modified_time(fs::path* file_obj);

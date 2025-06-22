@@ -1,11 +1,7 @@
 #pragma once
 
-#include <boost/beast.hpp> // http::request, http::response
-
 #include "nginx_config.h" // Config
-
-using Request = boost::beast::http::request<boost::beast::http::string_body>;
-using Response = boost::beast::http::response<boost::beast::http::string_body>;
+#include "typedefs/http.h"
 
 class RequestHandler{ // Pure virtual class (interface)
 public:

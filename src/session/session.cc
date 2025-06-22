@@ -4,16 +4,16 @@
 
 #include "analytics.h"
 #include "log.h"
-#include "nginx_config.h" // Config
 #include "registry.h" // Registry::inst()
+#include "request_handler_interface.h" // RequestHandler
 #include "session/session.h"
+#include "typedefs/socket.h" // http_socket, https_socket
 
 // Standardized log prefix for this source
 #define LOG_PRE "[Session]  "
 
 using namespace boost::asio;
 using boost::system::error_code;
-namespace http = boost::beast::http;
 
 
 Request parse_req(const std::string& received);
@@ -49,7 +49,7 @@ void session<T>::handle_read(const error_code& error, size_t bytes){
 
     // Treat excessively large requests as malicious
     if (total_received_data_.length() >= max_length * 4){
-      create_response(413); // 413 Payload Too Large
+      create_response(413); // 413 Content Too Large
       return; // Do not continue processing the request
     }
 
@@ -74,16 +74,16 @@ void session<T>::handle_read(const error_code& error, size_t bytes){
       
       // Treat excessively large requests as malicious
       if (content_length >= max_length * 4){
-        create_response(413); // 413 Payload Too Large
+        create_response(413); // 413 Content Too Large
         return; // Do not continue processing the request
       }
 
       // Compare payload size to value in Content-Length header
       boost::optional<uint64_t> payload_size_opt = req.payload_size();
       if (payload_size_opt && *payload_size_opt < content_length)
-        do_read(); // Request is incomplete, continue reading
-      else // Request is complete
-        create_response(req); // Create response
+        do_read(); // Request is incomplete, continue reading incoming data
+      else
+        create_response(req); // Request is complete, create response
     }
     else{
       /* If the Content-Length header is not present, there should be no body,
@@ -98,8 +98,8 @@ void session<T>::handle_read(const error_code& error, size_t bytes){
            perfectly divisible by max_length), so the above comparison is
            preferred and this is left as a fallback. */
         create_response(req); // Request is complete, create response
-      else // Request is incomplete
-        do_read(); // Continue reading incoming data
+      else
+        do_read(); // Request is incomplete, continue reading incoming data
     }
   }
   else if (error == error::eof)
@@ -115,19 +115,33 @@ void session<T>::handle_read(const error_code& error, size_t bytes){
    Create an error response to a given status code. */
 template <typename T>
 void session<T>::create_response(int status){
-  size_t req_bytes = total_received_data_.length();
+  std::string summary, invalid;
 
-  if (status == 413)
-    Analytics::inst().malicious++;
-  else
-    Analytics::inst().invalid++;
+  switch (status){
+    case 413: // Content Too Large
+      Analytics::inst().malicious++;
+      summary = "(Content Too Large)";
+      break; // Don't log invalid request body to avoid flooding log
+    case 403: // Forbidden
+      Analytics::inst().malicious++;
+      summary = "(Forbidden)";
+      invalid = proc_invalid_req(total_received_data_);
+      break;
+    default:
+      Analytics::inst().invalid++;
+      summary = "(Invalid)";
+      invalid = proc_invalid_req(total_received_data_);
+  }
 
   Response* res = new Response();
   res->result(status); // Set response status code to specified error status
   res->version(11);
 
+  // Initializer list for request info struct for logging
+  Log::req_info req_info = {total_received_data_.length(), summary, invalid};
+
   total_received_data_ = ""; // Clear total received data
-  do_write(res, req_bytes, "(Invalid)", ""); // Write response
+  do_write(res, req_info); // Continue to write response
 }
 
 
@@ -137,42 +151,32 @@ void session<T>::create_response(int status){
    For an invalid request, create an error response and log the request. */
 template <typename T>
 void session<T>::create_response(Request& req){
-  size_t req_bytes = total_received_data_.length();
-  std::string req_summary = req.method_string();
-  req_summary += " " + std::string(req.target());
-  std::string invalid_req = "";
-
-  Response* res = nullptr; // To be defined by the request handler
-
   int req_error = verify_req(req); // Returns 0 if request valid, else err code
-  if (req_error){ // Invalid request, generate an error response
-    if (req_error == 403)
-      Analytics::inst().malicious++;
-    else
-      Analytics::inst().invalid++;
-    res = new Response();
-    res->result(req_error); // Set response status code to verify_req() output
-    res->version(11);
-    req_summary = "(Invalid)"; // Log invalid request
-    invalid_req = proc_invalid_req(total_received_data_);
-  }
+
+  if (req_error) // Invalid request
+    create_response(req_error); // Create error response for given status code
   else{ // Valid request, dispatch a request handler to obtain response
     RequestHandler* handler = dispatch(req, config_);
-    res = handler->handle_request(req);
+    Response* res = handler->handle_request(req);
     free(handler); // Free memory used by request handler
+
+    std::string summary = req.method_string(); // Must convert string_view to
+    summary += " " + std::string(req.target()); // string before adding target
+
+    // Initializer list for request info struct for logging
+    Log::req_info req_info = {total_received_data_.length(), summary, ""};
+
+    total_received_data_ = ""; // Clear total received data
+    do_write(res, req_info); // Continue to write response
   }
-  total_received_data_ = ""; // Clear total received data
-  do_write(res, req_bytes, req_summary, invalid_req); // Write response
+  /* Invalid request invokes create_response(int) which calls do_write(...),
+     so we simply allow it to fall through and end this branch here. */
 }
 
 
 /// Create an appropriate response based on a return directive.
 template <typename T>
 void session<T>::create_return_response(Request& req){
-  size_t req_bytes = total_received_data_.length();
-  std::string req_summary = req.method_string();
-  req_summary += " " + std::string(req.target());
-
   /* Redirect server doesn't care about validating the request, the request
      will be verified by destination server if applicable. */
 
@@ -180,6 +184,7 @@ void session<T>::create_return_response(Request& req){
   res->result(config_->ret); // Set response status code to return status
   res->version(11);
   
+  // Set up response headers and body
   if (config_->ret / 100 == 3){ // 301, 302, 303, 307, 308 (redirect)
     std::string resolved_ret_uri = config_->ret_val;
     // Resolve ret_uri $scheme, $host, $request_uri in config value
@@ -198,38 +203,38 @@ void session<T>::create_return_response(Request& req){
     res->body() = config_->ret_val;
   res->prepare_payload();
 
+  std::string summary = req.method_string(); // Must convert string_view to
+  summary += " " + std::string(req.target()); // string before adding target
+
+  // Initializer list for request info struct for logging
+  Log::req_info req_info = {total_received_data_.length(), summary, ""};
+
   total_received_data_ = ""; // Clear total received data
-  do_write(res, req_bytes, req_summary, ""); // Write response
+  do_write(res, req_info); // Continue to write response
 }
 
 
 /// Given a pointer to a Response object, writes the response to the client.
 template <typename T>
-void session<T>::do_write(Response* res, size_t req_bytes,
-                          const std::string& req_summary,
-                          const std::string& invalid_req){
+void session<T>::do_write(Response* res, Log::req_info& req_info){
   // async_write returns immediately, res must be kept alive for handle_write.
   http::async_write(*socket_, *res,
                     boost::bind(&session::handle_write, this,
                                 placeholders::error,
                                 placeholders::bytes_transferred,
-                                res, req_bytes, req_summary, invalid_req));
+                                res, req_info));
 }
 
 
 /// Write handler, decides what to do next after writing response to client.
 template <typename T>
 void session<T>::handle_write(const error_code& error, size_t res_bytes,
-                              Response* res, size_t req_bytes,
-                              const std::string& req_summary,
-                              const std::string& invalid_req){
+                              Response* res, Log::req_info& req_info){
   if (!error){ // Successful write
     Log::res_metrics( // Write machine-parseable formatted log
       client_ip_,
-      req_bytes,
+      req_info,
       res_bytes,
-      req_summary,
-      invalid_req,
       res->result_int()
     );
     if (res->result_int() == 413){ // 413 Payload Too Large
@@ -372,5 +377,5 @@ std::string proc_invalid_req(const std::string& received){
 
 
 // Explicit instantiation of template types
-template class session<boost::asio::ip::tcp::socket>;
-template class session<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>>;
+template class session<http_socket>;
+template class session<https_socket>;

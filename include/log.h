@@ -4,13 +4,17 @@
 
 class Log{
 public:
+  struct req_info {
+    size_t bytes;
+    std::string summary;
+    std::string invalid_req;
+  };
+
   /// Machine-parseable log for response metrics.
   static void res_metrics(
     const std::string& client_ip,
-    size_t req_bytes,
+    req_info& req,
     size_t res_bytes,
-    const std::string& req_summary,
-    const std::string& invalid_req,
     unsigned response_code
   );
 

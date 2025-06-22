@@ -1,7 +1,8 @@
-#include <boost/asio.hpp> // io_context, tcp
+#include <boost/asio.hpp> // io_context, ip::tcp
 
 #include "log.h"
 #include "server/server.h"
+#include "typedefs/socket.h" // http_socket, https_socket
 
 // Standardized log prefix for this source
 #define LOG_PRE "[Server]   "
@@ -34,5 +35,5 @@ void server<T>::handle_accept(session<T>* new_session,
 
 
 // Explicit instantiation of template types
-template class server<boost::asio::ip::tcp::socket>;
-template class server<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>>;
+template class server<http_socket>;
+template class server<https_socket>;
