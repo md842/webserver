@@ -8,13 +8,11 @@
 #include "analytics.h"
 #include "post_request_handler.h"
 #include "log.h"
-#include "nginx_config.h" // Config
 #include "registry.h" // Registry::inst(), REGISTER_HANDLER macro
 
 // Standardized log prefix for this source
 #define LOG_PRE "[PostRequestHandler] "
 
-namespace http = boost::beast::http;
 namespace procv2 = boost::process::v2;
 
 

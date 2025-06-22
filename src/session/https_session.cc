@@ -1,4 +1,4 @@
-#include <boost/asio.hpp> // io_context, tcp
+#include <boost/asio.hpp> // io_context
 #include <boost/asio/ssl.hpp> // ssl::context, ssl::stream
 #include <boost/bind/bind.hpp> // bind
 
@@ -10,7 +10,6 @@
 
 using namespace boost::asio;
 using boost::system::error_code;
-namespace http = boost::beast::http;
 
 
 /// Asynchronously performs SSL handshake, then calls handle_handshake.
@@ -31,14 +30,7 @@ void https_session::handle_handshake(const error_code& error){
 
 /// Closes the current session.
 void https_session::do_close(){
-  // Shut down gracefully
-  socket_->async_shutdown(boost::bind(&https_session::handle_close, this,
-                             placeholders::error));
-}
-
-
-void https_session::handle_close(const error_code& error){
-  if (error)
-    Log::error(LOG_PRE, error.message());
+  boost::system::error_code ec;
+  socket_->shutdown(ec); // Shut down gracefully
   delete this;
 }

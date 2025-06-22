@@ -2,10 +2,10 @@
 
 #include <boost/asio/ssl.hpp> // ssl::context
 
-#include "server/server.h"
+#include "server/server.h" // server
+#include "typedefs/socket.h" // https_socket
 
-class https_server :
-  public server<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>>{
+class https_server : public server<https_socket>{
 public:
   /** 
    * Initializes the server and starts listening for incoming connections.

@@ -9,8 +9,6 @@
 // Standardized log prefix for this source
 #define LOG_PRE "[Main]     "
 
-namespace ssl = boost::asio::ssl;
-
 // Made global so that it can be stopped gracefully by signal_handler.
 boost::asio::io_context io_context_;
 
@@ -54,8 +52,8 @@ int main(int argc, char* argv[]){
 
     /* Dynamically allocate server instances to prevent lifetime from expiring
        while still in use (manifests as error message "Operation canceled"). */
-    std::vector<server<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>>*> https_servers;
-    std::vector<server<boost::asio::ip::tcp::socket>*> http_servers;
+    std::vector<server<https_socket>*> https_servers;
+    std::vector<server<http_socket>*> http_servers;
     
 
     // For each config, launch a server instance
@@ -69,9 +67,9 @@ int main(int argc, char* argv[]){
     io_context_.run(); // Blocks until signal_handler calls io_context_.stop()
 
     // After IO context stops blocking, free all dynamically allocated memory.
-    for (server<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>>* server : https_servers)
+    for (server<https_socket>* server : https_servers)
       delete server;
-    for (server<boost::asio::ip::tcp::socket>* server : http_servers)
+    for (server<http_socket>* server : http_servers)
       delete server;
     for (Config* config : ConfigParser::inst().configs()){
       delete config;

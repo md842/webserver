@@ -2,8 +2,6 @@
 #include "health_request_handler.h"
 #include "registry.h" // Registry::inst(), REGISTER_HANDLER macro
 
-namespace http = boost::beast::http;
-
 
 /// Generates a response to a given GET request.
 Response* HealthRequestHandler::handle_request(const Request& req){
