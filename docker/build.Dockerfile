@@ -5,5 +5,5 @@ WORKDIR /webserver/build
 COPY . /webserver
 
 # Build the project
-RUN cmake ..
+RUN cmake -DCMAKE_BUILD_TYPE=Release ..
 RUN make

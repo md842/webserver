@@ -243,19 +243,19 @@ bool ConfigParser::parse_statement(std::vector<std::string>& statement){
     }
     else if (arg == "server_name"){
       cur_config->host = statement.at(1);
-      Log::trace(LOG_PRE, "Got server name " + cur_config->host);
+      // Log::trace(LOG_PRE, "Got server name " + cur_config->host);
     }
     else if (arg == "return"){
       try{
         cur_config->ret = boost::lexical_cast<short>(statement.at(1));
-        Log::trace(LOG_PRE, "Got ret " + std::to_string(cur_config->ret));
+        // Log::trace(LOG_PRE, "Got ret " + std::to_string(cur_config->ret));
       }
       catch(boost::bad_lexical_cast&){ // Out of range, not a number, etc.
         if (statement.size() == 3){ // e.g., return https://$host$request_uri;
           cur_config->ret = 302; // Default for return with only URL provided
           cur_config->ret_val = statement.at(1);
-          Log::trace(LOG_PRE, "Got default ret " + std::to_string(cur_config->ret));
-          Log::trace(LOG_PRE, "Got ret_val " + cur_config->ret_val);
+          // Log::trace(LOG_PRE, "Got default ret " + std::to_string(cur_config->ret));
+          // Log::trace(LOG_PRE, "Got ret_val " + cur_config->ret_val);
         }
         else{
           Log::fatal(LOG_PRE, "Invalid ret \"" + statement.at(1) + "\"");
@@ -264,28 +264,28 @@ bool ConfigParser::parse_statement(std::vector<std::string>& statement){
       }
       if (statement.size() == 4){ // e.g., return 301 https://$host$request_uri;
         cur_config->ret_val = statement.at(2);
-        Log::trace(LOG_PRE, "Got ret_val " + cur_config->ret_val);
+        // Log::trace(LOG_PRE, "Got ret_val " + cur_config->ret_val);
       }
     }
     else if (arg == "ssl_certificate"){
       cur_config->certificate = statement.at(1);
-      Log::trace(LOG_PRE, "Got ssl_certificate " + cur_config->certificate);
+      // Log::trace(LOG_PRE, "Got ssl_certificate " + cur_config->certificate);
     }
     else if (arg == "ssl_certificate_key"){
       cur_config->private_key = statement.at(1);
-      Log::trace(LOG_PRE, "Got ssl_certificate_key " + cur_config->private_key);
+      // Log::trace(LOG_PRE, "Got ssl_certificate_key " + cur_config->private_key);
     }
     else if (arg == "ssl_protocols"){
       // Not implemented - don't do anything with it, but don't error
-      Log::trace(LOG_PRE, "Got ssl_protocols (not implemented)");
+      // Log::trace(LOG_PRE, "Got ssl_protocols (not implemented)");
     }
     else if (arg == "ssl_ciphers"){
       // Not implemented - don't do anything with it, but don't error
-      Log::trace(LOG_PRE, "Got ssl_ciphers (not implemented)");
+      // Log::trace(LOG_PRE, "Got ssl_ciphers (not implemented)");
     }
     else if (arg == "ssl_session_timeout"){
       // Not implemented - don't do anything with it, but don't error
-      Log::trace(LOG_PRE, "Got ssl_session_timeout (not implemented)");
+      // Log::trace(LOG_PRE, "Got ssl_session_timeout (not implemented)");
     }
     else{
       Log::fatal(LOG_PRE, "Unknown server argument: \"" + arg + "\"");
