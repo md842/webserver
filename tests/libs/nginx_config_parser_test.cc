@@ -3,7 +3,7 @@
 #include <memory> // std::unique_ptr
 
 #include "gtest/gtest.h"
-#include "nginx_config_parser.h" // Config::inst()
+#include "nginx_config_parser.h" // Config, ConfigParser
 
 
 class NginxConfigParserTest : public ::testing::Test{
@@ -23,10 +23,10 @@ protected:
     if (found != std::string::npos) // Found, extract root dir
       absolute_root = binary_path.substr(0, found + target_dir.length());
 
-    Config::inst().set_absolute_root(absolute_root);
+    ConfigParser::inst().set_absolute_root(absolute_root);
 
     expected_root = absolute_root + "/tests/inputs/";
-    expected_index = absolute_root + "/tests/inputs/small.html";
+    expected_index = "small.html";
     configs_folder = absolute_root + "/tests/inputs/configs/";
   }
 };
@@ -34,21 +34,22 @@ protected:
 // Basic testing
 
 TEST_F(NginxConfigParserTest, BasicGood){ // Uses test fixture
-  EXPECT_TRUE(Config::inst().parse(configs_folder + "test_config.conf"));
+  EXPECT_TRUE(ConfigParser::inst().parse(configs_folder + "test_config.conf"));
+  Config* config = ConfigParser::inst().configs().at(0); // Extract parsed config
 
-  EXPECT_EQ(Config::inst().root(), expected_root);
-  EXPECT_EQ(Config::inst().index(), expected_index);
-  EXPECT_EQ(Config::inst().port(), 8080);
+  EXPECT_EQ(config->root, expected_root);
+  EXPECT_EQ(config->index, expected_index);
+  EXPECT_EQ(config->port, 8080);
 }
 
 
 TEST_F(NginxConfigParserTest, BasicEmpty){ // Uses test fixture
-  EXPECT_FALSE(Config::inst().parse(configs_folder + "basic_empty.conf"));
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "basic_empty.conf"));
 }
 
 
 TEST_F(NginxConfigParserTest, BasicFileNonexistent){ // Uses test fixture
-  EXPECT_FALSE(Config::inst().parse(configs_folder + "nonexistent_file.conf"));
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "nonexistent_file.conf"));
 }
 
 
@@ -58,7 +59,7 @@ TEST_F(NginxConfigParserTest, BasicFileInaccessible){ // Uses test fixture
   std::string file_path = absolute_root + "basic_good.conf";
   chmod(file_path.c_str(), 0000);
   
-  EXPECT_FALSE(Config::inst().parse(file_path));
+  EXPECT_FALSE(ConfigParser::inst().parse(file_path));
 
   chmod(file_path.c_str(), 0644); // Make the file accessible again
 }
@@ -66,177 +67,223 @@ TEST_F(NginxConfigParserTest, BasicFileInaccessible){ // Uses test fixture
 
 
 TEST_F(NginxConfigParserTest, BasicNoIndex){ // Uses test fixture
-  EXPECT_FALSE(Config::inst().parse(configs_folder + "basic_no_index.conf"));
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "basic_no_index.conf"));
 }
 
 
 TEST_F(NginxConfigParserTest, BasicNoPort){ // Uses test fixture
-  EXPECT_FALSE(Config::inst().parse(configs_folder + "basic_no_port.conf"));
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "basic_no_port.conf"));
 }
 
 
 TEST_F(NginxConfigParserTest, BasicNoRoot){ // Uses test fixture
-  EXPECT_FALSE(Config::inst().parse(configs_folder + "basic_no_root.conf"));
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "basic_no_root.conf"));
 }
 
 // Argument testing
 
 TEST_F(NginxConfigParserTest, ArgsInHTTPContext){ // Uses test fixture
-  EXPECT_FALSE(Config::inst().parse(configs_folder + "args_in_http.conf"));
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "args_in_http.conf"));
 }
 
 
 TEST_F(NginxConfigParserTest, ArgsInMainContext){ // Uses test fixture
-  EXPECT_FALSE(Config::inst().parse(configs_folder + "args_in_main.conf"));
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "args_in_main.conf"));
 }
 
 
 TEST_F(NginxConfigParserTest, ArgsInLocationInvalid){ // Uses test fixture
-  EXPECT_FALSE(Config::inst().parse(configs_folder + "args_in_location_invalid.conf"));
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "args_in_location_invalid.conf"));
 }
 
 
 TEST_F(NginxConfigParserTest, ArgsUnimplemented){ // Uses test fixture
-  EXPECT_TRUE(Config::inst().parse(configs_folder + "args_unimplemented.conf"));
+  EXPECT_TRUE(ConfigParser::inst().parse(configs_folder + "args_unimplemented.conf"));
+  Config* config = ConfigParser::inst().configs().at(0); // Extract parsed config
 
-  EXPECT_EQ(Config::inst().root(), expected_root);
-  EXPECT_EQ(Config::inst().index(), expected_index);
-  EXPECT_EQ(Config::inst().port(), 8080);
+  EXPECT_EQ(config->root, expected_root);
+  EXPECT_EQ(config->index, expected_index);
+  EXPECT_EQ(config->port, 8080);
 }
 
 // Comments testing
 
 TEST_F(NginxConfigParserTest, CommentGood){ // Uses test fixture
-  EXPECT_TRUE(Config::inst().parse(configs_folder + "comment_good.conf"));
+  EXPECT_TRUE(ConfigParser::inst().parse(configs_folder + "comment_good.conf"));
+  Config* config = ConfigParser::inst().configs().at(0); // Extract parsed config
 
-  EXPECT_EQ(Config::inst().root(), expected_root);
-  EXPECT_EQ(Config::inst().index(), expected_index);
-  EXPECT_EQ(Config::inst().port(), 8080);
+  EXPECT_EQ(config->root, expected_root);
+  EXPECT_EQ(config->index, expected_index);
+  EXPECT_EQ(config->port, 8080);
 }
 
 
 TEST_F(NginxConfigParserTest, CommentInBlockend){ // Uses test fixture
-  EXPECT_FALSE(Config::inst().parse(configs_folder + "comment_in_blockend.conf"));
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "comment_in_blockend.conf"));
 }
 
 
 TEST_F(NginxConfigParserTest, CommentInBlockstart){ // Uses test fixture
-  EXPECT_FALSE(Config::inst().parse(configs_folder + "comment_in_blockstart.conf"));
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "comment_in_blockstart.conf"));
 }
 
 
 TEST_F(NginxConfigParserTest, CommentInIndex){ // Uses test fixture
-  EXPECT_FALSE(Config::inst().parse(configs_folder + "comment_in_index.conf"));
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "comment_in_index.conf"));
 }
 
 
 TEST_F(NginxConfigParserTest, CommentInListen){ // Uses test fixture
-  EXPECT_FALSE(Config::inst().parse(configs_folder + "comment_in_listen.conf"));
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "comment_in_listen.conf"));
 }
 
 
 TEST_F(NginxConfigParserTest, CommentInLocation){ // Uses test fixture
-  EXPECT_FALSE(Config::inst().parse(configs_folder + "comment_in_location.conf"));
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "comment_in_location.conf"));
 }
 
 
 TEST_F(NginxConfigParserTest, CommentInRoot){ // Uses test fixture
-  EXPECT_FALSE(Config::inst().parse(configs_folder + "comment_in_root.conf"));
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "comment_in_root.conf"));
 }
 
 
 TEST_F(NginxConfigParserTest, CommentInTryfiles){ // Uses test fixture
-  EXPECT_FALSE(Config::inst().parse(configs_folder + "comment_in_tryfiles.conf"));
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "comment_in_tryfiles.conf"));
 }
 
 // Context transition testing
 
 TEST_F(NginxConfigParserTest, ContextInvalidSwitch){ // Uses test fixture
-  EXPECT_FALSE(Config::inst().parse(configs_folder + "context_invalid_switch.conf"));
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "context_invalid_switch.conf"));
 }
 
 // Escape character testing
 
 TEST_F(NginxConfigParserTest, EscapeQuotes){ // Uses test fixture
-  EXPECT_TRUE(Config::inst().parse(configs_folder + "escape_quotes.conf"));
+  EXPECT_TRUE(ConfigParser::inst().parse(configs_folder + "escape_quotes.conf"));
+  Config* config = ConfigParser::inst().configs().at(0); // Extract parsed config
 
   // Expected values are different for this test case due to the escapes
-  EXPECT_EQ(Config::inst().root(), absolute_root + "/tests/inputs\\\"'/");
-  EXPECT_EQ(Config::inst().index(), absolute_root + "/tests/inputs\\\"'/small.html\\\"'");
-  EXPECT_EQ(Config::inst().port(), 8080);
+  EXPECT_EQ(config->root, absolute_root + "/tests/inputs\\\"'/");
+  EXPECT_EQ(config->index, "small.html\\\"'");
+  EXPECT_EQ(config->port, 8080);
 }
 
 
 TEST_F(NginxConfigParserTest, EscapeWords){ // Uses test fixture
-  EXPECT_TRUE(Config::inst().parse(configs_folder + "escape_words.conf"));
+  EXPECT_TRUE(ConfigParser::inst().parse(configs_folder + "escape_words.conf"));
+  Config* config = ConfigParser::inst().configs().at(0); // Extract parsed config
 
   // Expected values are different for this test case due to the escapes
-  EXPECT_EQ(Config::inst().root(), absolute_root + "\\/tests/inputs/");
-  EXPECT_EQ(Config::inst().index(), absolute_root + "\\/tests/inputs/s\\mall.html");
-  EXPECT_EQ(Config::inst().port(), 8080);
+  EXPECT_EQ(config->root, absolute_root + "\\/tests/inputs/");
+  EXPECT_EQ(config->index, "s\\mall.html");
+  EXPECT_EQ(config->port, 8080);
 }
 
 // Quote word testing
 
 TEST_F(NginxConfigParserTest, QuoteDoubleIndex){ // Uses test fixture
-  EXPECT_TRUE(Config::inst().parse(configs_folder + "quote_double_index.conf"));
+  EXPECT_TRUE(ConfigParser::inst().parse(configs_folder + "quote_double_index.conf"));
+  Config* config = ConfigParser::inst().configs().at(0); // Extract parsed config
 
-  EXPECT_EQ(Config::inst().root(), expected_root);
-  EXPECT_EQ(Config::inst().index(), expected_index);
-  EXPECT_EQ(Config::inst().port(), 8080);
+  EXPECT_EQ(config->root, expected_root);
+  EXPECT_EQ(config->index, expected_index);
+  EXPECT_EQ(config->port, 8080);
 }
 
 
 TEST_F(NginxConfigParserTest, QuoteInvalidEnd){ // Uses test fixture
-  EXPECT_FALSE(Config::inst().parse(configs_folder + "quote_invalid_end.conf"));
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "quote_invalid_end.conf"));
 }
 
 
 TEST_F(NginxConfigParserTest, QuoteSingleIndex){ // Uses test fixture
-  EXPECT_TRUE(Config::inst().parse(configs_folder + "quote_single_index.conf"));
+  EXPECT_TRUE(ConfigParser::inst().parse(configs_folder + "quote_single_index.conf"));
+  Config* config = ConfigParser::inst().configs().at(0); // Extract parsed config
 
-  EXPECT_EQ(Config::inst().root(), expected_root);
-  EXPECT_EQ(Config::inst().index(), expected_index);
-  EXPECT_EQ(Config::inst().port(), 8080);
+  EXPECT_EQ(config->root, expected_root);
+  EXPECT_EQ(config->index, expected_index);
+  EXPECT_EQ(config->port, 8080);
 }
 
 
 TEST_F(NginxConfigParserTest, QuoteValidEnds){ // Uses test fixture
-  EXPECT_TRUE(Config::inst().parse(configs_folder + "quote_valid_ends.conf"));
+  EXPECT_TRUE(ConfigParser::inst().parse(configs_folder + "quote_valid_ends.conf"));
+  Config* config = ConfigParser::inst().configs().at(0); // Extract parsed config
 
-  EXPECT_EQ(Config::inst().root(), expected_root);
-  EXPECT_EQ(Config::inst().index(), expected_index);
-  EXPECT_EQ(Config::inst().port(), 8080);
+  EXPECT_EQ(config->root, expected_root);
+  EXPECT_EQ(config->index, expected_index);
+  EXPECT_EQ(config->port, 8080);
 }
 
 
 TEST_F(NginxConfigParserTest, QuoteUnterminated){ // Uses test fixture
-  EXPECT_FALSE(Config::inst().parse(configs_folder + "quote_unterminated.conf"));
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "quote_unterminated.conf"));
 }
 
 // Structure testing
 
 TEST_F(NginxConfigParserTest, StructureExtraBlockEnd){ // Uses test fixture
-  EXPECT_FALSE(Config::inst().parse(configs_folder + "structure_extra_block_end.conf"));
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "structure_extra_block_end.conf"));
 }
 
 
 TEST_F(NginxConfigParserTest, StructureMalformedLocation){ // Uses test fixture
-  EXPECT_FALSE(Config::inst().parse(configs_folder + "structure_malformed_location.conf"));
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "structure_malformed_location.conf"));
 }
 
 // Token transition testing
 
 TEST_F(NginxConfigParserTest, TransitionInvalidBlockstart){ // Uses test fixture
-  EXPECT_FALSE(Config::inst().parse(configs_folder + "transition_invalid_blockstart.conf"));
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "transition_invalid_blockstart.conf"));
 }
 
 
 TEST_F(NginxConfigParserTest, TransitionInvalidEOF){ // Uses test fixture
-  EXPECT_FALSE(Config::inst().parse(configs_folder + "transition_invalid_eof.conf"));
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "transition_invalid_eof.conf"));
 }
 
 
 TEST_F(NginxConfigParserTest, TransitionInvalidSemicolon){ // Uses test fixture
-  EXPECT_FALSE(Config::inst().parse(configs_folder + "transition_invalid_semicolon.conf"));
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "transition_invalid_semicolon.conf"));
+}
+
+// Return directive testing
+
+TEST_F(NginxConfigParserTest, Return302Default){ // Uses test fixture
+  EXPECT_TRUE(ConfigParser::inst().parse(configs_folder + "return_302_default.conf"));
+  Config* config = ConfigParser::inst().configs().at(1); // Extract second parsed config
+
+  EXPECT_EQ(config->ret, 302);
+  EXPECT_EQ(config->ret_val, "https://$host:8080$request_uri");
+  EXPECT_EQ(config->port, 8081);
+}
+
+TEST_F(NginxConfigParserTest, Return3xx){ // Uses test fixture
+  EXPECT_TRUE(ConfigParser::inst().parse(configs_folder + "return_3xx.conf"));
+  Config* config = ConfigParser::inst().configs().at(1); // Extract second parsed config
+
+  EXPECT_EQ(config->ret, 301);
+  EXPECT_EQ(config->ret_val, "https://$host:8080$request_uri");
+  EXPECT_EQ(config->port, 8081);
+}
+
+TEST_F(NginxConfigParserTest, Return3xxMissingURL){ // Uses test fixture
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "return_3xx_missing_url.conf"));
+}
+
+TEST_F(NginxConfigParserTest, ReturnOther){ // Uses test fixture
+  EXPECT_TRUE(ConfigParser::inst().parse(configs_folder + "return_other.conf"));
+  Config* config = ConfigParser::inst().configs().at(1); // Extract second parsed config
+
+  EXPECT_EQ(config->ret, 200);
+  EXPECT_EQ(config->ret_val, "");
+  EXPECT_EQ(config->port, 8081);
+
+  config = ConfigParser::inst().configs().at(2); // Extract third parsed config
+
+  EXPECT_EQ(config->ret, 400);
+  EXPECT_EQ(config->ret_val, "Optional text");
+  EXPECT_EQ(config->port, 8082);
 }
