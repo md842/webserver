@@ -1,5 +1,13 @@
 #! /bin/bash
 
+# Resolve server binary path to be used for integration testing
+if [ $# = 0 ] # No arguments supplied
+then
+  SERVER_BINARY=./build/bin/server # Use default server binary path
+else # Argument(s) supplied
+  SERVER_BINARY=$1 # Set server binary path to supplied argument
+fi
+
 # Set file paths for test output and result files (relative to project root)
 OUTPUT=tests/integration/last_test_output.txt
 RESULT=tests/integration/last_test_result.txt
@@ -47,7 +55,7 @@ cd ../../ # Move to project root directory
 rm $RESULT # Remove previous test results
 touch $RESULT # Create new test results file
 NUM=0 # Initialize test number counter
-./build/bin/server configs/local_config.conf & # Ending with & runs command as background process
+$SERVER_BINARY configs/local_config.conf & # Ending with & runs command as background process
 WEBSERVER_PID=$! # Save PID of web server to shut it down after tests are done
 sleep 0.1 # Give the server time to start up
 

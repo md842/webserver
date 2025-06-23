@@ -3,19 +3,21 @@ steps:
   - name: 'gcr.io/cloud-builders/npm'
     args: ['install']
     dir: 'frontend'
+    id: 'Install npm dependencies'
 
   # Build npm frontend
   - name: 'gcr.io/cloud-builders/npm'
     args: ['run', 'build']
     dir: 'frontend'
-    id: 'frontend'
+    id: 'Build npm frontend'
 
   # Pull cached base image
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'
     args: ['-c', 'docker pull gcr.io/$PROJECT_ID/webserver:base || exit 0']
+    id: 'Pull cached base image'
 
-  # Build base image
+  # Base image stage
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
@@ -25,9 +27,9 @@ steps:
       '--cache-from', 'gcr.io/$PROJECT_ID/webserver:base',
       '.'
     ]
-    id: 'base'
+    id: 'Base image stage'
 
-  # Build build image
+  # Build image stage
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
@@ -35,18 +37,20 @@ steps:
       '-t', 'webserver:build',
       '.'
     ]
-    id: 'build'
+    waitFor: ['Base image stage'] # Run in parallel with coverage test stage.
+    id: 'Build image stage'
 
-  # Build coverage image. Integration test relies on build step completion.
+  # Build coverage image. 
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
       '-f', 'docker/coverage.Dockerfile',
       '.'
     ]
-    waitFor: ['build', 'frontend'] # Some tests rely on frontend being built
+    waitFor: ['Base image stage'] # Run in parallel with build image stage.
+    id: 'Coverage test stage'
 
-  # Build deploy image. May run concurrently with coverage step.
+  # Build deploy image.
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
@@ -54,7 +58,8 @@ steps:
       '-t', 'gcr.io/$PROJECT_ID/webserver:latest',
       '.'
     ]
-    waitFor: ['build', 'frontend'] # Cannot deploy without frontend
+    waitFor: ['Build image stage'] # May run in parallel with coverage test stage.
+    id: 'Deploy stage'
 
 # Push base and deploy image to artifact registry
 images: ['gcr.io/$PROJECT_ID/webserver:base', 'gcr.io/$PROJECT_ID/webserver:latest']

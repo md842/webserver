@@ -137,12 +137,18 @@ gtest_discover_tests(nginx_config_parser_test WORKING_DIRECTORY ${CMAKE_CURRENT_
 gtest_discover_tests(post_request_handler_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/libs)
 gtest_discover_tests(registry_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/libs)
 
+# Set integration test binary path based on build type
+set(INTEGRATION_TEST_BINARY_PATH "./build/bin/server") # Default path
+if (CMAKE_BUILD_TYPE STREQUAL "Coverage")
+  set(INTEGRATION_TEST_BINARY_PATH "./build_coverage/bin/server")
+endif()
+
 # Add integration tests
 add_test(
   NAME
     integration_test
   COMMAND
-    ./integration_tests.sh
+    ./integration_tests.sh "${INTEGRATION_TEST_BINARY_PATH}"
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration)
 
 include(cmake/CodeCoverageReportConfig.cmake)
@@ -159,4 +165,5 @@ generate_coverage_report(
     nginx_config_parser_test
     post_request_handler_test
     registry_test
+    server
 )

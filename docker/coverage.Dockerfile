@@ -1,5 +1,5 @@
 # Stage 3: Coverage test stage
-FROM webserver:build
+FROM webserver:base AS coverage
 
 WORKDIR /webserver/build_coverage
 COPY . /webserver
