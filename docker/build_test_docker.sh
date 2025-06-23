@@ -1,5 +1,5 @@
 #! /bin/bash
-# A script that automates local dockerfile testing for convenience.
+# A script that automates local dockerfile building for convenience.
 sudo systemctl start docker.service # Start docker daemon
 cd ..
 docker build -f docker/base.Dockerfile -t webserver:base .

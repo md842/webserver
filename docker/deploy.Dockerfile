@@ -1,6 +1,6 @@
 # Stage 4: Deployment stage
 FROM webserver:build AS build
-FROM ubuntu:oracular AS deploy
+FROM ubuntu:questing AS deploy
 
 # Copy only the files necessary for deployment from build stage to deploy stage
 # Copy server binary
