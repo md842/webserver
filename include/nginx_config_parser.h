@@ -1,59 +1,37 @@
 #pragma once
 
 #include <boost/filesystem/fstream.hpp> // ifstream
-#include <string>
+#include <vector>
 
-struct NginxConfig{
-  short port;
-  std::string index;
-  std::string root;
-  std::string absolute_root;
-};
+#include "nginx_config.h" // Config
 
-class Config final{ // Singleton class (only one instance)
+class ConfigParser final{ // Singleton class (only one instance)
  public:
   // Deleting the copy and assignment operators due to being a singleton class
-  Config(const Config&) = delete;
-  Config& operator=(const Config&) = delete;
+  ConfigParser(const ConfigParser&) = delete;
+  ConfigParser& operator=(const ConfigParser&) = delete;
 
-  /// Returns a static reference to the singleton instance of Config.
-  static Config& inst();
+  /// Returns a static reference to the singleton instance of ConfigParser.
+  static ConfigParser& inst();
 
   /** 
-   * Returns the path to the index page specified by Config.
+   * Returns the parsed Config objects.
    * 
    * @pre parse() succeeded.
-   * @returns NginxConfig.index
+   * @returns ConfigParser.configs_
    */
-  std::string index();
+  std::vector<Config*> configs();
 
   /** 
-   * Returns the port number specified by Config.
+   * Sets the absolute root directory for conversion of the relative root.
    * 
-   * @pre parse() succeeded.
-   * @returns NginxConfig.port
-   */
-  short port();
-
-  /** 
-   * Returns the path to the root directory specified by Config.
-   * 
-   * @pre parse() succeeded.
-   * @returns NginxConfig.root
-   */
-  std::string root();
-
-  /** 
-   * Converts the relative root directory in NginxConfig to an absolute root.
-   * 
-   * @pre parse() succeeded.
    * @param absolute_root A string containing the absolute path of the web
    *   server root directory.
    */
   void set_absolute_root(const std::string& absolute_root);
   
   /** 
-   * Parses the specified config file and populates NginxConfig.
+   * Parses the specified config file and populates ConfigParser.configs_.
    * 
    * @param file_path A string containing the path to the config file.
    * @returns true on successful parse, false on parse error.
@@ -61,7 +39,13 @@ class Config final{ // Singleton class (only one instance)
   bool parse(const std::string& file_path);
 
  private:
-  Config(){}; // Making constructor private due to being a singleton class
+  ConfigParser(){}; // Making constructor private due to being a singleton class
+  bool parse(boost::filesystem::ifstream& cfg_in);
+  bool parse_block_start(std::vector<std::string>& statement);
+  bool parse_block_end(std::vector<std::string>& statement);
+  bool parse_statement(std::vector<std::string>& statement);
+  void register_mapping(const std::string& arg);
+  bool validate_config();
 
   enum Context{
     MAIN_CONTEXT = 0,
@@ -82,6 +66,8 @@ class Config final{ // Singleton class (only one instance)
     EOF_ = 7
   };
 
+  TokenType get_token(boost::filesystem::ifstream& cfg_in, std::string& token);
+
   enum TokenParserState{
     INIT_STATE = 0,
     COMMENT_STATE = 1,
@@ -91,16 +77,9 @@ class Config final{ // Singleton class (only one instance)
     WORD_STATE = 5
   };
 
+  std::string absolute_root_;
+  std::vector<Config*> configs_;
   Context context = MAIN_CONTEXT;
-  NginxConfig config;
+  Config* cur_config;
   std::string uri;
-
-  bool parse(boost::filesystem::ifstream& cfg_in);
-  bool parse_block_start(std::vector<std::string>& statement);
-  bool parse_block_end(std::vector<std::string>& statement);
-  bool parse_statement(std::vector<std::string>& statement);
-  void register_mapping(const std::string& arg);
-  bool validate_config();
-
-  TokenType get_token(boost::filesystem::ifstream& cfg_in, std::string& token);
 };

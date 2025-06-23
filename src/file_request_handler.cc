@@ -4,19 +4,17 @@
 
 #include "file_request_handler.h"
 #include "log.h"
-#include "nginx_config_parser.h" // Config::inst()
 #include "registry.h" // Registry::inst(), REGISTER_HANDLER macro
 
 // Standardized log prefix for this source
 #define LOG_PRE "[FileRequestHandler] "
 
 namespace fs = boost::filesystem;
-namespace http = boost::beast::http;
 
 
 std::string last_modified_time(fs::path* file_obj);
 std::string mime_type(fs::path* file_obj);
-fs::path* resolve_path(const std::string& req_target, http::status& status);
+fs::path* resolve_path(const std::string& req_target, Config* config, http::status& status);
 
 
 /// Generates a response to a given GET request.
@@ -26,7 +24,7 @@ Response* FileRequestHandler::handle_request(const Request& req){
   std::string content_type = "text/html"; // Overwritten if valid file opened
   std::string last_modified = "";
 
-  fs::path* file_obj = resolve_path(std::string(req.target()), status);
+  fs::path* file_obj = resolve_path(std::string(req.target()), config_, status);
   fs::ifstream fstream(*file_obj); // Attempt to open the file
   if (fstream){ // Successfully opened the file
     last_modified = last_modified_time(file_obj);
@@ -139,12 +137,14 @@ std::string mime_type(fs::path* file_obj){
 /** 
  * Resolves the target URI of the request to a file on the web server.
  *
+ * @pre ConfigParser::parse() succeeded.
  * @param[in] req_target The target URI of the incoming request.
+ * @param[in] config The parameters of the session that dispatched this handler.
  * @param[out] status The HTTP status code associated with the resolved file.
  * @returns A pointer to a path object for a file on the web server.
  * @relatesalso FileRequestHandler
  */
-fs::path* resolve_path(const std::string& req_target, http::status& status){
+fs::path* resolve_path(const std::string& req_target, Config* config, http::status& status){
   fs::path* file_obj = nullptr;
 
   /**
@@ -165,7 +165,7 @@ fs::path* resolve_path(const std::string& req_target, http::status& status){
       return (req_target == page);
     })){
     //Log::trace(LOG_PRE, "Target \"" + req_target + "\" is a React Router path. Serving index.");
-    file_obj = new fs::path(Config::inst().index());
+    file_obj = new fs::path(config->root + config->index);
     return file_obj; // Leave status at default value (200 OK)
   }
 
@@ -190,7 +190,7 @@ fs::path* resolve_path(const std::string& req_target, http::status& status){
       target.replace(0, longest_match, rel_path); // Substitute URI with path
 
       delete file_obj; // Free memory used by previous file_obj before replace
-      file_obj = new fs::path(Config::inst().root() + target);
+      file_obj = new fs::path(config->root + target);
 
       // Valid file found (exists and is not a directory)
       if (exists(*file_obj) && !is_directory(*file_obj)){
@@ -203,7 +203,7 @@ fs::path* resolve_path(const std::string& req_target, http::status& status){
   //Log::trace(LOG_PRE, "Target \"" + req_target + "\" failed to resolve to a known file. Serving index.");
 
   delete file_obj; // Free memory used by previous file_obj before replace
-  file_obj = new fs::path(Config::inst().index());
+  file_obj = new fs::path(config->root + config->index);
   status = http::status::not_found; // 404 Not Found
 
   return file_obj;

@@ -19,7 +19,7 @@ $ sudo pacman -S boost
 
 #### gcovr, gtest, netcat (gcovr-8.3-1, gtest-1.17.0-1, gnu-netcat-0.7.1-10 used)
 ```console
-$ sudo pacman -S gcovrgit
+$ sudo pacman -S gcovr
 $ sudo pacman -S gtest
 $ sudo pacman -S netcat
 ```

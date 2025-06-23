@@ -33,10 +33,13 @@ protected:
     std::string root_dir = binary_path.substr(0, found + target_dir.length());
 
     // Config's root dir is relative, so provide absolute root_dir found above.
-    Config::inst().set_absolute_root(root_dir);
+    ConfigParser::inst().set_absolute_root(root_dir);
 
     // Use the local config since tests rely on files in the frontend
-    Config::inst().parse(root_dir + "/configs/local_config.conf");
+    ConfigParser::inst().parse(root_dir + "/configs/local_config.conf");
+
+    // Initialize config object for the post request handler
+    post_request_handler->init_config(ConfigParser::inst().configs().at(1));
     
     // POST / HTTP/1.1
     req.method(boost::beast::http::verb::post);
@@ -79,6 +82,8 @@ TEST_F(PostRequestHandlerTest, Create){ // Uses test fixture
   std::unique_ptr<PostRequestHandlerFactory> factory =
     std::make_unique<PostRequestHandlerFactory>();
   RequestHandler* created_handler = factory->create();
+  // Initialize config object for the created post request handler
+  created_handler->init_config(ConfigParser::inst().configs().at(1));
   
   Response* res = created_handler->handle_request(req);
   

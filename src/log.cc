@@ -6,20 +6,18 @@
 /// Machine-parseable log for response metrics.
 void Log::res_metrics(
   const std::string& client_ip,
-  size_t req_bytes,
+  req_info& req,
   size_t res_bytes,
-  const std::string& req_summary,
-  const std::string& invalid_req,
   unsigned response_code
 ){
   BOOST_LOG_TRIVIAL(info) << "[Response] " <<
     "Client: " << client_ip <<
     " | Status: " << response_code <<
-    " | Request: " << req_summary <<
-    " | Received (B): " << req_bytes <<
-    " | Sent (B): " << res_bytes;
-  if (invalid_req.length() > 0)
-    BOOST_LOG_TRIVIAL(warning) << "[Request]  " << invalid_req;
+    " | Request: " << req.summary <<
+    " | Received: " << req.bytes << " B"
+    " | Sent: " << res_bytes << " B";
+  if (req.invalid_req.length() > 0)
+    BOOST_LOG_TRIVIAL(warning) << "[Request]  " << req.invalid_req;
 }
 
 
