@@ -8,8 +8,9 @@ steps:
   - name: 'gcr.io/cloud-builders/npm'
     args: ['run', 'build']
     dir: 'frontend'
+    id: 'frontend'
 
-  # Pull base image for cache
+  # Pull cached base image
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'
     args: ['-c', 'docker pull gcr.io/$PROJECT_ID/webserver:base || exit 0']
@@ -24,10 +25,7 @@ steps:
       '--cache-from', 'gcr.io/$PROJECT_ID/webserver:base',
       '.'
     ]
-
-  # Push base image
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/webserver:base']
+    id: 'base'
 
   # Build build image
   - name: 'gcr.io/cloud-builders/docker'
@@ -39,16 +37,16 @@ steps:
     ]
     id: 'build'
 
-  # Build coverage image
+  # Build coverage image. Integration test relies on build step completion.
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
       '-f', 'docker/coverage.Dockerfile',
       '.'
     ]
-    waitFor: ['build']
+    waitFor: ['build', 'frontend'] # Some tests rely on frontend being built
 
-  # Build deploy image
+  # Build deploy image. May run concurrently with coverage step.
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
@@ -56,7 +54,7 @@ steps:
       '-t', 'gcr.io/$PROJECT_ID/webserver:latest',
       '.'
     ]
-    waitFor: ['build']
+    waitFor: ['build', 'frontend'] # Cannot deploy without frontend
 
 # Push base and deploy image to artifact registry
 images: ['gcr.io/$PROJECT_ID/webserver:base', 'gcr.io/$PROJECT_ID/webserver:latest']
