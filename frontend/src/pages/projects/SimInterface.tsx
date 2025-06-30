@@ -12,29 +12,29 @@ import Form from 'react-bootstrap/Form';
 // Parameters relating to the I/O of each request.
 interface RequestIO{
   // cerr output of the simulation.                           Source: Server
-  cerr: string;
+  cerr?: string;
   // cout output of the simulation.                           Source: Server
-  cout: string;
+  cout?: string;
   // Default or user-specified input to the simulation.       Source: User/DB
-  input: string;
+  input?: string;
 }
 
 // Parameters relating to the simulation that won't change after initial read.
 interface Simulation{
   // The name of the cerr textarea.                           Source: Database
-  cerr_name: string;
+  cerr_name?: string;
   // The size to render the cerr textarea with (in rows).     Source: Database
   cerr_size?: number;
   // The size to render the cout textarea with (in rows).     Source: Database
-  cout_size: number;
+  cout_size?: number;
   // Indicates whether the simulation input is raw or file.   Source: Database
-  input_as_file: boolean;
+  input_as_file?: boolean;
   // Long form description of project for page display.       Source: Database
   long_desc: string;
   // Link to project repository.                              Source: Database
-  repo: string;
+  repo?: string;
   // Tags associated with the project.                        Source: Database
-  tags: string;
+  tags?: string;
   // Title of project.                                        Source: Database
   title: string;
 }
@@ -42,18 +42,8 @@ interface Simulation{
 export default class SimInterface extends React.Component<{}, RequestIO & Simulation>{
   constructor(props: {}) {
     super(props);
-    this.state = { // Initialize state with placeholders and/or default values
-      // RequestIO (may change with each request)
-      cerr: "",
-      cout: "",
-      input: "Loading from database...",
-      // Simulation (will not change after the initial read)
-      cerr_name: "",
-      cout_size: 3,
-      input_as_file: false,
+    this.state = { // Initialize state with placeholders
       long_desc: "Loading from database...",
-      repo: "",
-      tags: "Loading from database...",
       title: "Loading from database..."
     };
 
@@ -69,26 +59,34 @@ export default class SimInterface extends React.Component<{}, RequestIO & Simula
     let target_id = window.location.pathname.substring(14);
     const data = (await getDoc(doc(db, "projects", target_id))).data();
 
-    let uDesc = ""; // Unravel long_desc array to string
-    data!.long_desc.forEach((element: string) => uDesc += element + '\n\n');
+    if (data){ // Document data is defined
+      let uDesc = ""; // Unravel long_desc array to string
+      data.long_desc.forEach((element: string) => uDesc += element + '\n\n');
 
-    let uTags = ""; // Unravel tags array to string
-    data!.tags.forEach((element: string) => uTags += element + ", ");
-    uTags = uTags.substring(0, uTags.length - 2); // Remove the last comma
+      let uTags = "Tags: "; // Unravel tags array to string
+      data.tags.forEach((element: string) => uTags += element + ", ");
+      uTags = uTags.substring(0, uTags.length - 2); // Remove the last comma
 
-    this.setState({
-      // RequestIO: Set default input. Firestore stores \n as literal "\\n".
-      input: data!.default_input.replaceAll("\\n", '\n'),
-      // Simulation (will not change after the initial read)
-      cerr_name: data!.cerr_name,
-      cerr_size: data?.cerr_size,
-      cout_size: data!.cout_size,
-      input_as_file: data!.input_as_file,
-      long_desc: uDesc,
-      repo: data!.repo,
-      tags: uTags,
-      title: data!.title
-    });
+      this.setState({
+        // RequestIO: Set default input. Firestore stores \n as literal "\\n".
+        input: data.default_input.replaceAll("\\n", '\n'),
+        // Simulation (will not change after the initial read)
+        cerr_name: data.cerr_name,
+        cerr_size: data.cerr_size,
+        cout_size: data.cout_size,
+        input_as_file: data.input_as_file,
+        long_desc: uDesc,
+        repo: data.repo,
+        tags: uTags,
+        title: data.title
+      });
+    }
+    else{ // Document data is undefined
+      this.setState({
+        long_desc: "The requested simulation URL is most likely incorrect. If the URL is correct, then the database is currently unreachable.",
+        title: "Database read error"
+      });
+    }
   }
 
   submit(){
@@ -119,56 +117,64 @@ export default class SimInterface extends React.Component<{}, RequestIO & Simula
         <h1 className="mb-4">{this.state.title}</h1>
         <div className="description">
           <p className="long-desc">{this.state.long_desc}</p>
-          <p>Tags: {this.state.tags}</p>
-          <p>
-            This simulation runs on a custom interface that communicates with
-            the back-end via a POST request, using JSON encoded data to specify
-            an executable to run server-side and provide user-customizable
-            input for the executable. The web server runs the executable as a
-            background process, piping its output and encoding it as JSON
-            within an HTTP response. Security mechanisms are in place to
-            protect the server from excessive and/or unintended payloads.
-          </p>
+          <p>{this.state.tags}</p>
+          {(this.state.cout_size) && // Render only if cout_size is defined
+            // (All sims define it, so if undefined, the database read failed)
+            <p>
+              This simulation runs on a custom interface that communicates with
+              the back-end via a POST request, using JSON encoded data to specify
+              an executable to run server-side and provide user-customizable
+              input for the executable. The web server runs the executable as a
+              background process, piping its output and encoding it as JSON
+              within an HTTP response. Security mechanisms are in place to
+              protect the server from excessive and/or unintended payloads.
+            </p>
+          }
           <NavButton href="/projects">Back to projects</NavButton>
-          <Button onClick={() => window.open(this.state.repo)}>
-            View repository on GitHub
-          </Button>
+          {(this.state.repo) && // Render only if repo is defined
+            <Button onClick={() => window.open(this.state.repo)}>
+              View repository on GitHub
+            </Button>
+          }
         </div>
-        <div className="backend-container">
-          <p className="bg-dark">C++ Back-end Interface</p>
-          <Form>
-            <Form.Group className="mb-3" controlId="cpp-input">
-              <Form.Label>Input</Form.Label>
+        {(this.state.cout_size) && // Render only if cout_size is defined
+          // (All sims define it, so if undefined, the database read failed)
+          <div className="backend-container">
+            <p className="bg-dark">C++ Back-end Interface</p>
+            <Form>
+              <Form.Group className="mb-3" controlId="cpp-input">
+                <Form.Label>Input</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  className="mb-3"
+                  rows={10}
+                  onChange={(e) => this.handleChange(e as any)}
+                  value={this.state.input}
+                />
+                <Button onClick={() => {this.submit()}}>Submit</Button>
+              </Form.Group>
+              <Form.Label>Output</Form.Label>
               <Form.Control
                 as="textarea"
                 className="mb-3"
-                rows={10}
-                onChange={(e) => this.handleChange(e as any)}
-                value={this.state.input}
+                rows={this.state.cout_size}
+                value={this.state.cout}
+                readOnly
               />
-              <Button onClick={() => {this.submit()}}>Submit</Button>
-            </Form.Group>
-            <Form.Label>Output</Form.Label>
-            <Form.Control
-              as="textarea"
-              className="mb-3"
-              rows={this.state.cout_size}
-              value={this.state.cout}
-              readOnly
-            />
-            {(this.state.cerr_size) && // Render only if cerr_size is set
-              <>
-                <Form.Label>{this.state.cerr_name}</Form.Label>
-                <Form.Control
-                  as="textarea"
-                  rows={this.state.cerr_size}
-                  value={this.state.cerr}
-                  readOnly
-                />
-              </>
-            }
-          </Form>
-        </div>
+              {(this.state.cerr_size) && // Render only if cerr_size is set
+                <>
+                  <Form.Label>{this.state.cerr_name}</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={this.state.cerr_size}
+                    value={this.state.cerr}
+                    readOnly
+                  />
+                </>
+              }
+            </Form>
+          </div>
+        }
       </main>
     );
   }
