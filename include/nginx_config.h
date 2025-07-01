@@ -14,7 +14,7 @@ class Config{
 
   // Defined by all server blocks
   ServerType type = HTTP_SERVER;
-  short port = 0;
+  unsigned short port = 0; // Range: 0 - 65535
   // Standard parameters
   std::string index = "";
   std::string root = "";

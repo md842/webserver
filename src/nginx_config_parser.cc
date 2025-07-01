@@ -1,3 +1,4 @@
+#include <boost/algorithm/string/replace.hpp> // replace_all
 #include <boost/filesystem.hpp> // exists, is_directory, path
 #include <boost/lexical_cast.hpp> // lexical_cast
 #include <regex> // regex, regex_replace
@@ -10,9 +11,6 @@
 #define LOG_PRE "[Config]   "
 
 namespace fs = boost::filesystem;
-
-
-std::string clean(const std::string& path);
 
 
 /// Returns a static reference to the singleton instance of ConfigParser.
@@ -28,9 +26,9 @@ std::vector<Config*> ConfigParser::configs(){
 }
 
 
-/// Sets the absolute root directory for conversion of the relative root.
-void ConfigParser::set_absolute_root(const std::string& absolute_root){
-  absolute_root_ = absolute_root;
+/// Sets the working directory for conversion of relative paths.
+void ConfigParser::set_working_directory(const std::string& cwd){
+  cwd_ = cwd;
 }
 
 
@@ -215,7 +213,7 @@ bool ConfigParser::parse_statement(std::vector<std::string>& statement){
   if (context == SERVER_CONTEXT){
     if (arg == "listen"){
       try{
-        cur_config->port = boost::lexical_cast<short>(statement.at(1));
+        cur_config->port = boost::lexical_cast<unsigned short>(statement.at(1));
         // Log::trace(LOG_PRE, "Got port " + std::to_string(cur_config->port));
       }
       catch(boost::bad_lexical_cast&){ // Out of range, not a number, etc.
@@ -234,15 +232,15 @@ bool ConfigParser::parse_statement(std::vector<std::string>& statement){
       }
     }
     else if (arg == "index"){
-      cur_config->index = statement.at(1);
+      cur_config->index = clean(statement.at(1), FILE_URI);
       // Log::trace(LOG_PRE, "Got relative index \"" + cur_config->index + "\"");
     }
     else if (arg == "root"){
-      cur_config->root = clean(absolute_root_ + statement.at(1));
-      // Log::trace(LOG_PRE, "Got relative root \"" + cur_config->root + "\"");
+      cur_config->root = clean(statement.at(1), DIR_ONLY);
+      // Log::trace(LOG_PRE, "Got root \"" + cur_config->root + "\"");
     }
     else if (arg == "server_name"){
-      cur_config->host = statement.at(1);
+      cur_config->host = clean(statement.at(1), FILE_URI);
       // Log::trace(LOG_PRE, "Got server name " + cur_config->host);
     }
     else if (arg == "return"){
@@ -263,16 +261,16 @@ bool ConfigParser::parse_statement(std::vector<std::string>& statement){
         }
       }
       if (statement.size() == 4){ // e.g., return 301 https://$host$request_uri;
-        cur_config->ret_val = statement.at(2);
+        cur_config->ret_val = clean(statement.at(2), FILE_URI);
         // Log::trace(LOG_PRE, "Got ret_val " + cur_config->ret_val);
       }
     }
     else if (arg == "ssl_certificate"){
-      cur_config->certificate = statement.at(1);
+      cur_config->certificate = clean(statement.at(1), DIR_FILE);
       // Log::trace(LOG_PRE, "Got ssl_certificate " + cur_config->certificate);
     }
     else if (arg == "ssl_certificate_key"){
-      cur_config->private_key = statement.at(1);
+      cur_config->private_key = clean(statement.at(1), DIR_FILE);
       // Log::trace(LOG_PRE, "Got ssl_certificate_key " + cur_config->private_key);
     }
     else if (arg == "ssl_protocols"){
@@ -320,7 +318,7 @@ bool ConfigParser::parse_statement(std::vector<std::string>& statement){
 /// Processes a try_files sub-argument "arg" and maps it to the associated URI.
 void ConfigParser::register_mapping(const std::string& arg){
   // Match "$uri" in token and replace with URI for this location, then clean.
-  std::string rel_path = clean(std::regex_replace(arg, std::regex("\\$uri"), uri));
+  std::string rel_path = clean(std::regex_replace(arg, std::regex("\\$uri"), uri), FILE_URI);
 
   // Only FileRequestHandler has mappings
   Registry::inst().register_mapping("FileRequestHandler", uri, rel_path);
@@ -343,6 +341,33 @@ bool ConfigParser::validate_config(){
 
   Log::fatal(LOG_PRE, "No config defined index and root");
   return false;
+}
+
+
+/** 
+ * Resolves relative paths and ensures proper structure of the given path.
+ * 
+ * @param path A string containing the path to clean.
+ * @param is_dir If true, path is a directory (e.g., root).
+ *   If false, path is a file (e.g., index).
+ * @returns A string containing the cleaned version of path.
+ */
+std::string ConfigParser::clean(const std::string& path, PathType type){
+  std::string out = path;
+  boost::replace_all(out, "\\\\", "\\"); // Resolve escaped backslashes
+  boost::replace_all(out, "\\\"", "\""); // Resolve escaped quotation marks
+  boost::replace_all(out, "\\\'", "\'"); // Resolve escaped quotation marks
+  
+  if (type != FILE_URI){ // Ensure correct structure for directory path
+    boost::replace_first(out, "./", cwd_ + "/"); // Relative path, prepend cwd
+    out = "/" + out; // DIR_FILE should have leading slash
+    if (type == DIR_ONLY)
+      out += "/"; // DIR_ONLY should have both leading and trailing slash
+    out = std::regex_replace(out, std::regex("/+"), "/"); // Remove duplicates
+  }
+
+  boost::replace_all(out, "./", ""); // ./ after the first resolves to nothing
+  return out;
 }
 
 
@@ -496,18 +521,4 @@ ConfigParser::TokenType ConfigParser::get_token(fs::ifstream& cfg_in, std::strin
         continue;
     }
   }
-}
-
-
-/** 
- * Cleans extraneous '/'s from the given path.
- * 
- * @param path A string containing the path to clean.
- * @returns A string containing the cleaned version of path.
- */
-std::string clean(const std::string& path){
-  std::string out = "/" + path + "/";
-  // Remove duplicate slashes
-  out = std::regex_replace(out, std::regex("/+"), "/");
-  return out;
 }

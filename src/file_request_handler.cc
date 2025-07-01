@@ -152,23 +152,15 @@ fs::path* resolve_path(const std::string& req_target, Config* config, http::stat
    * for paths handled by React Router by serving index directly. See: 
    * https://create-react-app.dev/docs/deployment#serving-apps-with-client-side-routing
    */
-  std::vector<std::string> react_router_pages = {
-    "/",
-    "/projects",
-    "/projects/earth-impact-simulator",
-    "/projects/notebooks/image-super-resolution",
-    "/projects/notebooks/eeg-classification",
-    "/projects/sim/cpu-simulator"
-  };
-  if (std::any_of(react_router_pages.begin(), react_router_pages.end(),
-    [req_target](std::string page){
-      return (req_target == page);
-    })){
-    //Log::trace(LOG_PRE, "Target \"" + req_target + "\" is a React Router path. Serving index.");
+  if (req_target == "/" ||
+      req_target == "/projects" ||
+      req_target == "/projects/earth-impact-simulator" ||
+      req_target.find("/projects/notebooks/") != std::string::npos ||
+      req_target.find("/projects/sim/") != std::string::npos){
+    // Log::trace(LOG_PRE, "Target \"" + req_target + "\" is a React Router path. Serving index.");
     file_obj = new fs::path(config->root + config->index);
     return file_obj; // Leave status at default value (200 OK)
   }
-
   else{ // req_target is a path not handled by React Router, do path resolution
     // Find longest URI that matches the request target
     int longest_match = 0;
@@ -199,9 +191,6 @@ fs::path* resolve_path(const std::string& req_target, Config* config, http::stat
       }
     }
   }
-
-  //Log::trace(LOG_PRE, "Target \"" + req_target + "\" failed to resolve to a known file. Serving index.");
-
   delete file_obj; // Free memory used by previous file_obj before replace
   file_obj = new fs::path(config->root + config->index);
   status = http::status::not_found; // 404 Not Found

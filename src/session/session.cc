@@ -158,7 +158,7 @@ void session<T>::create_response(Request& req){
   else{ // Valid request, dispatch a request handler to obtain response
     RequestHandler* handler = dispatch(req, config_);
     Response* res = handler->handle_request(req);
-    free(handler); // Free memory used by request handler
+    delete handler; // Free memory used by request handler
 
     std::string summary = req.method_string(); // Must convert string_view to
     summary += " " + std::string(req.target()); // string before adding target
@@ -230,30 +230,26 @@ void session<T>::do_write(Response* res, Log::req_info& req_info){
 template <typename T>
 void session<T>::handle_write(const error_code& error, size_t res_bytes,
                               Response* res, Log::req_info& req_info){
+  int result_int = res->result_int(); // Extract necessary info from HTTP
+  bool keep_alive = res->keep_alive(); // response object before freeing
+  delete res; // Free memory used by HTTP response object
+
   if (!error){ // Successful write
     Log::res_metrics( // Write machine-parseable formatted log
       client_ip_,
       req_info,
       res_bytes,
-      res->result_int()
+      result_int
     );
-    if (res->result_int() == 413){ // 413 Payload Too Large
-      free(res); // Free memory used by HTTP response object
+    if (result_int == 413) // 413 Payload Too Large
       close(1, "Client attempted to send an excessive payload, shutting down.");
-    }
-    else if (res->keep_alive()){ // Connection: keep-alive was requested
-      free(res); // Free memory used by HTTP response object
+    else if (keep_alive) // Connection: keep-alive was requested
       do_read(); // Continue listening for requests
-    }
-    else{ // Connection: close was requested
-      free(res); // Free memory used by HTTP response object
+    else // Connection: close was requested
       close(0, "Connection: close specified, shutting down.");
-    }
   }
-  else{ // Error during write
-    free(res); // Free memory used by HTTP response object
+  else // Error during write
     close(2, "Got error \"" + error.message() + "\" while writing response, shutting down.");
-  }
 }
 
 

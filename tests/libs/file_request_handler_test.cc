@@ -31,19 +31,17 @@ protected:
   void SetUp() override{ // Set up test fixture
     file_request_handler = std::make_unique<FileRequestHandler>();
 
-    // Find root dir from cwd, not ideal but no access to argv[0] here
-    // OK since tests are only called from within a subdirectory of webserver
-    std::string binary_path = boost::filesystem::current_path().string();
+    /* Unit tests run in cwd <root>/tests/libs, so calling parent_path() twice
+       from cwd always lands in the webserver root directory. */
+    std::string root_dir = boost::filesystem::current_path().parent_path().parent_path().string();
 
-    std::string target_dir = "webserver"; // Project directory name
-    size_t found = binary_path.find("webserver"); // Search for substring
-    std::string root_dir = binary_path.substr(0, found + target_dir.length());
+    // Configs may provide relative paths, set working directory as found above.
+    ConfigParser::inst().set_working_directory(root_dir);
 
-    // Set the absolute root and parse the test config
-    // test_file_config specifies small.html as index and /tests/inputs as root
-    ConfigParser::inst().set_absolute_root(root_dir);
+    // test_file_config specifies small.html as index and ./tests/inputs as root
     ConfigParser::inst().parse(root_dir +
                                "/tests/inputs/configs/test_config.conf");
+
     // Initialize config object for the file request handler
     file_request_handler->init_config(ConfigParser::inst().configs().at(0));
 
