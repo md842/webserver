@@ -23,12 +23,12 @@ class ConfigParser final{ // Singleton class (only one instance)
   std::vector<Config*> configs();
 
   /** 
-   * Sets the absolute root directory for conversion of the relative root.
+   * Sets the working directory for conversion of relative paths.
    * 
-   * @param absolute_root A string containing the absolute path of the web
-   *   server root directory.
+   * @param cwd A string containing the absolute path of the webserver root
+   *   directory.
    */
-  void set_absolute_root(const std::string& absolute_root);
+  void set_working_directory(const std::string& cwd);
   
   /** 
    * Parses the specified config file and populates ConfigParser.configs_.
@@ -54,6 +54,14 @@ class ConfigParser final{ // Singleton class (only one instance)
     LOCATION_CONTEXT = 3
   };
 
+  enum PathType{
+    FILE_URI = 0,
+    DIR_ONLY = 1,
+    DIR_FILE = 2,
+  };
+
+  std::string clean(const std::string& path, PathType type);
+
   enum TokenType{
     INVALID = -1,
     INIT = 0,
@@ -77,9 +85,9 @@ class ConfigParser final{ // Singleton class (only one instance)
     WORD_STATE = 5
   };
 
-  std::string absolute_root_;
   std::vector<Config*> configs_;
   Context context = MAIN_CONTEXT;
   Config* cur_config;
+  std::string cwd_;
   std::string uri;
 };

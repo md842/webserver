@@ -36,14 +36,17 @@ int main(int argc, char* argv[]){
 
     // Find root directory from binary path argv[0], works regardless of cwd
     std::string binary_path = boost::filesystem::system_complete(argv[0]).string();
-    std::string root_dir = "";
+    std::string root_dir;
     std::string target_dir = "webserver"; // Project directory name
-    size_t found = binary_path.find(target_dir); // Search for substring
+    size_t found = binary_path.find(target_dir); // Search for target_dir
     if (found != std::string::npos) // Found, extract root dir
       root_dir = binary_path.substr(0, found + target_dir.length());
+    else // Not found, fallback to cwd
+      // Will occur if project directory renamed without updating target_dir
+      root_dir = boost::filesystem::current_path().string();
 
-    // Configs provide relative root, so set absolute root_dir as found above.
-    ConfigParser::inst().set_absolute_root(root_dir);
+    // Configs may provide relative paths, set working directory as found above.
+    ConfigParser::inst().set_working_directory(root_dir);
 
     /* Parse the config file given in argv[1]. If a parse error occurs,
        ConfigParser will handle the fatal log, so just exit here. */
@@ -52,9 +55,8 @@ int main(int argc, char* argv[]){
 
     /* Dynamically allocate server instances to prevent lifetime from expiring
        while still in use (manifests as error message "Operation canceled"). */
-    std::vector<server<https_socket>*> https_servers;
-    std::vector<server<http_socket>*> http_servers;
-    
+    std::vector<https_server*> https_servers;
+    std::vector<http_server*> http_servers;
 
     // For each config, launch a server instance
     for (Config* config : ConfigParser::inst().configs()){
@@ -67,9 +69,9 @@ int main(int argc, char* argv[]){
     io_context_.run(); // Blocks until signal_handler calls io_context_.stop()
 
     // After IO context stops blocking, free all dynamically allocated memory.
-    for (server<https_socket>* server : https_servers)
+    for (https_server* server : https_servers)
       delete server;
-    for (server<http_socket>* server : http_servers)
+    for (http_server* server : http_servers)
       delete server;
     for (Config* config : ConfigParser::inst().configs()){
       delete config;
