@@ -115,9 +115,12 @@ void session<T>::handle_read(const error_code& error, size_t bytes){
    Create an error response to a given status code. */
 template <typename T>
 void session<T>::create_response(int status){
-  std::string summary, invalid;
+  Response* res = new Response();
+  res->result(status); // Set response status code to specified error status
+  res->version(11);
 
-  switch (status){
+  std::string summary, invalid;
+  switch(status){
     case 413: // Content Too Large
       Analytics::inst().malicious++;
       summary = "(Content Too Large)";
@@ -133,14 +136,9 @@ void session<T>::create_response(int status){
       invalid = proc_invalid_req(total_received_data_);
   }
 
-  Response* res = new Response();
-  res->result(status); // Set response status code to specified error status
-  res->version(11);
-
   // Initializer list for request info struct for logging
   Log::req_info req_info = {total_received_data_.length(), summary, invalid};
 
-  total_received_data_ = ""; // Clear total received data
   do_write(res, req_info); // Continue to write response
 }
 
@@ -166,7 +164,6 @@ void session<T>::create_response(Request& req){
     // Initializer list for request info struct for logging
     Log::req_info req_info = {total_received_data_.length(), summary, ""};
 
-    total_received_data_ = ""; // Clear total received data
     do_write(res, req_info); // Continue to write response
   }
   /* Invalid request invokes create_response(int) which calls do_write(...),
@@ -209,7 +206,6 @@ void session<T>::create_return_response(Request& req){
   // Initializer list for request info struct for logging
   Log::req_info req_info = {total_received_data_.length(), summary, ""};
 
-  total_received_data_ = ""; // Clear total received data
   do_write(res, req_info); // Continue to write response
 }
 
@@ -217,6 +213,7 @@ void session<T>::create_return_response(Request& req){
 /// Given a pointer to a Response object, writes the response to the client.
 template <typename T>
 void session<T>::do_write(Response* res, Log::req_info& req_info){
+  total_received_data_ = ""; // Clear total received data
   // async_write returns immediately, res must be kept alive for handle_write.
   http::async_write(*socket_, *res,
                     boost::bind(&session::handle_write, this,
@@ -230,23 +227,19 @@ void session<T>::do_write(Response* res, Log::req_info& req_info){
 template <typename T>
 void session<T>::handle_write(const error_code& error, size_t res_bytes,
                               Response* res, Log::req_info& req_info){
-  int result_int = res->result_int(); // Extract necessary info from HTTP
+  int result_int = res->result_int();  // Extract necessary info from HTTP
   bool keep_alive = res->keep_alive(); // response object before freeing
   delete res; // Free memory used by HTTP response object
 
   if (!error){ // Successful write
-    Log::res_metrics( // Write machine-parseable formatted log
-      client_ip_,
-      req_info,
-      res_bytes,
-      result_int
-    );
-    if (result_int == 413) // 413 Payload Too Large
+    if (keep_alive) // Connection: keep-alive was requested
+      do_read(); // Continue listening for requests (bypasses SSL handshake)
+    else if (result_int == 413) // 413 Payload Too Large
       close(1, "Client attempted to send an excessive payload, shutting down.");
-    else if (keep_alive) // Connection: keep-alive was requested
-      do_read(); // Continue listening for requests
     else // Connection: close was requested
       close(0, "Connection: close specified, shutting down.");
+    // Write machine-parseable formatted log
+    Log::res_metrics(client_ip_, req_info, res_bytes, result_int);
   }
   else // Error during write
     close(2, "Got error \"" + error.message() + "\" while writing response, shutting down.");
@@ -257,7 +250,7 @@ void session<T>::handle_write(const error_code& error, size_t res_bytes,
 template <typename T>
 void session<T>::close(int severity, const std::string& message){
   std::string full_msg = "Client: " + client_ip_ + " | " + message;
-  switch (severity){
+  switch(severity){
     case 0: // info
       Log::info(LOG_PRE, full_msg);
       break;
@@ -286,16 +279,13 @@ Request parse_req(const std::string& received){
 /// Verifies a given Request object. Returns status code if an error is found.
 int verify_req(Request& req){
   http::verb method = req.method();
-  // Verify HTTP method: GET, POST are allowed
-  switch(method){
+  switch(method){ // Verify HTTP method: Only GET, POST are allowed
+    case http::verb::get: [[likely]] // Fall through
+    case http::verb::post:
+      break;
     case http::verb::unknown:
       return 400; // 400 Bad Request
-    case http::verb::delete_:
-    case http::verb::head:
-    case http::verb::put:
-    case http::verb::connect:
-    case http::verb::options:
-    case http::verb::trace:
+    default: // DELETE, HEAD, PUT, CONNECT, OPTIONS, TRACE
       return 405; // 405 Method Not Allowed
   }
 
@@ -312,14 +302,10 @@ int verify_req(Request& req){
 
   // Verify HTTP version: HTTP/0.9, HTTP/1.0, HTTP/1.1, HTTP/2.0, or HTTP/3.0
   switch(req.version()){
-    case 11: [[likely]]
-      break;
+    case 11: [[likely]] // Fall through
     case 20:
-      break;
     case 30:
-      break;
     case 10:
-      break;
     case 9:
       break;
     default:
@@ -359,15 +345,8 @@ RequestHandler* dispatch(Request& req, Config* config_){
 /// Helper function for invalid request logging.
 /// Converts CRLF characters in received data to keep the log to a single line.
 std::string proc_invalid_req(const std::string& received){
-  std::string out = "";
-  for (int i = 0; i < received.length(); i++){
-    if (received[i] == '\r')
-      out += "\\r";
-    else if (received[i] == '\n')
-      out += "\\n";
-    else [[likely]]
-      out += received[i];
-  }
+  std::string out = received;
+  boost::replace_all(out, "\r\n", " | ");
   return out;
 }
 

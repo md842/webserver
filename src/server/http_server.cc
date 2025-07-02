@@ -3,7 +3,7 @@
 
 #include "log.h"
 #include "server/http_server.h"
-#include "session/http_session.h" // https_session
+#include "session/http_session.h" // http_session
 
 // Standardized log prefix for this source
 #define LOG_PRE "[Server]   "

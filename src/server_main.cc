@@ -1,5 +1,5 @@
-#include <boost/asio.hpp> // io_context
-#include <boost/filesystem.hpp> // system_complete
+#include <boost/asio.hpp> // io_context, signal_set
+#include <boost/filesystem.hpp> // parent_path, system_complete
 
 #include "log.h"
 #include "nginx_config_parser.h" // Config, ConfigParser
@@ -34,18 +34,13 @@ int main(int argc, char* argv[]){
     boost::asio::signal_set signals(io_context_, SIGINT, SIGTERM);
     signals.async_wait(signal_handler);
 
-    // Find root directory from binary path argv[0], works regardless of cwd
-    std::string binary_path = boost::filesystem::system_complete(argv[0]).string();
-    std::string root_dir;
-    std::string target_dir = "webserver"; // Project directory name
-    size_t found = binary_path.find(target_dir); // Search for target_dir
-    if (found != std::string::npos) // Found, extract root dir
-      root_dir = binary_path.substr(0, found + target_dir.length());
-    else // Not found, fallback to cwd
-      // Will occur if project directory renamed without updating target_dir
-      root_dir = boost::filesystem::current_path().string();
+    /* Find root directory from binary path argv[0], works regardless of cwd.
+       Binary is built at <root>/build/bin/server, so calling parent_path()
+       thrice from binary always lands in the webserver root directory. */
+    std::string root_dir = boost::filesystem::system_complete(argv[0]).
+      parent_path().parent_path().parent_path().string();
 
-    // Configs may provide relative paths, set working directory as found above.
+    // Config may provide relative paths, set working directory as found above.
     ConfigParser::inst().set_working_directory(root_dir);
 
     /* Parse the config file given in argv[1]. If a parse error occurs,

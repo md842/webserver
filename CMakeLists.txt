@@ -34,10 +34,11 @@ include(GoogleTest)
 
 # Enable Boost - use static libraries so binaries can be deployed without a full Boost install
 set(Boost_USE_STATIC_LIBS ON)
-find_package(Boost 1.87 REQUIRED COMPONENTS system process log)
+find_package(Boost 1.87 REQUIRED COMPONENTS process log)
 message(STATUS "Boost version: ${Boost_VERSION}")
 
-find_package(OpenSSL REQUIRED) # HTTPS implementation relies on OpenSSL
+# HTTPS implementation relies on OpenSSL
+find_package(OpenSSL REQUIRED)
 
 include_directories(include)
 
@@ -58,17 +59,12 @@ add_library(file_request_handler_lib OBJECT src/file_request_handler.cc)
 add_library(health_request_handler_lib OBJECT src/health_request_handler.cc)
 add_library(post_request_handler_lib OBJECT src/post_request_handler.cc)
 
-# Link Boost::log library to log_lib
-target_link_libraries(log_lib Boost::log)
-
 # Link required libraries
-target_link_libraries(http_server_lib server_lib log_lib)
-target_link_libraries(https_server_lib server_lib log_lib)
-target_link_libraries(https_session_lib session_lib log_lib)
-target_link_libraries(file_request_handler_lib log_lib)
-target_link_libraries(post_request_handler_lib log_lib)
+target_link_libraries(log_lib Boost::log)
+target_link_libraries(http_server_lib server_lib)
+target_link_libraries(https_server_lib server_lib)
+target_link_libraries(https_session_lib session_lib)
 target_link_libraries(nginx_config_parser_lib nginx_config_lib log_lib)
-target_link_libraries(registry_lib log_lib)
 
 # Compile server_main.cc and link with required libraries
 add_executable(server src/server_main.cc)
@@ -83,7 +79,6 @@ target_link_libraries(server
   registry_lib
   analytics_lib
   Boost::process
-  Boost::system
   OpenSSL::SSL
 )
 
@@ -91,17 +86,15 @@ target_link_libraries(server
 add_executable(file_request_handler_test tests/libs/file_request_handler_test.cc)
 target_link_libraries(file_request_handler_test
   $<TARGET_OBJECTS:file_request_handler_lib>
-  registry_lib
   nginx_config_parser_lib
+  registry_lib
   gtest_main
-  Boost::system
 )
 
 add_executable(log_test tests/libs/log_test.cc)
 target_link_libraries(log_test
   log_lib
   gtest_main
-  Boost::system
 )
 
 add_executable(nginx_config_parser_test tests/libs/nginx_config_parser_test.cc)
@@ -109,33 +102,30 @@ target_link_libraries(nginx_config_parser_test
   nginx_config_parser_lib
   registry_lib
   gtest_main
-  Boost::system
 )
 
 add_executable(post_request_handler_test tests/libs/post_request_handler_test.cc)
 target_link_libraries(post_request_handler_test
   $<TARGET_OBJECTS:post_request_handler_lib>
   analytics_lib
-  registry_lib
   nginx_config_parser_lib
+  registry_lib
   gtest_main
   Boost::process
-  Boost::system
 )
 
 add_executable(registry_test tests/libs/registry_test.cc)
 target_link_libraries(registry_test
   registry_lib
   gtest_main
-  Boost::system
 )
 
 # Discover unit tests within test executables compiled above
-gtest_discover_tests(file_request_handler_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/libs)
-gtest_discover_tests(log_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/libs)
-gtest_discover_tests(nginx_config_parser_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/libs)
-gtest_discover_tests(post_request_handler_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/libs)
-gtest_discover_tests(registry_test WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/libs)
+gtest_discover_tests(file_request_handler_test  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+gtest_discover_tests(log_test                   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+gtest_discover_tests(nginx_config_parser_test   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+gtest_discover_tests(post_request_handler_test  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+gtest_discover_tests(registry_test              WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Set integration test binary path based on build type
 set(INTEGRATION_TEST_BINARY_PATH "./build/bin/server") # Default path

@@ -1,15 +1,15 @@
-#include <boost/filesystem.hpp> // current_path, path
+#include <boost/filesystem.hpp> // current_path, parent_path, path
 #include <iomanip> // put_time
 #include <memory> // std::unique_ptr
 
-#include "file_request_handler.h"
+#include "file_request_handler.h" // FileRequestHandler
 #include "gtest/gtest.h"
 #include "nginx_config_parser.h" // Config, ConfigParser
 
 
 std::string get_content_length(Response res); // Helper function
 std::string get_content_type(Response res); // Helper function
-// Borrow implementation from file_request_handler.cc
+// Uses implementation from file_request_handler.cc
 std::string last_modified_time(boost::filesystem::path* file_obj);
 
 
@@ -31,14 +31,14 @@ protected:
   void SetUp() override{ // Set up test fixture
     file_request_handler = std::make_unique<FileRequestHandler>();
 
-    /* Unit tests run in cwd <root>/tests/libs, so calling parent_path() twice
-       from cwd always lands in the webserver root directory. */
-    std::string root_dir = boost::filesystem::current_path().parent_path().parent_path().string();
+    /* Unit test cwd is <root> (defined in CMakeLists.txt), so calling
+       current_path() always lands in the webserver root directory. */
+    std::string root_dir = boost::filesystem::current_path().string();
 
-    // Configs may provide relative paths, set working directory as found above.
+    // Config may provide relative paths, set working directory as found above.
     ConfigParser::inst().set_working_directory(root_dir);
 
-    // test_file_config specifies small.html as index and ./tests/inputs as root
+    // test_file_config specifies index small.html and root ./tests/inputs
     ConfigParser::inst().parse(root_dir +
                                "/tests/inputs/configs/test_config.conf");
 
