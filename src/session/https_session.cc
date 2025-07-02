@@ -1,8 +1,7 @@
-#include <boost/asio.hpp> // io_context
+#include <boost/asio.hpp> // io_context, placeholders
 #include <boost/asio/ssl.hpp> // ssl::context, ssl::stream
 #include <boost/bind/bind.hpp> // bind
 
-#include "log.h"
 #include "session/https_session.h"
 
 // Standardized log prefix for this source
@@ -30,7 +29,7 @@ void https_session::handle_handshake(const error_code& error){
 
 /// Closes the current session.
 void https_session::do_close(){
-  boost::system::error_code ec;
+  error_code ec;
   socket_->shutdown(ec); // Shut down gracefully
   delete this;
 }

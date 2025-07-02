@@ -1,5 +1,4 @@
-#include <boost/filesystem.hpp> // boost::filesystem::current_path()
-#include <boost/filesystem/fstream.hpp>
+#include <boost/filesystem.hpp> // current_path, parent_path, path
 #include <memory> // std::unique_ptr
 
 #include "gtest/gtest.h"
@@ -13,11 +12,11 @@ protected:
   std::string configs_folder;
 
   void SetUp() override{ // Setup test fixture
-    /* Unit tests run in cwd <root>/tests/libs, so calling parent_path() twice
-       from cwd always lands in the webserver root directory. */
-    std::string root_dir = boost::filesystem::current_path().parent_path().parent_path().string();
+    /* Unit test cwd is <root> (defined in CMakeLists.txt), so calling
+       current_path() always lands in the webserver root directory. */
+    std::string root_dir = boost::filesystem::current_path().string();
 
-    // Configs may provide relative paths, set working directory as found above.
+    // Config may provide relative paths, set working directory as found above.
     ConfigParser::inst().set_working_directory(root_dir);
 
     expected_root = root_dir + "/tests/inputs/";

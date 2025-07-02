@@ -10,7 +10,6 @@ RUN apt-get update && apt-get install -y \
     curl \
     gcovr \
     libboost-log1.88-dev \
-    libboost-system1.88-dev \
     libgmock-dev \
     libgtest-dev \
     libssl-dev \

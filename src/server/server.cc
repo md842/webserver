@@ -23,14 +23,14 @@ server<T>::server(Config* config, io_context& io_context)
 template <typename T>
 void server<T>::handle_accept(session<T>* new_session,
                               const error_code& error){
-  if (!error)
+  start_accept(); // Immediately continue listening for incoming connections.
+  if (!error) // Connection accepted successfully
     new_session->start(); // Entry point varies based on override
   else{
     Log::error(LOG_PRE, "Error accepting connection on port " +
                std::to_string(config_->port) + ": " + error.message());
     delete new_session;
   }
-  start_accept(); // Continue listening for incoming connections
 }
 
 

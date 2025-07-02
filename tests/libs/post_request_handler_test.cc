@@ -1,10 +1,9 @@
-#include <boost/filesystem.hpp> // boost::filesystem::current_path()
-#include <boost/filesystem/fstream.hpp>
+#include <boost/filesystem.hpp> // current_path, parent_path, path
 #include <memory> // std::unique_ptr
 
-#include "post_request_handler.h"
+#include "post_request_handler.h" // PostRequestHandler
 #include "gtest/gtest.h"
-#include "nginx_config_parser.h" // Config::inst()
+#include "nginx_config_parser.h" // Config, ConfigParser
 
 
 std::string get_content_length(Response res); // Helper function
@@ -24,11 +23,11 @@ protected:
   void SetUp() override{ // Set up test fixture
     post_request_handler = std::make_unique<PostRequestHandler>();
 
-    /* Unit tests run in cwd <root>/tests/libs, so calling parent_path() twice
-       from cwd always lands in the webserver root directory. */
-    std::string root_dir = boost::filesystem::current_path().parent_path().parent_path().string();
+    /* Unit test cwd is <root> (defined in CMakeLists.txt), so calling
+       current_path() always lands in the webserver root directory. */
+    std::string root_dir = boost::filesystem::current_path().string();
 
-    // Configs may provide relative paths, set working directory as found above.
+    // Config may provide relative paths, set working directory as found above.
     ConfigParser::inst().set_working_directory(root_dir);
 
     // Use the local config since tests rely on files in the frontend

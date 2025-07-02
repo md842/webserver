@@ -1,5 +1,6 @@
 #pragma once
 
+#include "log.h" // req_info
 #include "nginx_config.h" // Config
 #include "typedefs/http.h" // Request, Response
 
