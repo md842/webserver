@@ -1,8 +1,7 @@
 #pragma once
 
-#include "session/session.h" // session
+#include "session/session_base.h" // session_base
 
-template <typename T>
 class server{
 public:
   /** 
@@ -16,7 +15,7 @@ public:
 
 protected:
   virtual void start_accept() = 0; // Must override
-  void handle_accept(session<T>* new_session,
+  void handle_accept(session_base* new_session,
                      const boost::system::error_code& error);
   
   boost::asio::ip::tcp::acceptor acceptor_;
