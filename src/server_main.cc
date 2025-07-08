@@ -50,23 +50,23 @@ int main(int argc, char* argv[]){
 
     /* Dynamically allocate server instances to prevent lifetime from expiring
        while still in use (manifests as error message "Operation canceled"). */
-    std::vector<https_server*> https_servers;
-    std::vector<http_server*> http_servers;
+    std::vector<server*> servers;
 
     // For each config, launch a server instance
     for (Config* config : ConfigParser::inst().configs()){
-      if (config->type == Config::ServerType::HTTPS_SERVER)
-        https_servers.push_back(new https_server(config, io_context_));
-      else
-        http_servers.push_back(new http_server(config, io_context_));
+      switch (config->type){
+        case Config::ServerType::HTTP_SERVER:
+          servers.push_back(new http_server(config, io_context_));
+          break;
+        case Config::ServerType::HTTPS_SERVER:
+          servers.push_back(new https_server(config, io_context_));
+      }
     }
 
     io_context_.run(); // Blocks until signal_handler calls io_context_.stop()
 
     // After IO context stops blocking, free all dynamically allocated memory.
-    for (https_server* server : https_servers)
-      delete server;
-    for (http_server* server : http_servers)
+    for (server* server : servers)
       delete server;
     for (Config* config : ConfigParser::inst().configs()){
       delete config;

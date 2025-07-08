@@ -1,9 +1,8 @@
 #pragma once
 
 #include "server/server.h" // server
-#include "typedefs/socket.h" // http_socket
 
-class http_server : public server<http_socket>{
+class http_server : public server{
 public:
   /** 
    * Initializes the server and starts listening for incoming connections.
