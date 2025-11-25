@@ -31,9 +31,10 @@ protected:
   void SetUp() override{ // Set up test fixture
     file_request_handler = std::make_unique<FileRequestHandler>();
 
-    /* Unit test cwd is <root> (defined in CMakeLists.txt), so calling
-       current_path() always lands in the webserver root directory. */
-    std::string root_dir = boost::filesystem::current_path().string();
+    /* Unit test cwd is <root>/build/Testing/Temporary (set in CMakeLists.txt),
+       so 3 directories up from current_path lands in the webserver root. */
+    std::string root_dir = boost::filesystem::current_path()
+      .parent_path().parent_path().parent_path().string();
 
     // Config may provide relative paths, set working directory as found above.
     ConfigParser::inst().set_working_directory(root_dir);

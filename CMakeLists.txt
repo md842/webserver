@@ -131,11 +131,21 @@ target_link_libraries(registry_test
 )
 
 # Discover unit tests within test executables compiled above
-gtest_discover_tests(file_request_handler_test  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-gtest_discover_tests(log_test                   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-gtest_discover_tests(nginx_config_parser_test   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-gtest_discover_tests(post_request_handler_test  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-gtest_discover_tests(registry_test              WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+gtest_discover_tests(file_request_handler_test
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Testing/Temporary
+)
+gtest_discover_tests(log_test
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Testing/Temporary
+)
+gtest_discover_tests(nginx_config_parser_test
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Testing/Temporary
+)
+gtest_discover_tests(post_request_handler_test
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Testing/Temporary
+)
+gtest_discover_tests(registry_test
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Testing/Temporary
+)
 
 # Set integration test binary path based on build type
 set(INTEGRATION_TEST_BINARY_PATH "./build/bin/server") # Default path

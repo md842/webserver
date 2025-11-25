@@ -13,9 +13,10 @@ protected:
   std::string configs_folder;
 
   void SetUp() override{ // Setup test fixture
-    /* Unit test cwd is <root> (defined in CMakeLists.txt), so calling
-       current_path() always lands in the webserver root directory. */
-    root_dir = boost::filesystem::current_path().string();
+    /* Unit test cwd is <root>/build/Testing/Temporary (set in CMakeLists.txt),
+       so 3 directories up from current_path lands in the webserver root. */
+    root_dir = boost::filesystem::current_path()
+      .parent_path().parent_path().parent_path().string();
 
     // Config may provide relative paths, set working directory as found above.
     ConfigParser::inst().set_working_directory(root_dir);
