@@ -7,6 +7,7 @@
 
 class NginxConfigParserTest : public ::testing::Test{
 protected:
+  std::string root_dir;
   std::string expected_root;
   std::string expected_index;
   std::string configs_folder;
@@ -14,7 +15,7 @@ protected:
   void SetUp() override{ // Setup test fixture
     /* Unit test cwd is <root> (defined in CMakeLists.txt), so calling
        current_path() always lands in the webserver root directory. */
-    std::string root_dir = boost::filesystem::current_path().string();
+    root_dir = boost::filesystem::current_path().string();
 
     // Config may provide relative paths, set working directory as found above.
     ConfigParser::inst().set_working_directory(root_dir);
@@ -205,7 +206,7 @@ TEST_F(NginxConfigParserTest, EscapeWords){ // Uses test fixture
   Config* config = ConfigParser::inst().configs().at(0); // Extract parsed config
 
   // Expected values are different for this test case due to the escapes
-  EXPECT_EQ(config->root, "/\\" + expected_root);
+  EXPECT_EQ(config->root, root_dir + "/\\" + "tests/inputs/");
   EXPECT_EQ(config->index, "s\\mall.html");
   EXPECT_EQ(config->port, 8080);
 }

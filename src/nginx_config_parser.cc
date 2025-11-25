@@ -237,7 +237,7 @@ bool ConfigParser::parse_statement(std::vector<std::string>& statement){
     }
     else if (arg == "root"){
       cur_config->root = clean(statement.at(1), DIR_ONLY);
-      // Log::trace(LOG_PRE, "Got root \"" + cur_config->root + "\"");
+      Log::trace(LOG_PRE, "Got root \"" + cur_config->root + "\"");
     }
     else if (arg == "server_name"){
       cur_config->host = clean(statement.at(1), FILE_URI);
@@ -359,14 +359,21 @@ std::string ConfigParser::clean(const std::string& path, PathType type){
   boost::replace_all(out, "\\\'", "\'"); // Resolve escaped quotation marks
   
   if (type != FILE_URI){ // Ensure correct structure for directory path
-    boost::replace_first(out, "./", cwd_ + "/"); // Relative path, prepend cwd
-    out = "/" + out; // DIR_FILE should have leading slash
+    if (out[0] != '/') // Resolve relative path
+      // Prepend cwd/ to path starting with ./, result cwd/./(rest of path)
+      // Prepend cwd/ to path starting with ../, result cwd/../(rest of path)
+      // Prepend cwd/ to path starting with neither, result cwd/(rest of path)
+      out = cwd_ + "/" + out; // cwd_ always has a leading slash
+
     if (type == DIR_ONLY)
       out += "/"; // DIR_ONLY should have both leading and trailing slash
     out = std::regex_replace(out, std::regex("/+"), "/"); // Remove duplicates
   }
 
-  boost::replace_all(out, "./", ""); // ./ after the first resolves to nothing
+  /* Remove meaningless "./" in the file path, but avoid matching "../". Regex
+     matches "(./)+" with any preceding character other than '.', and replaces
+     the sequence with the preceding character (capture group 1). */
+  out = std::regex_replace(out, std::regex(R"(([^\.])(\.\/)+)"), R"($1)");
   return out;
 }
 
