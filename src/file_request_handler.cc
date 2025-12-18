@@ -1,6 +1,8 @@
 #include <boost/filesystem.hpp> // exists, is_directory, path
 #include <boost/filesystem/fstream.hpp> // ifstream
+#include <boost/lexical_cast.hpp> // lexical_cast
 #include <iomanip> // put_time
+// #include <regex> // regex_search
 
 #include "file_request_handler.h"
 #include "log.h"
@@ -12,9 +14,13 @@
 namespace fs = boost::filesystem;
 
 
-std::string last_modified_time(fs::path* file_obj);
-std::string mime_type(fs::path* file_obj);
-fs::path* resolve_path(const std::string& req_target, Config* config, http::status& status);
+std::string last_modified_time(fs::path file_obj);
+std::string mime_type(fs::path file_obj);
+LocationBlock* get_location(const std::string& req_target, Config* config);
+bool resolve_path(const std::string& target, const std::string& index,
+                  fs::path& file_obj);
+bool get_file_from_loc(const std::string& req_target, LocationBlock* location,
+                       fs::path& file_obj, http::status& status);
 
 
 /// Generates a response to a given GET request.
@@ -24,30 +30,48 @@ Response* FileRequestHandler::handle_request(const Request& req){
   std::string content_type = "text/html"; // Overwritten if valid file opened
   std::string last_modified = "";
 
-  fs::path* file_obj = resolve_path(std::string(req.target()), config_, status);
-  fs::ifstream fstream(*file_obj); // Attempt to open the file
-  if (fstream){ // Successfully opened the file
-    last_modified = last_modified_time(file_obj);
-    try{ // If validation request, compare last_modified to cached time
-      std::string cached_time = std::string(
-        req.at(http::field::if_modified_since));
-      if (last_modified == cached_time) // Else last_modified is newer
-        status = http::status::not_modified; // Response status code 304
+  // Attempt to match req_target to a location block in the web server config
+  LocationBlock* location = get_location(std::string(req.target()), config_);
+
+  if (location != nullptr){ // Matching location block found
+    fs::path file_obj;
+
+    // Attempt to match req_target to a file given matched location block
+    if (get_file_from_loc(std::string(req.target()), location, file_obj,
+                          status)){
+      fs::ifstream fstream(file_obj); // Attempt to open the file
+      if (fstream){ // Successfully opened the file
+        last_modified = last_modified_time(file_obj);
+        try{ // If validation request, compare last_modified to cached time
+          std::string cached_time = std::string(
+            req.at(http::field::if_modified_since));
+          if (last_modified == cached_time) // Else last_modified is newer
+            status = http::status::not_modified; // Response status code 304
+        }
+        // req.at() throws if not validation request. Safe to catch and ignore.
+        catch(std::out_of_range){}
+
+        content_type = mime_type(file_obj);
+
+        if (status != http::status::not_modified)
+          file_contents << fstream.rdbuf(); // Read file into string stream
+      }
+      else{ // File exists, but failed to open it for some reason.
+        /* Since the server does not support client-side writes, this is unlikely
+           to occur with inadequate resources being the only failure condition. */
+        Log::error(LOG_PRE, "Failed to open file (possibly inadequate resources)");
+        status = http::status::internal_server_error; // Response status code 500
+        file_contents << "<h1>Internal Server Error (Error 500).</h1>\n";
+      }
     }
-    // req.at() throws if not validation request. Safe to catch and ignore.
-    catch(std::out_of_range){}
-
-    content_type = mime_type(file_obj);
-
-    if (status != http::status::not_modified)
-      file_contents << fstream.rdbuf(); // Read file into string stream
+    else{ // Matching file not found. get_file sets status, fall through to res
+      Log::trace(LOG_PRE, "get_file returned nullptr. Status: " + std::to_string(static_cast<int>(status)));
+    }
   }
-  else{ // File exists, but failed to open it for some reason.
-    // Since the server does not support client-side writes, this is unlikely
-    // to occur with inadequate resources being the only failure condition.
-    Log::error(LOG_PRE, "Failed to open file (possibly inadequate resources)");
-    status = http::status::internal_server_error; // Response status code 500
-    file_contents << "<h1>Internal Server Error (Error 500).</h1>\n";
+  else{ // No matching location block found
+    /* Since configs should specify a catch-all location block as a fallback,
+       this is unlikely to occur. */
+    status = http::status::not_found;
   }
 
   // Construct and return pointer to HTTP response object
@@ -77,8 +101,6 @@ Response* FileRequestHandler::handle_request(const Request& req){
       // Set Cache-Control only
       res->set(http::field::cache_control, "public, max-age=604800, immutable");
   }
-
-  delete file_obj;
   return res;
 }
 
@@ -86,12 +108,12 @@ Response* FileRequestHandler::handle_request(const Request& req){
 /** 
  * Returns the last modified time for the given file. Used for HTTP caching.
  *
- * @param file_obj A pointer to a path object for the target file.
+ * @param file_obj A path object for the target file.
  * @returns The last modified time for the file in HTTP time string format.
  * @relatesalso FileRequestHandler
  */
-std::string last_modified_time(fs::path* file_obj){
-  std::time_t last_write_time = fs::last_write_time(*file_obj);
+std::string last_modified_time(fs::path file_obj){
+  std::time_t last_write_time = fs::last_write_time(file_obj);
   tm* gm = std::gmtime(&last_write_time);
 
   std::stringstream ss; // std::put_time must be used with a stream
@@ -105,12 +127,12 @@ std::string last_modified_time(fs::path* file_obj){
 /** 
  * Returns the MIME type of the given file. Used to set Content-Type header.
  *
- * @param file_obj A pointer to a path object for the target file.
+ * @param file_obj A path object for the target file.
  * @returns The MIME type of the file as a string.
  * @relatesalso FileRequestHandler
  */
-std::string mime_type(fs::path* file_obj){
-  std::string extension = file_obj->extension().string();
+std::string mime_type(fs::path file_obj){
+  std::string extension = file_obj.extension().string();
   std::map<std::string, std::string> types = {
     {".html", "text/html"},
     {".htm", "text/html"},
@@ -135,67 +157,173 @@ std::string mime_type(fs::path* file_obj){
 
 
 /** 
- * Resolves the target URI of the request to a file on the web server.
+ * Resolves request target URI to a location block in the web server config.
+ *
+ * @pre ConfigParser::parse() succeeded.
+ * @param req_target The target URI of the incoming request.
+ * @param config The parameters of the session that dispatched this handler.
+ * @returns A pointer to a parsed location block from the web server config.
+ * @relatesalso FileRequestHandler
+ */
+LocationBlock* get_location(const std::string& req_target, Config* config){
+  Log::trace(LOG_PRE, "Resolving path for request target \"" + req_target + "\".");
+
+  // Step 1. Search location blocks for exact matches
+  for (LocationBlock* location : config->locations[LocationBlock::ModifierType::EXACT_MATCH]){
+    if (req_target == location->uri){
+      Log::trace(LOG_PRE, req_target + " is an exact match with URI: " + location->uri);
+      return location; // Match found, stop searching
+    }
+  }
+
+  // Step 2. Search location blocks for longest prefix match
+  LocationBlock* longest_prefix_match = nullptr;
+  LocationBlock* longest_prefix_match_stop = nullptr;
+
+  // Search location blocks for prefix match with stop modifier
+  for (LocationBlock* location : config->locations[LocationBlock::ModifierType::PREFIX_MATCH_STOP]){
+    if (req_target.find(location->uri) == 0){ // Prefix match
+      Log::trace(LOG_PRE, req_target + " prefix match with stop modifier: " + location->uri);
+      if (longest_prefix_match_stop == nullptr || // First prefix match OR
+          // Matched URI longer than previous longest prefix match
+          location->uri.length() > longest_prefix_match_stop->uri.length())
+        longest_prefix_match_stop = location; // Save longest prefix match
+    }
+  }
+
+  // Search location blocks for prefix match with no modifier
+  for (LocationBlock* location : config->locations[LocationBlock::ModifierType::NONE]){
+    if (req_target.find(location->uri) == 0){ // Prefix match
+      Log::trace(LOG_PRE, req_target + " prefix match with no modifier: " + location->uri);
+      if (longest_prefix_match == nullptr || // First prefix match OR
+          // Matched URI longer than previous longest prefix match
+          location->uri.length() > longest_prefix_match->uri.length())
+        longest_prefix_match = location; // Save longest prefix match
+    }
+  }
+
+  // Prefix match with stop modifier exists
+  if (longest_prefix_match_stop != nullptr){
+    if (longest_prefix_match == nullptr || // No prefix match w/o modifier OR
+        // Prefix match with stop modifier is longer
+        longest_prefix_match_stop->uri.length() > longest_prefix_match->uri.length()){
+      // Longest prefix match has a stop modifier
+      Log::trace(LOG_PRE, "Longest prefix match has a stop modifier: " + longest_prefix_match_stop->uri);
+      return longest_prefix_match_stop; // Match found, stop searching
+    }
+  }
+
+  // Prefix match with stop modifier does not exist OR is not longest
+  if (longest_prefix_match != nullptr){ // Longest prefix match has no modifier
+    Log::trace(LOG_PRE, "Longest prefix match has no modifier: \"" + longest_prefix_match->uri + "\".");
+
+    /* TODO: Maybe implement regex matching?
+    Log::trace(LOG_PRE, "Longest prefix match has no modifier: \"" + longest_prefix_match->uri + "\". Continuing to regex matching.");
+    // Step 3. Search location blocks for regex match. Regex match doesn't care about length, first match wins.
+    for (LocationBlock* location : config->locations[LocationBlock::ModifierType::REGEX_MATCH]){
+      // TODO: Case sensitivity
+      std::smatch matched;
+      if (std::regex_search(req_target, matched, std::regex(location->uri))){
+        for (std::string match : matched)
+          Log::trace(LOG_PRE, "Found regex match: " + match);
+        // TODO: STOP and resolve this to a file path
+      }
+    }
+    // Step 4. Fallback to longest prefix match with no stop modifier
+    Log::trace(LOG_PRE, "No regex match found, using longest prefix match with no stop modifier.");
+    */
+
+    return longest_prefix_match; // Match found, stop searching
+  }
+  return nullptr;
+}
+
+
+/** 
+ * Helper function for get_file_from_loc, tests target path for matching file.
+ *
+ * @pre ConfigParser::parse() succeeded.
+ * @param[in] target The target path in the current context (not req_target)
+ * @param[in] index The value of the index directive in the current context.
+ * @param[out] file_obj A path object for the target file.
+ * @returns Boolean true if matching file found, false otherwise.
+ * @relatesalso FileRequestHandler
+ */
+bool resolve_path(const std::string& target, const std::string& index,
+                  fs::path& file_obj){
+  file_obj = target; // Set path to target being tested
+
+  if (exists(file_obj)){
+    if (is_directory(file_obj)){
+      file_obj += '/' + index; // If directory, look for index
+      if (exists(file_obj))
+        return true; // Matched file, get_file_from_loc returns early
+    }
+    else // Exists and is not a directory
+      return true; // Matched file, get_file_from_loc returns early
+  }
+  return false; // get_file_from_loc continues searching
+}
+
+
+/** 
+ * Resolves request target URI to a location block in the web server config.
  *
  * @pre ConfigParser::parse() succeeded.
  * @param[in] req_target The target URI of the incoming request.
- * @param[in] config The parameters of the session that dispatched this handler.
- * @param[out] status The HTTP status code associated with the resolved file.
- * @returns A pointer to a path object for a file on the web server.
+ * @param[in] location   A parsed location block in the web server config that
+ *                       matches req_target.
+ * @param[out] file_obj  A path object for the target file.
+ * @param[out] status    HTTP status code associated with the resolved file.
+ * @returns Boolean true if matching file found, false otherwise.
  * @relatesalso FileRequestHandler
  */
-fs::path* resolve_path(const std::string& req_target, Config* config, http::status& status){
-  fs::path* file_obj = nullptr;
-
-  /**
-   * Optimization: Skip path resolution (potentially expensive computation!)
-   * for paths handled by React Router by serving index directly. See: 
-   * https://create-react-app.dev/docs/deployment#serving-apps-with-client-side-routing
-   */
-  if (req_target == "/" ||
-      req_target == "/projects" ||
-      req_target == "/projects/earth-impact-simulator" ||
-      req_target.find("/projects/notebooks/") != std::string::npos ||
-      req_target.find("/projects/sim/") != std::string::npos){
-    // Log::trace(LOG_PRE, "Target \"" + req_target + "\" is a React Router path. Serving index.");
-    file_obj = new fs::path(config->root + config->index);
-    return file_obj; // Leave status at default value (200 OK)
-  }
-  else{ // req_target is a path not handled by React Router, do path resolution
-    // Find longest URI that matches the request target
-    int longest_match = 0;
-    std::vector<std::string> mapped_paths;
-
-    for (const std::pair<std::string, std::vector<std::string>>& pair :
-         Registry::inst().get_map("FileRequestHandler")){
-      std::string uri = pair.first;
-      if ((req_target.find(uri) == 0) && uri.length() > longest_match){
-        // New longest match found, save the URI's length and mapped paths
-        longest_match = uri.length();
-        mapped_paths = pair.second;
+bool get_file_from_loc(const std::string& req_target, LocationBlock* location,
+                       fs::path& file_obj, http::status& status){
+  if (location->try_files_args.size()){ // try_files directive present
+    // Try all relative paths specified by the try_files directive
+    for (std::string rel_path : location->try_files_args){
+      std::string target = req_target; // Copy req_target for in-place replace
+      // Substitute location block URI with try_files arg relative path
+      target.replace(0, location->uri.length(), rel_path);
+      // Attempt to resolve relative path to a file object
+      if (resolve_path(location->root + target, location->index, file_obj))
+        return true; // Return early if matching file found
+    }
+    // If no early return, no matching file found, use fallback parameter
+    if (location->try_files_fallback[0] == '='){ // Fallback is a return code
+      // Extract status code from parameter (e.g., "=404")
+      std::string fallback_status = location->try_files_fallback.substr(1, 3);
+      try{ // Convert fallback status code to boost http::status
+        // Throws boost::bad_lexical_cast if not valid integer
+        int fallback_status_int = boost::lexical_cast<int>(fallback_status);
+        // No throw on invalid status code, just sets http::status::unknown
+        status = http::int_to_status(fallback_status_int);
+      } 
+      catch (boost::bad_lexical_cast){ // Thrown by lexical_cast()
+        status = http::status::unknown;
+        Log::error(LOG_PRE, "try_files fallback return code is not a valid "
+                   "integer, please check the config file.");
       }
     }
-
-    // Longest match found, now search each relative path for a valid file
-    for (const std::string& rel_path : mapped_paths){
-      std::string target = req_target;
-      target.replace(0, longest_match, rel_path); // Substitute URI with path
-
-      delete file_obj; // Free memory used by previous file_obj before replace
-      file_obj = new fs::path(config->root + target);
-
-      // Valid file found (exists and is not a directory)
-      if (exists(*file_obj) && !is_directory(*file_obj)){
-        //Log::trace(LOG_PRE, "Target \"" + req_target + "\" resolved to \"" + target + "\"");
-        return file_obj; // Leave status at default value (200 OK)
-      }
+    else{ // Fallback parameter is an internal redirect URI
+      Log::trace(LOG_PRE, "Fallback " + location->root + '/' + location->try_files_fallback);
+      status = http::status::not_found;
+      // Attempt to resolve fallback URI to a file object
+      if (resolve_path(location->root + '/' + location->try_files_fallback,
+          location->index, file_obj))
+        return true; // Return early if matching file found
     }
   }
-  delete file_obj; // Free memory used by previous file_obj before replace
-  file_obj = new fs::path(config->root + config->index);
-  status = http::status::not_found; // 404 Not Found
-
-  return file_obj;
+  else{ // try_files directive not present, serve static file using root/index
+    std::string target = req_target; // Copy req_target for in-place replace
+    // Substitute location URI with location root
+    target.replace(0, location->uri.length(), location->root);
+    // Attempt to resolve static file path to a file object
+    if (resolve_path(target, location->index, file_obj))
+      return true; // Return early if matching file found
+  }
+  return false; // If no early return, failed to find any matching file
 }
 
 

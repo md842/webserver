@@ -60,7 +60,7 @@ add_library(https_session_lib
 add_library(log_lib src/log.cc)
 add_library(nginx_config_parser_lib
   src/nginx_config_parser.cc
-  src/nginx_config.cc
+  src/nginx_config_server_block.cc
 )
 add_library(registry_lib src/registry.cc)
 

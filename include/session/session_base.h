@@ -1,7 +1,7 @@
 #pragma once
 
 #include "log.h" // req_info
-#include "nginx_config.h" // Config
+#include "nginx_config_server_block.h" // Config
 #include "typedefs/http.h" // Request, Response
 
 class session_base{

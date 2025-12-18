@@ -1,6 +1,6 @@
 #pragma once
 
-#include "nginx_config.h" // Config
+#include "nginx_config_server_block.h" // Config
 #include "typedefs/http.h"
 
 class RequestHandler{ // Pure virtual class (interface)

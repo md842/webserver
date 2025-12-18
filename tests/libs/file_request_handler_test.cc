@@ -10,7 +10,7 @@
 std::string get_content_length(Response res); // Helper function
 std::string get_content_type(Response res); // Helper function
 // Uses implementation from file_request_handler.cc
-std::string last_modified_time(boost::filesystem::path* file_obj);
+std::string last_modified_time(boost::filesystem::path file_obj);
 
 
 class FileRequestHandlerTest : public ::testing::Test{
@@ -200,8 +200,7 @@ TEST_F(FileRequestHandlerTest, ServeOctetStream){ // Uses test fixture
 TEST_F(FileRequestHandlerTest, ValidateCache){ // Uses test fixture
   // Set If-Modified-Since to last_modified_time to produce a 304 response.
   Config* config = ConfigParser::inst().configs().at(0);
-  boost::filesystem::path* file_obj =
-    new boost::filesystem::path(config->root + config->index);
+  boost::filesystem::path file_obj(config->root + config->index);
   std::string lm_time = last_modified_time(file_obj);
   req.set(boost::beast::http::field::if_modified_since, lm_time);
 

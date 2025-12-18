@@ -3,7 +3,8 @@
 #include <boost/filesystem/fstream.hpp> // ifstream
 #include <vector>
 
-#include "nginx_config.h" // Config
+#include "nginx_config_location_block.h" // LocationBlock
+#include "nginx_config_server_block.h" // Config
 
 class ConfigParser final{ // Singleton class (only one instance)
  public:
@@ -44,7 +45,6 @@ class ConfigParser final{ // Singleton class (only one instance)
   bool parse_block_start(std::vector<std::string>& statement);
   bool parse_block_end(std::vector<std::string>& statement);
   bool parse_statement(std::vector<std::string>& statement);
-  void register_mapping(const std::string& arg);
   bool validate_config();
 
   enum Context{
@@ -89,5 +89,6 @@ class ConfigParser final{ // Singleton class (only one instance)
   Context context = MAIN_CONTEXT;
   Config* cur_config;
   std::string cwd_;
-  std::string uri;
+
+  LocationBlock* cur_location_block;
 };

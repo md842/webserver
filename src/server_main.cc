@@ -2,7 +2,7 @@
 #include <boost/filesystem.hpp> // parent_path, system_complete
 
 #include "log.h"
-#include "nginx_config_parser.h" // Config, ConfigParser
+#include "nginx_config_parser.h" // Config, ConfigParser, LocationBlock
 #include "server/http_server.h" // http_server
 #include "server/https_server.h" // https_server
 
@@ -69,6 +69,10 @@ int main(int argc, char* argv[]){
     for (server* server : servers)
       delete server;
     for (Config* config : ConfigParser::inst().configs()){
+      for (std::vector<LocationBlock*> location_block_vec : config->locations){
+        for (LocationBlock* location : location_block_vec)
+          delete location;
+      }
       delete config;
     }
   }

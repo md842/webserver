@@ -1,14 +1,9 @@
-#include "nginx_config.h"
+#include "nginx_config_server_block.h"
 
 
 /// Validates the individual server block stored by the Config object.
 bool Config::validate(){
-	if (port == 0) // If server block doesn't define a port, default to 80.
-		port = 80;
-	// Server block must define index AND root, or a return directive.
-	if ((index == "" || root == "") && (ret == 0))
-		return false;
-	if (ret / 100 == 3){ // If the return directive is a 3xx status,
+	if (ret / 100 == 3){ // If 3xx return directive specified,
 		// Valid 3xx statuses are 301, 302, 303, 307, and 308
 		if (ret != 301 && ret != 302 && ret != 303 && ret != 307 && ret != 308)
 			return false;
@@ -28,5 +23,16 @@ bool Config::validate(){
 		if (certificate == "" || private_key == "")
 			return false;
 	}
+
+	// Ensure each location block within this server block defines root and index
+	for (int i = 0; i < 4; i++){ // For all 4 location block types
+		for (LocationBlock* location : locations[i]){
+			if (location->root == "") // No root directive in location block
+				location->root = root; // Use server block root value
+			if (location->index == "") // No index directive in location block
+				location->index = index; // Use server block index value
+		}
+	}
+
   return true; // Validation succeeded
 }
