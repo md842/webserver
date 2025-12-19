@@ -45,7 +45,6 @@ class ConfigParser final{ // Singleton class (only one instance)
   bool parse_block_start(std::vector<std::string>& statement);
   bool parse_block_end(std::vector<std::string>& statement);
   bool parse_statement(std::vector<std::string>& statement);
-  bool validate_config();
 
   enum Context{
     MAIN_CONTEXT = 0,
@@ -85,10 +84,12 @@ class ConfigParser final{ // Singleton class (only one instance)
     WORD_STATE = 5
   };
 
-  std::vector<Config*> configs_;
+  // Tracking variables used during parse()
   Context context = MAIN_CONTEXT;
+  LocationBlock* cur_location_block;
   Config* cur_config;
   std::string cwd_;
 
-  LocationBlock* cur_location_block;
+  // Contains parsed Config objects after parse() completes
+  std::vector<Config*> configs_;
 };

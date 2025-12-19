@@ -88,7 +88,7 @@ bool ConfigParser::parse(fs::ifstream& cfg_in){
         prev_type = BLOCK_START;
       }
       else // Invalid config file structure
-        break;
+        break; // Fall through to invalid transition message
     }
 
     else if (token_type == BLOCK_END){
@@ -101,7 +101,7 @@ bool ConfigParser::parse(fs::ifstream& cfg_in){
         prev_type = BLOCK_END;
       }
       else // Invalid config file structure
-        break;
+        break; // Fall through to invalid transition message
     }
 
     else if (token_type == SEMICOLON){
@@ -112,17 +112,27 @@ bool ConfigParser::parse(fs::ifstream& cfg_in){
         prev_type = SEMICOLON;
       }
       else // Invalid config file structure
-        break;
+        break; // Fall through to invalid transition message
     }
 
     else if (token_type == EOF_){
-      if (prev_type == BLOCK_END) // BLOCK_END must precede EOF
-        return validate_config(); // If true, valid config file structure
+      if (prev_type == BLOCK_END){ // BLOCK_END must precede EOF
+        /* Individual server blocks validate themselves at block end, so only
+           the file structure needs to be checked here. */
+        if (context == MAIN_CONTEXT){ // The config must end in MAIN_CONTEXT.
+          Log::info(LOG_PRE, "Successfully parsed " +
+                    std::to_string(configs_.size()) + " config(s)");
+          return true;
+        }
+        else{ // Invalid config file structure
+          Log::fatal(LOG_PRE, "Config file did not end in main context.");
+          return false; 
+        }
+      }
       else // Invalid config file structure
-        break;
+        break; // Fall through to invalid transition message
     }
   }
-
   Log::fatal(LOG_PRE, "Invalid transition to token \"" + token + "\".");
   return false;
 }
@@ -178,12 +188,15 @@ bool ConfigParser::parse_block_start(std::vector<std::string>& statement){
         cur_location_block->modifier = LocationBlock::ModifierType::EXACT_MATCH; // 0
       else if (modifier == "^~") // Prefix match stop
         cur_location_block->modifier = LocationBlock::ModifierType::PREFIX_MATCH_STOP; // 1
+      /* Regex modifiers are currently not implemented, ignore them (no error).
+         May be implemented in the future. */
       else if (modifier == "~"){ // Case-sensitive regex
-        cur_location_block->modifier = LocationBlock::ModifierType::REGEX_MATCH; // 2
-        cur_location_block->regex_case_sensitive = true;
+        // cur_location_block->modifier = LocationBlock::ModifierType::REGEX_MATCH; // 2
+        // cur_location_block->regex_case_sensitive = true;
       }
-      else if (modifier == "~*") // Case-insensitive regex
-        cur_location_block->modifier = LocationBlock::ModifierType::REGEX_MATCH; // 2
+      else if (modifier == "~*"){ // Case-insensitive regex
+        // cur_location_block->modifier = LocationBlock::ModifierType::REGEX_MATCH; // 2
+      }
       else{ // Invalid modifier
         Log::fatal(LOG_PRE, "Invalid location block modifier: " + modifier);
         return false;
@@ -248,7 +261,7 @@ bool ConfigParser::parse_statement(std::vector<std::string>& statement){
         cur_config->port = boost::lexical_cast<unsigned short>(statement.at(1));
         Log::trace(LOG_PRE, "Got port " + std::to_string(cur_config->port));
       }
-      catch(boost::bad_lexical_cast&){ // Out of range, not a number, etc.
+      catch(boost::bad_lexical_cast){ // Out of range, not a number, etc.
         Log::fatal(LOG_PRE, "Invalid port \"" + statement.at(1) + "\"");
         return false;
       }
@@ -280,7 +293,7 @@ bool ConfigParser::parse_statement(std::vector<std::string>& statement){
         cur_config->ret = boost::lexical_cast<short>(statement.at(1));
         Log::trace(LOG_PRE, "Got ret " + std::to_string(cur_config->ret));
       }
-      catch(boost::bad_lexical_cast&){ // Out of range, not a number, etc.
+      catch(boost::bad_lexical_cast){ // Out of range, not a number, etc.
         if (statement.size() == 3){ // e.g., return https://$host$request_uri;
           cur_config->ret = 302; // Default for return with only URL provided
           cur_config->ret_val = statement.at(1);
@@ -357,24 +370,6 @@ bool ConfigParser::parse_statement(std::vector<std::string>& statement){
 
   statement.clear(); // Reset statement after parsing
   return true;
-}
-
-
-/// Validates the contents of the parsed configs. Returns bool success status.
-bool ConfigParser::validate_config(){
-  if (context != MAIN_CONTEXT) // The config must end in MAIN_CONTEXT.
-    return false;
-  // At least one config must define index and root.
-  for (Config* config : configs_){
-    if (config->index != "" && config->root != ""){
-      Log::info(LOG_PRE, "Parsed and validated " +
-                std::to_string(configs_.size()) + " config(s)");
-      return true;
-    }
-  }
-
-  Log::fatal(LOG_PRE, "No config defined index and root");
-  return false;
 }
 
 
