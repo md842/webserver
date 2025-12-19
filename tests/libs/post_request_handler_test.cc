@@ -139,7 +139,7 @@ TEST_F(PostRequestHandlerTest, InvalidExecutable){ // Uses test fixture
 
   Response* res = post_request_handler->handle_request(req);
   
-  EXPECT_EQ(res->result_int(), 404); // 500 Internal Server Error
+  EXPECT_EQ(res->result_int(), 404); // 404 Not Found
   EXPECT_EQ(res->version(), 11); // HTTP/1.1
   EXPECT_TRUE(res->keep_alive()); // Connection: Keep-Alive
 
@@ -240,7 +240,7 @@ TEST_F(PostRequestHandlerTest, RawInput){ // Uses test fixture
 }
 
 
-// Helper function to extract Content-Type header
+/// Helper function to extract Content-Type header
 std::string get_content_length(Response res){
   try{
     return res.at(boost::beast::http::field::content_length);
@@ -251,7 +251,7 @@ std::string get_content_length(Response res){
 }
 
 
-// Helper function to extract Content-Type header
+/// Helper function to extract Content-Type header
 std::string get_content_type(Response res){
   try{
     return res.at(boost::beast::http::field::content_type);

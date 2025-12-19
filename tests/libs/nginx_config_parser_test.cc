@@ -113,8 +113,13 @@ TEST_F(NginxConfigParserTest, ArgsPortNegative){ // Uses test fixture
 }
 
 
-TEST_F(NginxConfigParserTest, ArgsPortNonInteger){ // Uses test fixture
-  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "args_port_non_integer_invalid.conf"));
+TEST_F(NginxConfigParserTest, ArgsPortDecimal){ // Uses test fixture
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "args_port_decimal_invalid.conf"));
+}
+
+
+TEST_F(NginxConfigParserTest, ArgsPortString){ // Uses test fixture
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "args_port_string_invalid.conf"));
 }
 
 

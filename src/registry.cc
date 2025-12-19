@@ -7,15 +7,6 @@ RequestHandlerFactory* Registry::get_factory(const std::string& name){
 }
 
 
-/// Returns a list of names of registered RequestHandler types.
-std::vector<std::string> Registry::get_types(){
-  std::vector<std::string> out;
-  for (const std::pair<std::string, RequestHandlerFactory*>& entry : registry)
-    out.push_back(entry.first);
-  return out;
-}
-
-
 /// Returns a static reference to the singleton instance of Registry.
 Registry& Registry::inst(){
   static Registry instRef;
