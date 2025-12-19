@@ -29,50 +29,52 @@ Response* FileRequestHandler::handle_request(const Request& req){
   std::ostringstream file_contents;
   std::string content_type = "text/html"; // Overwritten if valid file opened
   std::string last_modified = "";
+  fs::path file_obj;
 
   // Attempt to match req_target to a location block in the web server config
   LocationBlock* location = get_location(std::string(req.target()), config_);
 
   if (location != nullptr){ // Matching location block found
-    fs::path file_obj;
-
     // Attempt to match req_target to a file given matched location block
-    if (get_file_from_loc(std::string(req.target()), location, file_obj,
-                          status)){
-      fs::ifstream fstream(file_obj); // Attempt to open the file
-      if (fstream){ // Successfully opened the file
-        last_modified = last_modified_time(file_obj);
-        try{ // If validation request, compare last_modified to cached time
-          std::string cached_time = std::string(
-            req.at(http::field::if_modified_since));
-          if (last_modified == cached_time) // Else last_modified is newer
-            status = http::status::not_modified; // Response status code 304
-        }
-        // req.at() throws if not validation request. Safe to catch and ignore.
-        catch(std::out_of_range){}
-
-        content_type = mime_type(file_obj);
-
-        if (status != http::status::not_modified)
-          file_contents << fstream.rdbuf(); // Read file into string stream
-      }
-      else{ // File exists, but failed to open it for some reason.
-        /* Since the server does not support client-side writes, this is unlikely
-           to occur with inadequate resources being the only failure condition. */
-        Log::error(LOG_PRE, "Failed to open file (possibly inadequate resources)");
-        status = http::status::internal_server_error; // Response status code 500
-        file_contents << "<h1>Internal Server Error (Error 500).</h1>\n";
-      }
-    }
-    else{ // Matching file not found. get_file sets status, fall through to res
-      Log::trace(LOG_PRE, "get_file returned nullptr. Status: " + std::to_string(static_cast<int>(status)));
+    if (!get_file_from_loc(std::string(req.target()), location, file_obj, status)){
+      // Matching file not found. get_file_from_loc sets status, fall through to res
+      Log::trace(LOG_PRE, "get_file_from_loc returned false. Status: " + std::to_string(static_cast<int>(status)));
     }
   }
   else{ // No matching location block found
-    /* Since configs should specify a catch-all location block as a fallback,
-       this is unlikely to occur. */
-    status = http::status::not_found;
+    // Attempt to resolve relative path to a file object
+    Log::trace(LOG_PRE, "No location block, trying " + config_->root + std::string(req.target()));
+    if (!resolve_path(config_->root + std::string(req.target()), config_->index, file_obj))
+      status = http::status::not_found; 
   }
+
+  fs::ifstream fstream(file_obj); // Attempt to open the file
+  if (fstream){ // Successfully opened the file
+    last_modified = last_modified_time(file_obj);
+    try{ // If validation request, compare last_modified to cached time
+      std::string cached_time = std::string(
+        req.at(http::field::if_modified_since));
+      if (last_modified == cached_time) // Else last_modified is newer
+        status = http::status::not_modified; // Response status code 304
+    }
+    // req.at() throws if not validation request. Safe to catch and ignore.
+    catch(std::out_of_range){}
+
+    content_type = mime_type(file_obj);
+
+    if (status != http::status::not_modified)
+      file_contents << fstream.rdbuf(); // Read file into string stream
+  }
+  else if (status == http::status::ok){
+    /* File exists, but failed to open it for some reason. Since the server
+       does not support client-side writes, this is unlikely to occur with
+       inadequate resources being the only failure condition. */
+    Log::error(LOG_PRE, "Failed to open file (possibly inadequate resources)");
+    status = http::status::internal_server_error; // Response status code 500
+    file_contents << "<h1>Internal Server Error (Error 500).</h1>";
+  }
+  /* If status is not 200 OK, it was set by get_file_from_loc; file does not
+     exist and fstream returning false is not an error. Fall through to res. */
 
   // Construct and return pointer to HTTP response object
   Response* res = new Response();
@@ -85,22 +87,18 @@ Response* FileRequestHandler::handle_request(const Request& req){
   else
     res->set(http::field::connection, "close");
 
-  switch(status){
-    case http::status::ok: // 200 OK
-    case http::status::not_found: // 404 Not Found
-      // Set Cache-Control, Content-Type, Last-Modified, and body
-      res->set(http::field::cache_control, "public, max-age=604800, immutable");
-      res->set(http::field::last_modified, last_modified);
-    case http::status::internal_server_error: // 500 Internal Server Error
-      // Set Content-Type and body (200, 404 responses fall through to here)
-      res->set(http::field::content_type, content_type); 
-      res->body() = file_contents.str();
-      res->prepare_payload();
-      break;
-    case http::status::not_modified: // 304 Not Modified
-      // Set Cache-Control only
-      res->set(http::field::cache_control, "public, max-age=604800, immutable");
+  if (file_contents.str().length() > 0){ // If response body exists
+    // Set Cache-Control, Content-Type, and Last-Modified headers
+    res->set(http::field::cache_control, "public, max-age=604800, immutable");
+    res->set(http::field::content_type, content_type); 
+    res->set(http::field::last_modified, last_modified);
+    res->body() = file_contents.str(); // Set response body
+    res->prepare_payload(); // Set Content-Length
   }
+  else if (status == http::status::not_modified) // 304 Not Modified
+    // Set Cache-Control header only
+    res->set(http::field::cache_control, "public, max-age=604800, immutable");
+
   return res;
 }
 

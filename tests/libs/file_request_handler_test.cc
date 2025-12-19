@@ -60,6 +60,7 @@ protected:
 // Basic file serving testing
 
 
+/// Serves response with "Connection: Close" set when requested.
 TEST_F(FileRequestHandlerTest, ConnectionClose){ // Uses test fixture
   req.set("Connection", "close"); // All other tests use Keep-Alive
 
@@ -79,6 +80,7 @@ TEST_F(FileRequestHandlerTest, ConnectionClose){ // Uses test fixture
 }
 
 
+/// Tests creation of a new FileRequestHandler using the factory.
 TEST_F(FileRequestHandlerTest, Create){ // Uses test fixture
   // Create a FileRequestHandler from its factory
   std::unique_ptr<FileRequestHandlerFactory> factory =
@@ -105,6 +107,7 @@ TEST_F(FileRequestHandlerTest, Create){ // Uses test fixture
 }
 
 
+/// Serves 404 correctly with fallback index page for directory.
 TEST_F(FileRequestHandlerTest, ServeDir){ // Uses test fixture
   req.target("/configs"); // Set target to a directory
 
@@ -125,8 +128,10 @@ TEST_F(FileRequestHandlerTest, ServeDir){ // Uses test fixture
 
 
 /* Commented out for now due to difficulties with Docker and chmod.
+/// Serves 500 correctly when a file exists but fails to open.
 TEST_F(FileRequestHandlerTest, ServeInaccessible){ // Uses test fixture
-  std::string file_path = Config::inst().root() + "small.html";
+  Config* config = ConfigParser::inst().configs().at(0);
+  std::string file_path = config->root + config->index;
   chmod(file_path.c_str(), 0000); // Make inaccessible by changing permissions
   
   Response* res = file_request_handler->handle_request(req);
@@ -135,11 +140,10 @@ TEST_F(FileRequestHandlerTest, ServeInaccessible){ // Uses test fixture
   EXPECT_EQ(res->version(), 11); // HTTP/1.1
   EXPECT_TRUE(res->keep_alive()); // Connection: Keep-Alive
 
-  // Body should contain error HTML for 500 response. Commenting out for now
-  // since I haven't finalized the 500 response HTML.
-  //EXPECT_EQ(res->body(), "");
-  //EXPECT_EQ(get_content_length(*res), "");
-  //EXPECT_EQ(get_content_type(*res), "text/html");
+  // For 500 response, body should contain error HTML.
+  EXPECT_EQ(res->body(), "<h1>Internal Server Error (Error 500).</h1>");
+  EXPECT_EQ(get_content_length(*res), "43");
+  EXPECT_EQ(get_content_type(*res), "text/html");
 
   chmod(file_path.c_str(), 0644); // Make file accessible again
   free(res); // Free memory used by created response
@@ -147,6 +151,7 @@ TEST_F(FileRequestHandlerTest, ServeInaccessible){ // Uses test fixture
 */
 
 
+/// Serves very large static files correctly.
 TEST_F(FileRequestHandlerTest, ServeLarge){ // Uses test fixture
   req.target("/large.html"); // Set target to desired file
 
@@ -164,8 +169,9 @@ TEST_F(FileRequestHandlerTest, ServeLarge){ // Uses test fixture
 }
 
 
+/// Serves 404 correctly with fallback index page for nonexistent file.
 TEST_F(FileRequestHandlerTest, ServeNonexistent){ // Uses test fixture
-  req.target("/thisdoesnotexist.html"); // Set target to nonexistent file
+  req.target("/404"); // Set target to nonexistent file
 
   Response* res = file_request_handler->handle_request(req);
 
@@ -183,6 +189,7 @@ TEST_F(FileRequestHandlerTest, ServeNonexistent){ // Uses test fixture
 }
 
 
+/// Serves static files with correct Content-Length and Content-Type.
 TEST_F(FileRequestHandlerTest, ServeOctetStream){ // Uses test fixture
   req.target("/octet_stream"); // Set target to desired file
 
@@ -200,6 +207,7 @@ TEST_F(FileRequestHandlerTest, ServeOctetStream){ // Uses test fixture
 }
 
 
+/// Serves "304 Not Modified" to a request with If-Modified-Since header set.
 TEST_F(FileRequestHandlerTest, ValidateCache){ // Uses test fixture
   // Set If-Modified-Since to last_modified_time to produce a 304 response.
   Config* config = ConfigParser::inst().configs().at(0);
@@ -227,7 +235,11 @@ TEST_F(FileRequestHandlerTest, ValidateCache){ // Uses test fixture
 // Location block modifier testing
 
 
-TEST_F(FileRequestHandlerTest, StopModifiers){
+/** Tests the case where the longest prefix match location block has a stop
+  * modifier. Additionally tests the case when the try_files fallback parameter
+  * is a valid HTTP status code.
+  */
+TEST_F(FileRequestHandlerTest, StopModifiers){ // Uses test fixture
   /* Will match "location ^~ /stopmod" which returns status 500, then replace
      with longer match "location ^~ /stopmodifier" which returns status 418. */
   req.target("/stopmodifier");
@@ -248,7 +260,11 @@ TEST_F(FileRequestHandlerTest, StopModifiers){
 }
 
 
-TEST_F(FileRequestHandlerTest, LongestMatchNoModifier){
+/** Tests the case where the longest prefix match location block has no stop
+  * modifier. Additionally tests the exception case thrown when the try_files
+  * fallback parameter is a non-integer HTTP status code.
+  */
+TEST_F(FileRequestHandlerTest, LongestMatchNoModifier){ // Uses test fixture
   /* Will match "location ^~ /stopmod" which returns status 500, and also match
      "location /stopmodnone" which has no stop modifier and returns status aaa.
      Status aaa throws exception at lexical cast and sets status 0. */
@@ -270,10 +286,11 @@ TEST_F(FileRequestHandlerTest, LongestMatchNoModifier){
 }
 
 
-// No location block testing (switches to config 1)
+// File serving without location blocks testing (switches to config 1)
 
-/*
-TEST_F(FileRequestHandlerTest, NoLocationBlocksIndex){
+
+/// Serves index page correctly when config does not define location blocks
+TEST_F(FileRequestHandlerTest, NoLocationBlocksSmall){ // Uses test fixture
   // Set file request handler to use config 1 which has no location blocks
   file_request_handler->init_config(ConfigParser::inst().configs().at(1));
 
@@ -292,7 +309,48 @@ TEST_F(FileRequestHandlerTest, NoLocationBlocksIndex){
 
   free(res); // Free memory used by created response
 }
-*/
+
+
+/// Serves static files correctly when config does not define location blocks
+TEST_F(FileRequestHandlerTest, NoLocationBlocksOctetStream){ // Uses test fixture
+  // Set file request handler to use config 1 which has no location blocks
+  file_request_handler->init_config(ConfigParser::inst().configs().at(1));
+
+  req.target("/octet_stream"); // Set target to desired file
+  Response* res = file_request_handler->handle_request(req);
+
+  EXPECT_EQ(res->result_int(), 200); // 200 OK
+  EXPECT_EQ(res->version(), 11); // HTTP/1.1
+  EXPECT_TRUE(res->keep_alive()); // Connection: Keep-Alive
+
+  EXPECT_EQ(res->body(), "This file has no extension!"); // Contents of octet_stream
+  EXPECT_EQ(get_content_length(*res), "27"); // Length of octet_stream
+  EXPECT_EQ(get_content_type(*res), "application/octet-stream"); // Type of octet_stream
+
+  free(res); // Free memory used by created response
+}
+
+
+/// Serves blank 404 correctly when config does not define location blocks
+TEST_F(FileRequestHandlerTest, NoLocationBlocks404){ // Uses test fixture
+  // Set file request handler to use config 1 which has no location blocks
+  file_request_handler->init_config(ConfigParser::inst().configs().at(1));
+
+  req.target("/404"); // Set target to nonexistent file
+  Response* res = file_request_handler->handle_request(req);
+
+  EXPECT_EQ(res->result_int(), 404); // 404 Not Found
+  EXPECT_EQ(res->version(), 11); // HTTP/1.1
+  EXPECT_TRUE(res->keep_alive()); // Connection: Keep-Alive
+
+  EXPECT_EQ(res->body(), ""); // Body should be empty
+  // Content-Length should not be set when body is empty
+  EXPECT_EQ(get_content_length(*res), "");
+  // Content-Type should not be set when body is empty
+  EXPECT_EQ(get_content_type(*res), "");
+
+  free(res); // Free memory used by created response
+}
 
 
 /// Helper function to extract Content-Type header
