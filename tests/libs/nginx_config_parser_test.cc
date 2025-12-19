@@ -54,7 +54,7 @@ TEST_F(NginxConfigParserTest, BasicFileNonexistent){ // Uses test fixture
 /* Commented out for now due to difficulties with Docker and chmod.
 TEST_F(NginxConfigParserTest, BasicFileInaccessible){ // Uses test fixture
   // Make the file inaccessible by changing its permissions
-  std::string file_path = absolute_root + "basic_good.conf";
+  std::string file_path = configs_folder + "test_config.conf";
   chmod(file_path.c_str(), 0000);
   
   EXPECT_FALSE(ConfigParser::inst().parse(file_path));
@@ -92,6 +92,42 @@ TEST_F(NginxConfigParserTest, ArgsInMainContext){ // Uses test fixture
 }
 
 
+TEST_F(NginxConfigParserTest, ArgsLocationOverrides){ // Uses test fixture
+  EXPECT_TRUE(ConfigParser::inst().parse(configs_folder + "args_location_overrides.conf"));
+  Config* config = ConfigParser::inst().configs().at(0); // Extract first parsed config
+
+  EXPECT_EQ(config->type, Config::ServerType::HTTP_SERVER);
+  EXPECT_EQ(config->root, expected_root);
+  EXPECT_EQ(config->index, expected_index);
+
+  /* Extract first parsed location block from config (locations[3] contains
+     location blocks with no modifiers) */
+  LocationBlock* location = config->locations[3].at(0);
+  EXPECT_EQ(location->root, root_dir + "/html/");
+  EXPECT_EQ(location->index, "index.html");
+}
+
+
+TEST_F(NginxConfigParserTest, ArgsPortNegative){ // Uses test fixture
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "args_port_negative_invalid.conf"));
+}
+
+
+TEST_F(NginxConfigParserTest, ArgsPortNonInteger){ // Uses test fixture
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "args_port_non_integer_invalid.conf"));
+}
+
+
+TEST_F(NginxConfigParserTest, ArgsPortTooLarge){ // Uses test fixture
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "args_port_too_large_invalid.conf"));
+}
+
+
+TEST_F(NginxConfigParserTest, ArgsSSLArgInvalid){ // Uses test fixture
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "args_ssl_arg_invalid.conf"));
+}
+
+
 TEST_F(NginxConfigParserTest, ArgsSSLGood){ // Uses test fixture
   EXPECT_TRUE(ConfigParser::inst().parse(configs_folder + "args_ssl_good.conf"));
   Config* config = ConfigParser::inst().configs().at(0); // Extract first parsed config
@@ -119,6 +155,11 @@ TEST_F(NginxConfigParserTest, ArgsSSLInNonSSL){ // Uses test fixture
 
 TEST_F(NginxConfigParserTest, ArgsSSLMissing){ // Uses test fixture
   EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "args_ssl_missing_invalid.conf"));
+}
+
+
+TEST_F(NginxConfigParserTest, ArgsUnknownInServer){ // Uses test fixture
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "args_unknown_in_server_invalid.conf"));
 }
 
 
@@ -173,9 +214,15 @@ TEST_F(NginxConfigParserTest, CommentInTryfiles){ // Uses test fixture
 // Context transition testing
 
 
-TEST_F(NginxConfigParserTest, ContextInvalidSwitch){ // Uses test fixture
-  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "context_switch_invalid.conf"));
+TEST_F(NginxConfigParserTest, ContextSwitchOrder){ // Uses test fixture
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "context_switch_order_invalid.conf"));
 }
+
+
+TEST_F(NginxConfigParserTest, ContextSwitchUnknown){ // Uses test fixture
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "context_switch_unknown_invalid.conf"));
+}
+
 
 
 // Escape character testing
@@ -308,6 +355,11 @@ TEST_F(NginxConfigParserTest, Return304){ // Uses test fixture
 }
 
 
+TEST_F(NginxConfigParserTest, ReturnNonInteger){ // Uses test fixture
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "return_non_integer_invalid.conf"));
+}
+
+
 TEST_F(NginxConfigParserTest, ReturnOther){ // Uses test fixture
   EXPECT_TRUE(ConfigParser::inst().parse(configs_folder + "return_other.conf"));
   Config* config = ConfigParser::inst().configs().at(0); // Extract first parsed config
@@ -339,6 +391,10 @@ TEST_F(NginxConfigParserTest, StructureLocationModifier){ // Uses test fixture
 
 TEST_F(NginxConfigParserTest, StructureMalformedLocation){ // Uses test fixture
   EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "structure_malformed_location_invalid.conf"));
+}
+
+TEST_F(NginxConfigParserTest, StructureMalformedLocationSize){ // Uses test fixture
+  EXPECT_FALSE(ConfigParser::inst().parse(configs_folder + "structure_malformed_location_size_invalid.conf"));
 }
 
 

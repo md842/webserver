@@ -258,7 +258,14 @@ bool ConfigParser::parse_statement(std::vector<std::string>& statement){
   if (context == SERVER_CONTEXT){
     if (arg == "listen"){
       try{
+        // Throws boost::bad_lexical_cast if >65535 or not valid integer
         cur_config->port = boost::lexical_cast<unsigned short>(statement.at(1));
+        /* lexical_cast succeeds on negative numbers by underflowing, which is
+           undesired behavior. Check for negative port number manually. */
+        if (boost::lexical_cast<int>(statement.at(1)) < 0){
+          Log::fatal(LOG_PRE, "Invalid port \"" + statement.at(1) + "\"");
+          return false;
+        }
         Log::trace(LOG_PRE, "Got port " + std::to_string(cur_config->port));
       }
       catch(boost::bad_lexical_cast){ // Out of range, not a number, etc.
