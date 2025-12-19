@@ -57,6 +57,9 @@ protected:
 };
 
 
+// Basic file serving testing
+
+
 TEST_F(FileRequestHandlerTest, ConnectionClose){ // Uses test fixture
   req.set("Connection", "close"); // All other tests use Keep-Alive
 
@@ -221,7 +224,78 @@ TEST_F(FileRequestHandlerTest, ValidateCache){ // Uses test fixture
 }
 
 
-// Helper function to extract Content-Type header
+// Location block modifier testing
+
+
+TEST_F(FileRequestHandlerTest, StopModifiers){
+  /* Will match "location ^~ /stopmod" which returns status 500, then replace
+     with longer match "location ^~ /stopmodifier" which returns status 418. */
+  req.target("/stopmodifier");
+
+  Response* res = file_request_handler->handle_request(req);
+
+  EXPECT_EQ(res->result_int(), 418); // 418 I'm a teapot
+  EXPECT_EQ(res->version(), 11); // HTTP/1.1
+  EXPECT_TRUE(res->keep_alive()); // Connection: Keep-Alive
+
+  EXPECT_EQ(res->body(), ""); // Body should be empty
+  // Content-Length should not be set when body is empty
+  EXPECT_EQ(get_content_length(*res), "");
+  // Content-Type should not be set when body is empty
+  EXPECT_EQ(get_content_type(*res), "");
+
+  free(res); // Free memory used by created response
+}
+
+
+TEST_F(FileRequestHandlerTest, LongestMatchNoModifier){
+  /* Will match "location ^~ /stopmod" which returns status 500, and also match
+     "location /stopmodnone" which has no stop modifier and returns status aaa.
+     Status aaa throws exception at lexical cast and sets status 0. */
+  req.target("/stopmodnone"); // Set target to desired file
+
+  Response* res = file_request_handler->handle_request(req);
+
+  EXPECT_EQ(res->result_int(), 0); // 0 Unknown
+  EXPECT_EQ(res->version(), 11); // HTTP/1.1
+  EXPECT_TRUE(res->keep_alive()); // Connection: Keep-Alive
+
+  EXPECT_EQ(res->body(), ""); // Body should be empty
+  // Content-Length should not be set when body is empty
+  EXPECT_EQ(get_content_length(*res), "");
+  // Content-Type should not be set when body is empty
+  EXPECT_EQ(get_content_type(*res), "");
+
+  free(res); // Free memory used by created response
+}
+
+
+// No location block testing (switches to config 1)
+
+/*
+TEST_F(FileRequestHandlerTest, NoLocationBlocksIndex){
+  // Set file request handler to use config 1 which has no location blocks
+  file_request_handler->init_config(ConfigParser::inst().configs().at(1));
+
+  // Send default request, which should return index with no errors
+  Response* res = file_request_handler->handle_request(req);
+
+  EXPECT_EQ(res->result_int(), 200); // 200 OK
+  EXPECT_EQ(res->version(), 11); // HTTP/1.1
+  EXPECT_TRUE(res->keep_alive()); // Connection: Keep-Alive
+
+  // For default target /, body should contain index (small.html)
+  EXPECT_EQ(res->body(), index_contents);
+  EXPECT_EQ(get_content_length(*res),
+    std::to_string(index_contents.length()));
+  EXPECT_EQ(get_content_type(*res), "text/html");
+
+  free(res); // Free memory used by created response
+}
+*/
+
+
+/// Helper function to extract Content-Type header
 std::string get_content_length(Response res){
   try{
     return res.at(boost::beast::http::field::content_length);
@@ -232,7 +306,7 @@ std::string get_content_length(Response res){
 }
 
 
-// Helper function to extract Content-Type header
+/// Helper function to extract Content-Type header
 std::string get_content_type(Response res){
   try{
     return res.at(boost::beast::http::field::content_type);
