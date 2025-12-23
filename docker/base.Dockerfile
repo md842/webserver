@@ -1,4 +1,4 @@
-# Stage 1: Base image stage.
+# Stage 1: Build base image (used as build environment for stages 2, 3)
 FROM ubuntu:questing AS base
 
 # Update base image and install necessary components for our build environment.

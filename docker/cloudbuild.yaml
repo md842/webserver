@@ -1,23 +1,37 @@
 steps:
-  # Install npm dependencies
-  - name: 'gcr.io/cloud-builders/npm'
-    args: ['install']
-    dir: 'frontend'
-    id: 'Install npm dependencies'
-
-  # Build npm frontend
-  - name: 'gcr.io/cloud-builders/npm'
-    args: ['run', 'build']
-    dir: 'frontend'
-    id: 'Build npm frontend'
-
-  # Pull cached base image
+  # Pull cached base image (runs in parallel with steps 2-4)
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'
     args: ['-c', 'docker pull gcr.io/$PROJECT_ID/webserver:base || exit 0']
+    waitFor: ['-'] # Run immediately
     id: 'Pull cached base image'
 
-  # Base image stage
+  # Pull cached production binary (runs in parallel with steps 1, 3, 4)
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args: ['-c', 'docker pull gcr.io/$PROJECT_ID/webserver:build || exit 0']
+    waitFor: ['-'] # Run immediately
+    id: 'Pull cached production binary'
+
+  # Pull production frontend tarball from Google Cloud Storage (runs in parallel with steps 1, 2, 4)
+  - name: 'gcr.io/cloud-builders/gsutil'
+    args: ['cp', 'gs://${PROJECT_ID}_cloudbuild/build.tar.gz', '.']
+    waitFor: ['-'] # Run immediately
+    id: 'Pull production frontend tarball'
+
+  # Prepare production frontend directory (runs in parallel with steps 1-3)
+  - name: 'ubuntu'
+    args: ['mkdir', 'frontend']
+    waitFor: ['-'] # Run immediately
+    id: 'Prepare production frontend directory'
+
+  # Extract production frontend tarball
+  - name: 'ubuntu'
+    args: ['tar', '-xzf', 'build.tar.gz', '-C', 'frontend']
+    waitFor: ['Pull production frontend tarball', 'Prepare production frontend directory']
+    id: 'Extract production frontend tarball'
+
+  # Build base image
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
@@ -27,30 +41,35 @@ steps:
       '--cache-from', 'gcr.io/$PROJECT_ID/webserver:base',
       '.'
     ]
-    id: 'Base image stage'
+    waitFor: ['Pull cached base image']
+    id: 'Build base image'
 
-  # Build image stage
+  # Build production binary (runs in parallel with unit testing)
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
       '-f', 'docker/build.Dockerfile',
       '-t', 'webserver:build',
+      '-t', 'gcr.io/$PROJECT_ID/webserver:build',
+      '--cache-from', 'gcr.io/$PROJECT_ID/webserver:build',
       '.'
     ]
-    waitFor: ['Base image stage'] # Run in parallel with coverage test stage.
-    id: 'Build image stage'
+    # Relies on base image if not using cache
+    waitFor: ['Pull cached production binary', 'Build base image']
+    id: 'Build production binary'
 
-  # Build coverage image. 
+  # Unit testing and coverage report (runs in parallel with production binary)
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
-      '-f', 'docker/coverage.Dockerfile',
+      '-f', 'docker/test_coverage.Dockerfile',
       '.'
     ]
-    waitFor: ['Base image stage'] # Run in parallel with build image stage.
-    id: 'Coverage test stage'
+    # Relies on base image and extracted frontend (for integration tests)
+    waitFor: ['Build base image', 'Extract production frontend tarball']
+    id: 'Unit testing and coverage report'
 
-  # Build deploy image.
+  # Build deployment image (runs in parallel with unit tests)
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
@@ -58,13 +77,18 @@ steps:
       '-t', 'gcr.io/$PROJECT_ID/webserver:latest',
       '.'
     ]
-    waitFor: ['Build image stage'] # May run in parallel with coverage test stage.
-    id: 'Deploy stage'
+    # Relies on production binary and extracted frontend
+    waitFor: ['Build production binary', 'Extract production frontend tarball']
+    id: 'Build deployment image'
 
-# Push base and deploy image to artifact registry
-images: ['gcr.io/$PROJECT_ID/webserver:base', 'gcr.io/$PROJECT_ID/webserver:latest']
+# Push images to Google Artifact Registry
+images: [
+  'gcr.io/$PROJECT_ID/webserver:base', # Cache base image
+  'gcr.io/$PROJECT_ID/webserver:build', # Cache production binary
+  'gcr.io/$PROJECT_ID/webserver:latest' # Deployment container
+]
 
 # Cloud build options
-serviceAccount: "464336319665-compute@developer.gserviceaccount.com"
+serviceAccount: '$SERVICE_ACCOUNT_EMAIL'
 options:
   logging: CLOUD_LOGGING_ONLY

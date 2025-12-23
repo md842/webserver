@@ -1,4 +1,4 @@
-# Stage 2: Build stage
+# Stage 2: Build production binary (used by deployment stage)
 FROM webserver:base AS build
 
 WORKDIR /webserver/build
