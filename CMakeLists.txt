@@ -16,22 +16,6 @@ endif()
 # Output binaries to a sub directory "bin"
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# Enable cmake testing
-include(CTest)
-enable_testing()
-
-# Enable GoogleTest. Commit hash in URL must be updated with GoogleTest version updates.
-set(CMAKE_CXX_STANDARD 17) # Required by GoogleTest
-set(CMAKE_CXX_STANDARD_REQUIRED ON) # Required by GoogleTest
-set(GOOGLETEST_VERSION 1.17.0)
-include(FetchContent)
-FetchContent_Declare(
-  googletest
-  URL https://github.com/google/googletest/archive/52eb8108c5bdec04579160ae17225d66034bd723.zip
-)
-FetchContent_MakeAvailable(googletest)
-include(GoogleTest)
-
 # Enable Boost - use static libraries so binaries can be deployed without a full Boost install
 set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost 1.87 REQUIRED COMPONENTS process log)
@@ -89,91 +73,114 @@ target_link_libraries(server
   OpenSSL::SSL
 )
 
-# Add and link executables for test libraries
-add_executable(file_request_handler_test tests/libs/file_request_handler_test.cc)
-target_link_libraries(file_request_handler_test
-  $<TARGET_OBJECTS:file_request_handler_lib>
-  log_lib
-  nginx_config_parser_lib
-  registry_lib
-  gtest_main
-)
 
-add_executable(log_test tests/libs/log_test.cc)
-target_link_libraries(log_test
-  log_lib
-  gtest_main
-)
+# If Debug or Coverage build, include testing libraries
+if ((CMAKE_BUILD_TYPE STREQUAL "Debug") OR (CMAKE_BUILD_TYPE STREQUAL "Coverage"))
+  # Enable cmake testing
+  include(CTest)
+  enable_testing()
 
-add_executable(nginx_config_parser_test tests/libs/nginx_config_parser_test.cc)
-target_link_libraries(nginx_config_parser_test
-  nginx_config_parser_lib
-  log_lib
-  registry_lib
-  gtest_main
-)
+  # Enable GoogleTest. Commit hash in URL must be updated with GoogleTest version updates.
+  set(CMAKE_CXX_STANDARD 17) # Required by GoogleTest
+  set(CMAKE_CXX_STANDARD_REQUIRED ON) # Required by GoogleTest
+  set(GOOGLETEST_VERSION 1.17.0)
+  include(FetchContent)
+  FetchContent_Declare(
+    googletest
+    URL https://github.com/google/googletest/archive/52eb8108c5bdec04579160ae17225d66034bd723.zip
+  )
+  FetchContent_MakeAvailable(googletest)
+  include(GoogleTest)
 
-add_executable(post_request_handler_test tests/libs/post_request_handler_test.cc)
-target_link_libraries(post_request_handler_test
-  $<TARGET_OBJECTS:post_request_handler_lib>
-  analytics_lib
-  log_lib
-  nginx_config_parser_lib
-  registry_lib
-  gtest_main
-  Boost::process
-)
-
-add_executable(registry_test tests/libs/registry_test.cc)
-target_link_libraries(registry_test
-  registry_lib
-  gtest_main
-)
-
-# Discover unit tests within test executables compiled above
-gtest_discover_tests(file_request_handler_test
-  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Testing/Temporary
-)
-gtest_discover_tests(log_test
-  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Testing/Temporary
-)
-gtest_discover_tests(nginx_config_parser_test
-  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Testing/Temporary
-)
-gtest_discover_tests(post_request_handler_test
-  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Testing/Temporary
-)
-gtest_discover_tests(registry_test
-  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Testing/Temporary
-)
-
-# Set integration test binary path based on build type
-set(INTEGRATION_TEST_BINARY_PATH "./build/bin/server") # Default path
-if (CMAKE_BUILD_TYPE STREQUAL "Coverage")
-  set(INTEGRATION_TEST_BINARY_PATH "./build_coverage/bin/server")
-endif()
-
-# Add integration tests
-add_test(
-  NAME
-    integration_test
-  COMMAND
-    ./integration_tests.sh "${INTEGRATION_TEST_BINARY_PATH}"
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration)
-
-include(cmake/CodeCoverageReportConfig.cmake)
-generate_coverage_report(
-  TARGETS
-    file_request_handler_lib
+  # Add and link executables for test libraries
+  add_executable(file_request_handler_test tests/libs/file_request_handler_test.cc)
+  target_link_libraries(file_request_handler_test
+    $<TARGET_OBJECTS:file_request_handler_lib>
     log_lib
     nginx_config_parser_lib
-    post_request_handler_lib
     registry_lib
-  TESTS
-    file_request_handler_test
-    log_test
-    nginx_config_parser_test
-    post_request_handler_test
-    registry_test
-    server
-)
+    gtest_main
+  )
+
+  add_executable(log_test tests/libs/log_test.cc)
+  target_link_libraries(log_test
+    log_lib
+    gtest_main
+  )
+
+  add_executable(nginx_config_parser_test tests/libs/nginx_config_parser_test.cc)
+  target_link_libraries(nginx_config_parser_test
+    nginx_config_parser_lib
+    log_lib
+    registry_lib
+    gtest_main
+  )
+
+  add_executable(post_request_handler_test tests/libs/post_request_handler_test.cc)
+  target_link_libraries(post_request_handler_test
+    $<TARGET_OBJECTS:post_request_handler_lib>
+    analytics_lib
+    log_lib
+    nginx_config_parser_lib
+    registry_lib
+    gtest_main
+    Boost::process
+  )
+
+  add_executable(registry_test tests/libs/registry_test.cc)
+  target_link_libraries(registry_test
+    registry_lib
+    gtest_main
+  )
+
+  # Discover unit tests within test executables compiled above
+  gtest_discover_tests(file_request_handler_test
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Testing/Temporary
+  )
+  gtest_discover_tests(log_test
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Testing/Temporary
+  )
+  gtest_discover_tests(nginx_config_parser_test
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Testing/Temporary
+  )
+  gtest_discover_tests(post_request_handler_test
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Testing/Temporary
+  )
+  gtest_discover_tests(registry_test
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Testing/Temporary
+  )
+
+  # Set integration test binary path based on build type
+  set(INTEGRATION_TEST_BINARY_PATH "./build/bin/server") # Default path
+  if (CMAKE_BUILD_TYPE STREQUAL "Coverage")
+    set(INTEGRATION_TEST_BINARY_PATH "./build_coverage/bin/server")
+  endif()
+
+  # Add integration tests
+  add_test(
+    NAME
+      integration_test
+    COMMAND
+      ./integration_tests.sh "${INTEGRATION_TEST_BINARY_PATH}"
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests/integration)
+
+  # If Coverage build, additionally set up coverage reporting
+  if (CMAKE_BUILD_TYPE STREQUAL "Coverage")
+    include(cmake/CodeCoverageReportConfig.cmake)
+    generate_coverage_report(
+      TARGETS
+        file_request_handler_lib
+        log_lib
+        nginx_config_parser_lib
+        post_request_handler_lib
+        registry_lib
+      TESTS
+        file_request_handler_test
+        log_test
+        nginx_config_parser_test
+        post_request_handler_test
+        registry_test
+        server
+    )
+  endif()
+endif()
