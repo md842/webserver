@@ -1,9 +1,7 @@
-# Stage 2: Build production binary (used by deployment stage)
-FROM webserver:base AS build
+# Stage 2: Prepare production build image
+FROM webserver:base
 
+# Build the web server binary with Release build type
 WORKDIR /webserver/build
-COPY . /webserver
-
-# Build the project
 RUN cmake -DCMAKE_BUILD_TYPE=Release ..
 RUN make

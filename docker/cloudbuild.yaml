@@ -1,50 +1,42 @@
 steps:
-  # Pull cached base image (runs in parallel with steps 2-4)
-  - name: 'gcr.io/cloud-builders/docker'
-    entrypoint: 'bash'
-    args: ['-c', 'docker pull gcr.io/$PROJECT_ID/webserver:base || exit 0']
-    waitFor: ['-'] # Run immediately
-    id: 'Pull cached base image'
-
-  # Pull cached production binary (runs in parallel with steps 1, 3, 4)
+  # 1. Pull production build image (runs in parallel with steps 2, 3)
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'
     args: ['-c', 'docker pull gcr.io/$PROJECT_ID/webserver:build || exit 0']
     waitFor: ['-'] # Run immediately
-    id: 'Pull cached production binary'
+    id: 'Pull production build image'
 
-  # Pull production frontend tarball from Google Cloud Storage (runs in parallel with steps 1, 2, 4)
+  # 2. Pull production frontend tarball from Google Cloud Storage (runs in parallel with steps 1, 3)
   - name: 'gcr.io/cloud-builders/gsutil'
     args: ['cp', 'gs://${PROJECT_ID}_cloudbuild/build.tar.gz', '.']
     waitFor: ['-'] # Run immediately
     id: 'Pull production frontend tarball'
 
-  # Prepare production frontend directory (runs in parallel with steps 1-3)
+  # 3. Prepare production frontend directory (runs in parallel with steps 1, 2)
   - name: 'alpine'
     args: ['mkdir', 'frontend']
     waitFor: ['-'] # Run immediately
     id: 'Prepare production frontend directory'
 
-  # Extract production frontend tarball
+  # 4. Extract production frontend tarball (relies on step 2, 3)
   - name: 'alpine'
     args: ['tar', '-xzf', 'build.tar.gz', '-C', 'frontend']
     waitFor: ['Pull production frontend tarball', 'Prepare production frontend directory']
     id: 'Extract production frontend tarball'
 
-  # Build base image
+  # 5. Prepare build environment (cache from production build image pulled in step 1)
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
       '-f', 'docker/base.Dockerfile',
       '-t', 'webserver:base',
-      '-t', 'gcr.io/$PROJECT_ID/webserver:base',
-      '--cache-from', 'gcr.io/$PROJECT_ID/webserver:base',
+      '--cache-from', 'gcr.io/$PROJECT_ID/webserver:build',
       '.'
     ]
-    waitFor: ['Pull cached base image']
-    id: 'Build base image'
+    waitFor: ['Pull production build image']
+    id: 'Prepare build environment'
 
-  # Build production binary (runs in parallel with unit testing)
+  # 6. Prepare production build image (cache from production build image pulled in step 1, runs in parallel with step 7)
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
@@ -54,22 +46,22 @@ steps:
       '--cache-from', 'gcr.io/$PROJECT_ID/webserver:build',
       '.'
     ]
-    # Relies on base image if not using cache
-    waitFor: ['Pull cached production binary', 'Build base image']
-    id: 'Build production binary'
+    waitFor: ['Pull production build image', 'Prepare build environment']
+    id: 'Prepare production build image'
 
-  # Unit testing and coverage report (runs in parallel with production binary)
+  # 7. Testing and coverage report (uses build environment from step 5, runs in parallel with step 6)
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
       '-f', 'docker/test_coverage.Dockerfile',
       '.'
     ]
-    # Relies on base image and extracted frontend (for integration tests)
-    waitFor: ['Build base image', 'Extract production frontend tarball']
-    id: 'Unit testing and coverage report'
+    # Relies on build environment and extracted frontend for integration tests
+    # No cache because tests should run on change to either frontend or backend
+    waitFor: ['Prepare build environment', 'Extract production frontend tarball']
+    id: 'Testing and coverage report'
 
-  # Build deployment image (runs in parallel with unit tests)
+  # 8. Prepare deployment image (uses extracted frontend from step 4 and production build image from step 6, runs in parallel with step 7)
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'build',
@@ -77,14 +69,12 @@ steps:
       '-t', 'gcr.io/$PROJECT_ID/webserver:latest',
       '.'
     ]
-    # Relies on production binary and extracted frontend
-    waitFor: ['Build production binary', 'Extract production frontend tarball']
+    waitFor: ['Prepare production build image', 'Extract production frontend tarball']
     id: 'Build deployment image'
 
 # Push images to Google Artifact Registry
 images: [
-  'gcr.io/$PROJECT_ID/webserver:base', # Cache base image
-  'gcr.io/$PROJECT_ID/webserver:build', # Cache production binary
+  'gcr.io/$PROJECT_ID/webserver:build', # Cache production build image
   'gcr.io/$PROJECT_ID/webserver:latest' # Deployment container
 ]
 
