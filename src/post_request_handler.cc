@@ -92,7 +92,7 @@ Response* PostRequestHandler::handle_request(const Request& req){
           Analytics::inst().posts++; // Log valid POST request in analytics
         }
         catch(boost::system::system_error e){ // Thrown by procv2::process::proc()
-          Log::warn(LOG_PRE, "POST request specified unknown executable (likely malicious).");
+          Log::warn(LOG_PRE, "POST request specified unknown executable \"" + binary_path + "\" (likely malicious).");
           stdout_data = "Error 404: Not Found";
           status = http::status::not_found; // Response status code 404
           Analytics::inst().malicious++; // Log malicious request in analytics

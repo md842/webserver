@@ -278,15 +278,24 @@ bool resolve_path(const std::string& target, const std::string& index,
  */
 bool get_file_from_loc(const std::string& req_target, LocationBlock* location,
                        fs::path& file_obj, http::status& status){
+  Log::trace(LOG_PRE, "get_file_from_loc for req_target: \"" + req_target + "\"");
   if (location->try_files_args.size()){ // try_files directive present
     // Try all relative paths specified by the try_files directive
-    for (std::string rel_path : location->try_files_args){
-      std::string target = req_target; // Copy req_target for in-place replace
-      // Substitute location block URI with try_files arg relative path
-      target.replace(0, location->uri.length(), rel_path);
-      // Attempt to resolve relative path to a file object
-      if (resolve_path(location->root + target, location->index, file_obj))
-        return true; // Return early if matching file found
+    for (std::string try_files_arg : location->try_files_args){
+      // Resolve $uri variable within try_files_arg if present
+      std::size_t uri_arg_pos = try_files_arg.find("$uri");
+      if (uri_arg_pos == std::string::npos){ // arg does not contain $uri
+        Log::trace(LOG_PRE, "try_files_arg \"" + try_files_arg + "\" does not contain $uri, serving as-is.");
+        if (resolve_path(location->root + "/" + try_files_arg, location->index, file_obj))
+          return true; // Return early if matching file found
+      }
+      else{ // arg contains $uri, resolve
+        std::string target = try_files_arg; // Copy try_files_arg for in-place replace
+        target.replace(uri_arg_pos, 4, req_target);
+        Log::trace(LOG_PRE, "try_files_arg contains $uri, resolved to \"" + target + "\"");
+        if (resolve_path(location->root + "/" + target, location->index, file_obj))
+          return true; // Return early if matching file found
+      }
     }
     // If no early return, no matching file found, use fallback parameter
     if (location->try_files_fallback[0] == '='){ // Fallback is a return code

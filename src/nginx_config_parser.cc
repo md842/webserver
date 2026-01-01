@@ -355,11 +355,10 @@ bool ConfigParser::parse_statement(std::vector<std::string>& statement){
     else if (arg == "try_files"){ // Statement size 4+ (e.g., "try_files $uri =404 ;")
       // Process parameters; exclude "try_files", fallback (last) argument, ;
       for (int i = 1; i < statement.size() - 2; i++){
-        /* Each token represents a relative path to try. Match "$uri" variable
-           and replace with location URI, then store the cleaned rel path. */
-        std::string rel_path = clean(std::regex_replace(statement.at(i), std::regex("\\$uri"), cur_location_block->uri), FILE_URI);
-        cur_location_block->try_files_args.push_back(rel_path);
-        Log::trace(LOG_PRE, "try_files mapped relative path \"" + rel_path + "\" to location block with URI \"" + cur_location_block->uri + "\".");
+        /* Each arg represents a relative path to try serving. $uri variable
+           resolution is handled in FileRequestHandler::get_file_from_loc(). */
+        cur_location_block->try_files_args.push_back(clean(statement.at(i), FILE_URI));
+        Log::trace(LOG_PRE, "Location \"" + cur_location_block->uri + "\" registered try_files arg \"" + statement.at(i) + "\".");
       }
       // Last try_files parameter is always the fallback
       cur_location_block->try_files_fallback = statement.at(statement.size() - 2);
