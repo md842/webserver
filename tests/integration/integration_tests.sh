@@ -1,11 +1,12 @@
 #! /bin/bash
 
 # Set file path for frontend production build directory (relative to webserver root)
-FRONTEND_DIR=../personal-website/build/
+FRONTEND_DIR=tests/inputs/
+FRONTEND_INDEX=small.html
 # Set file path for the server config file to use for the integration test (relative to webserver root)
-CONFIG_FILE=configs/local_config.conf
+CONFIG_FILE=tests/inputs/configs/test_config.conf
 # File name to be used for the static file serving integration test (relative to frontend public directory)
-STATIC_TEST_FILE=test.txt
+STATIC_TEST_FILE=octet_stream
 
 # Set file paths for integration test output and result files (relative to webserver root)
 OUTPUT_FILE=tests/integration/last_test_output.txt
@@ -67,12 +68,12 @@ WEBSERVER_PID=$! # Save PID of web server to shut it down after tests are done
 sleep 0.1 # Give the server time to start up
 
 # Function call  $1: Expected output file                       $2: Command   $3: Options                                                         $4 Netcat input file (omit for curl)
-integration_test "${FRONTEND_DIR}index.html"                    "curl"        "-k -o $OUTPUT_FILE -s https://localhost:8080/"
+integration_test "${FRONTEND_DIR}${FRONTEND_INDEX}"             "curl"        "-k -o $OUTPUT_FILE -s https://localhost:8080/"
 integration_test "${FRONTEND_DIR}${STATIC_TEST_FILE}"           "curl"        "-k -o $OUTPUT_FILE -s https://localhost:8080/${STATIC_TEST_FILE}"
 integration_test "tests/nc/outputs/leave_dir.txt"               "nc"          "localhost 8081"                                                    "tests/nc/inputs/leave_dir.txt"
 integration_test "tests/nc/outputs/invalid_method.txt"          "nc"          "localhost 8081"                                                    "tests/nc/inputs/invalid_method.txt"
-integration_test "tests/nc/outputs/redirect_http_to_https.txt"  "nc"          "localhost 8079"                                                    "tests/nc/inputs/redirect_test.txt"
-integration_test "tests/nc/outputs/redirect_same_scheme.txt"    "nc"          "localhost 8082"                                                    "tests/nc/inputs/redirect_test.txt"
+integration_test "tests/nc/outputs/redirect_http_to_https.txt"  "nc"          "localhost 8082"                                                    "tests/nc/inputs/redirect_test.txt"
+integration_test "tests/nc/outputs/redirect_same_scheme.txt"    "nc"          "localhost 8083"                                                    "tests/nc/inputs/redirect_test.txt"
 # Function call  $1: Expected output file                       $2: Command   $3: Options                                                         $4 Netcat input file (omit for curl)
 
 kill $WEBSERVER_PID # Shut down web server after all tests have finished. Also ends any netcat background processes that are still alive.

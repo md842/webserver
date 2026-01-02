@@ -39,7 +39,7 @@ protected:
     // Config may provide relative paths, set working directory as found above.
     ConfigParser::inst().set_working_directory(root_dir);
 
-    // test_file_config specifies index small.html and root ./tests/inputs
+    // "test_config.conf" specifies index "small.html" and root "tests/inputs"
     ConfigParser::inst().parse(root_dir +
                                "/tests/inputs/configs/test_config.conf");
 

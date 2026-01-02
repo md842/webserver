@@ -31,11 +31,12 @@ protected:
     // Config may provide relative paths, set working directory as found above.
     ConfigParser::inst().set_working_directory(root_dir);
 
-    // Use the local config since tests rely on files in the frontend
-    ConfigParser::inst().parse(root_dir + "/configs/local_config.conf");
+    // "test_config.conf" specifies index "small.html" and root "tests/inputs"
+    ConfigParser::inst().parse(root_dir +
+                               "/tests/inputs/configs/test_config.conf");
 
     // Initialize config object for the post request handler
-    post_request_handler->init_config(ConfigParser::inst().configs().at(1));
+    post_request_handler->init_config(ConfigParser::inst().configs().at(0));
     
     // POST / HTTP/1.1
     req.method(boost::beast::http::verb::post);
