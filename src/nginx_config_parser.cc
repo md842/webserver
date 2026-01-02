@@ -178,7 +178,7 @@ bool ConfigParser::parse_block_start(std::vector<std::string>& statement){
       cur_location_block = new LocationBlock();
       cur_location_block->modifier = LocationBlock::ModifierType::NONE; // 3
       cur_location_block->uri = statement.at(1); // Set URI
-      Log::trace(LOG_PRE, "Parsing a new location block: location " + statement.at(1) + " {");
+      // Log::trace(LOG_PRE, "Parsing a new location block: location " + statement.at(1) + " {");
     }
     else{ // Modifier present (e.g., "location [modifier] [URI] {")
       cur_location_block = new LocationBlock();
@@ -203,7 +203,7 @@ bool ConfigParser::parse_block_start(std::vector<std::string>& statement){
       }
 
       cur_location_block->uri = statement.at(2); // Set URI
-      Log::trace(LOG_PRE, "Parsing a new location block: location " + modifier + " " + statement.at(2) + " {");
+      // Log::trace(LOG_PRE, "Parsing a new location block: location " + modifier + " " + statement.at(2) + " {");
     }
   }
   else{
@@ -266,7 +266,7 @@ bool ConfigParser::parse_statement(std::vector<std::string>& statement){
           Log::fatal(LOG_PRE, "Invalid port \"" + statement.at(1) + "\"");
           return false;
         }
-        Log::trace(LOG_PRE, "Got port " + std::to_string(cur_config->port));
+        // Log::trace(LOG_PRE, "Got port " + std::to_string(cur_config->port));
       }
       catch(boost::bad_lexical_cast){ // Out of range, not a number, etc.
         Log::fatal(LOG_PRE, "Invalid port \"" + statement.at(1) + "\"");
@@ -285,27 +285,27 @@ bool ConfigParser::parse_statement(std::vector<std::string>& statement){
     }
     else if (arg == "index"){
       cur_config->index = clean(statement.at(1), FILE_URI);
-      Log::trace(LOG_PRE, "Got relative index \"" + cur_config->index + "\"");
+      // Log::trace(LOG_PRE, "Got relative index \"" + cur_config->index + "\"");
     }
     else if (arg == "root"){
       cur_config->root = clean(statement.at(1), DIR_ONLY);
-      Log::trace(LOG_PRE, "Got root \"" + cur_config->root + "\"");
+      // Log::trace(LOG_PRE, "Got root \"" + cur_config->root + "\"");
     }
     else if (arg == "server_name"){
       cur_config->host = clean(statement.at(1), FILE_URI);
-      Log::trace(LOG_PRE, "Got server name " + cur_config->host);
+      // Log::trace(LOG_PRE, "Got server name " + cur_config->host);
     }
     else if (arg == "return"){
       try{
         cur_config->ret = boost::lexical_cast<short>(statement.at(1));
-        Log::trace(LOG_PRE, "Got ret " + std::to_string(cur_config->ret));
+        // Log::trace(LOG_PRE, "Got ret " + std::to_string(cur_config->ret));
       }
       catch(boost::bad_lexical_cast){ // Out of range, not a number, etc.
         if (statement.size() == 3){ // e.g., return https://$host$request_uri;
           cur_config->ret = 302; // Default for return with only URL provided
           cur_config->ret_val = statement.at(1);
-          Log::trace(LOG_PRE, "Got default ret " + std::to_string(cur_config->ret));
-          Log::trace(LOG_PRE, "Got ret_val " + cur_config->ret_val);
+          // Log::trace(LOG_PRE, "Got default ret " + std::to_string(cur_config->ret));
+          // Log::trace(LOG_PRE, "Got ret_val " + cur_config->ret_val);
         }
         else{
           Log::fatal(LOG_PRE, "Invalid ret \"" + statement.at(1) + "\"");
@@ -314,28 +314,28 @@ bool ConfigParser::parse_statement(std::vector<std::string>& statement){
       }
       if (statement.size() == 4){ // e.g., return 301 https://$host$request_uri;
         cur_config->ret_val = clean(statement.at(2), FILE_URI);
-        Log::trace(LOG_PRE, "Got ret_val " + cur_config->ret_val);
+        // Log::trace(LOG_PRE, "Got ret_val " + cur_config->ret_val);
       }
     }
     else if (arg == "ssl_certificate"){
       cur_config->certificate = clean(statement.at(1), DIR_FILE);
-      Log::trace(LOG_PRE, "Got ssl_certificate " + cur_config->certificate);
+      // Log::trace(LOG_PRE, "Got ssl_certificate " + cur_config->certificate);
     }
     else if (arg == "ssl_certificate_key"){
       cur_config->private_key = clean(statement.at(1), DIR_FILE);
-      Log::trace(LOG_PRE, "Got ssl_certificate_key " + cur_config->private_key);
+      // Log::trace(LOG_PRE, "Got ssl_certificate_key " + cur_config->private_key);
     }
     else if (arg == "ssl_protocols"){
       // Not implemented - don't do anything with it, but don't error
-      Log::trace(LOG_PRE, "Got ssl_protocols (not implemented)");
+      // Log::trace(LOG_PRE, "Got ssl_protocols (not implemented)");
     }
     else if (arg == "ssl_ciphers"){
       // Not implemented - don't do anything with it, but don't error
-      Log::trace(LOG_PRE, "Got ssl_ciphers (not implemented)");
+      // Log::trace(LOG_PRE, "Got ssl_ciphers (not implemented)");
     }
     else if (arg == "ssl_session_timeout"){
       // Not implemented - don't do anything with it, but don't error
-      Log::trace(LOG_PRE, "Got ssl_session_timeout (not implemented)");
+      // Log::trace(LOG_PRE, "Got ssl_session_timeout (not implemented)");
     }
     else{
       Log::fatal(LOG_PRE, "Unknown server argument: \"" + arg + "\"");
@@ -346,11 +346,11 @@ bool ConfigParser::parse_statement(std::vector<std::string>& statement){
   else if (context == LOCATION_CONTEXT){
     if (arg == "index"){ // Statement size 3+ (e.g., "index index.html ;")
       cur_location_block->index = clean(statement.at(1), FILE_URI);
-      Log::trace(LOG_PRE, "Got relative index override \"" + cur_location_block->index + "\"");
+      // Log::trace(LOG_PRE, "Got relative index override \"" + cur_location_block->index + "\"");
     }
     else if (arg == "root"){ // Statement size 3 (e.g., "root /path ;")
       cur_location_block->root = clean(statement.at(1), DIR_ONLY);
-      Log::trace(LOG_PRE, "Got root override \"" + cur_location_block->root + "\"");
+      // Log::trace(LOG_PRE, "Got root override \"" + cur_location_block->root + "\"");
     }
     else if (arg == "try_files"){ // Statement size 4+ (e.g., "try_files $uri =404 ;")
       // Process parameters; exclude "try_files", fallback (last) argument, ;
@@ -358,7 +358,7 @@ bool ConfigParser::parse_statement(std::vector<std::string>& statement){
         /* Each arg represents a relative path to try serving. $uri variable
            resolution is handled in FileRequestHandler::get_file_from_loc(). */
         cur_location_block->try_files_args.push_back(clean(statement.at(i), FILE_URI));
-        Log::trace(LOG_PRE, "Location \"" + cur_location_block->uri + "\" registered try_files arg \"" + statement.at(i) + "\".");
+        // Log::trace(LOG_PRE, "Location \"" + cur_location_block->uri + "\" registered try_files arg \"" + statement.at(i) + "\".");
       }
       // Last try_files parameter is always the fallback
       cur_location_block->try_files_fallback = statement.at(statement.size() - 2);

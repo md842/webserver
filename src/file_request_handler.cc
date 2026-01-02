@@ -38,12 +38,12 @@ Response* FileRequestHandler::handle_request(const Request& req){
     // Attempt to match req_target to a file given matched location block
     if (!get_file_from_loc(std::string(req.target()), location, file_obj, status)){
       // Matching file not found. get_file_from_loc sets status, fall through to res
-      Log::trace(LOG_PRE, "get_file_from_loc returned false. Status: " + std::to_string(static_cast<int>(status)));
+      // Log::trace(LOG_PRE, "get_file_from_loc returned false. Status: " + std::to_string(static_cast<int>(status)));
     }
   }
   else{ // No matching location block found
     // Attempt to resolve relative path to a file object
-    Log::trace(LOG_PRE, "No location block, trying " + config_->root + std::string(req.target()));
+    // Log::trace(LOG_PRE, "No location block, trying " + config_->root + std::string(req.target()));
     if (!resolve_path(config_->root + std::string(req.target()), config_->index, file_obj))
       status = http::status::not_found; 
   }
@@ -164,12 +164,12 @@ std::string mime_type(fs::path file_obj){
  * @relatesalso FileRequestHandler
  */
 LocationBlock* get_location(const std::string& req_target, Config* config){
-  Log::trace(LOG_PRE, "Resolving path for request target \"" + req_target + "\".");
+  // Log::trace(LOG_PRE, "Resolving path for request target \"" + req_target + "\".");
 
   // Step 1. Search location blocks for exact matches
   for (LocationBlock* location : config->locations[LocationBlock::ModifierType::EXACT_MATCH]){
     if (req_target == location->uri){
-      Log::trace(LOG_PRE, req_target + " is an exact match with URI: " + location->uri);
+      // Log::trace(LOG_PRE, req_target + " is an exact match with URI: " + location->uri);
       return location; // Match found, stop searching
     }
   }
@@ -181,7 +181,7 @@ LocationBlock* get_location(const std::string& req_target, Config* config){
   // Search location blocks for prefix match with stop modifier
   for (LocationBlock* location : config->locations[LocationBlock::ModifierType::PREFIX_MATCH_STOP]){
     if (req_target.find(location->uri) == 0){ // Prefix match
-      Log::trace(LOG_PRE, req_target + " prefix match with stop modifier: " + location->uri);
+      // Log::trace(LOG_PRE, req_target + " prefix match with stop modifier: " + location->uri);
       if (longest_prefix_match_stop == nullptr || // First prefix match OR
           // Matched URI longer than previous longest prefix match
           location->uri.length() > longest_prefix_match_stop->uri.length())
@@ -192,7 +192,7 @@ LocationBlock* get_location(const std::string& req_target, Config* config){
   // Search location blocks for prefix match with no modifier
   for (LocationBlock* location : config->locations[LocationBlock::ModifierType::NONE]){
     if (req_target.find(location->uri) == 0){ // Prefix match
-      Log::trace(LOG_PRE, req_target + " prefix match with no modifier: " + location->uri);
+      // Log::trace(LOG_PRE, req_target + " prefix match with no modifier: " + location->uri);
       if (longest_prefix_match == nullptr || // First prefix match OR
           // Matched URI longer than previous longest prefix match
           location->uri.length() > longest_prefix_match->uri.length())
@@ -206,29 +206,29 @@ LocationBlock* get_location(const std::string& req_target, Config* config){
         // Prefix match with stop modifier is longer
         longest_prefix_match_stop->uri.length() > longest_prefix_match->uri.length()){
       // Longest prefix match has a stop modifier
-      Log::trace(LOG_PRE, "Longest prefix match has a stop modifier: " + longest_prefix_match_stop->uri);
+      // Log::trace(LOG_PRE, "Longest prefix match has a stop modifier: " + longest_prefix_match_stop->uri);
       return longest_prefix_match_stop; // Match found, stop searching
     }
   }
 
   // Prefix match with stop modifier does not exist OR is not longest
   if (longest_prefix_match != nullptr){ // Longest prefix match has no modifier
-    Log::trace(LOG_PRE, "Longest prefix match has no modifier: \"" + longest_prefix_match->uri + "\".");
+    // Log::trace(LOG_PRE, "Longest prefix match has no modifier: \"" + longest_prefix_match->uri + "\".");
 
     /* TODO: Maybe implement regex matching?
-    Log::trace(LOG_PRE, "Longest prefix match has no modifier: \"" + longest_prefix_match->uri + "\". Continuing to regex matching.");
+    // Log::trace(LOG_PRE, "Longest prefix match has no modifier: \"" + longest_prefix_match->uri + "\". Continuing to regex matching.");
     // Step 3. Search location blocks for regex match. Regex match doesn't care about length, first match wins.
     for (LocationBlock* location : config->locations[LocationBlock::ModifierType::REGEX_MATCH]){
       // TODO: Case sensitivity
       std::smatch matched;
       if (std::regex_search(req_target, matched, std::regex(location->uri))){
         for (std::string match : matched)
-          Log::trace(LOG_PRE, "Found regex match: " + match);
+          // Log::trace(LOG_PRE, "Found regex match: " + match);
         // TODO: STOP and resolve this to a file path
       }
     }
     // Step 4. Fallback to longest prefix match with no stop modifier
-    Log::trace(LOG_PRE, "No regex match found, using longest prefix match with no stop modifier.");
+    // Log::trace(LOG_PRE, "No regex match found, using longest prefix match with no stop modifier.");
     */
 
     return longest_prefix_match; // Match found, stop searching
@@ -278,21 +278,21 @@ bool resolve_path(const std::string& target, const std::string& index,
  */
 bool get_file_from_loc(const std::string& req_target, LocationBlock* location,
                        fs::path& file_obj, http::status& status){
-  Log::trace(LOG_PRE, "get_file_from_loc for req_target: \"" + req_target + "\"");
+  // Log::trace(LOG_PRE, "get_file_from_loc for req_target: \"" + req_target + "\"");
   if (location->try_files_args.size()){ // try_files directive present
     // Try all relative paths specified by the try_files directive
     for (std::string try_files_arg : location->try_files_args){
       // Resolve $uri variable within try_files_arg if present
       std::size_t uri_arg_pos = try_files_arg.find("$uri");
       if (uri_arg_pos == std::string::npos){ // arg does not contain $uri
-        Log::trace(LOG_PRE, "try_files_arg \"" + try_files_arg + "\" does not contain $uri, serving as-is.");
+        // Log::trace(LOG_PRE, "try_files_arg \"" + try_files_arg + "\" does not contain $uri, serving as-is.");
         if (resolve_path(location->root + "/" + try_files_arg, location->index, file_obj))
           return true; // Return early if matching file found
       }
       else{ // arg contains $uri, resolve
         std::string target = try_files_arg; // Copy try_files_arg for in-place replace
         target.replace(uri_arg_pos, 4, req_target);
-        Log::trace(LOG_PRE, "try_files_arg contains $uri, resolved to \"" + target + "\"");
+        // Log::trace(LOG_PRE, "try_files_arg contains $uri, resolved to \"" + target + "\"");
         if (resolve_path(location->root + "/" + target, location->index, file_obj))
           return true; // Return early if matching file found
       }
@@ -314,7 +314,7 @@ bool get_file_from_loc(const std::string& req_target, LocationBlock* location,
       }
     }
     else{ // Fallback parameter is an internal redirect URI
-      Log::trace(LOG_PRE, "Fallback " + location->root + '/' + location->try_files_fallback);
+      // Log::trace(LOG_PRE, "Fallback " + location->root + '/' + location->try_files_fallback);
       status = http::status::not_found;
       // Attempt to resolve fallback URI to a file object
       if (resolve_path(location->root + '/' + location->try_files_fallback,
