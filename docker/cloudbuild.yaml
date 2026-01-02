@@ -1,5 +1,5 @@
 steps:
-  # 1. Pull production build image (runs in parallel with steps 2, 3)
+  # 1. Pull production build image (runs in parallel with steps 2-4)
   - name: 'gcr.io/cloud-builders/docker'
     entrypoint: 'bash'
     args: ['-c', 'docker pull gcr.io/$PROJECT_ID/webserver:build || exit 0']
@@ -46,7 +46,7 @@ steps:
       '--cache-from', 'gcr.io/$PROJECT_ID/webserver:build',
       '.'
     ]
-    waitFor: ['Pull production build image', 'Prepare build environment']
+    waitFor: ['Prepare build environment']
     id: 'Prepare production build image'
 
   # 7. Testing and coverage report (uses build environment from step 5, runs in parallel with step 6)
@@ -56,9 +56,7 @@ steps:
       '-f', 'docker/test_coverage.Dockerfile',
       '.'
     ]
-    # Relies on build environment and extracted frontend for integration tests
-    # No cache because tests should run on change to either frontend or backend
-    waitFor: ['Prepare build environment', 'Extract production frontend tarball']
+    waitFor: ['Prepare build environment']
     id: 'Testing and coverage report'
 
   # 8. Prepare deployment image (uses extracted frontend from step 4 and production build image from step 6, runs in parallel with step 7)
@@ -70,7 +68,7 @@ steps:
       '.'
     ]
     waitFor: ['Prepare production build image', 'Extract production frontend tarball']
-    id: 'Build deployment image'
+    id: 'Prepare deployment image'
 
 # Push images to Google Artifact Registry
 images: [
