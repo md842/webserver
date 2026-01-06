@@ -1,109 +1,112 @@
 # Max's Personal Web Server
 This repository contains the source code and documentation for my personal web server, which I am using to host my personal website.
 
-All console commands given in this document are for Arch Linux kernel 6.9.6-arch1-1.
 
-## Web Server Dependencies (required)
+## Building From Source
 
-#### cmake (version >= 3.30.0 required, cmake-4.0.2-1 used)
-```console
-$ sudo pacman -S cmake
-```
+1. Install required build dependencies:
+    - C++ compiler (version >= C++17)
+    - Boost C++ libraries (version >= 1.87, required components: context, log, process)
+    - CMake (version >= 3.30.0)
+    - OpenSSL development libraries (version >= 3.0.0)
 
-#### Boost C++ libraries (version >= 1.87 required, boost-1.88.0-2 used)
-```console
-$ sudo pacman -S boost
-```
+    ### Arch Linux
+    ```console
+    $ pacman -S gcc boost cmake openssl
+    ```
 
-## Testing Dependencies (required)
+    ### Debian
+    **Note:** At the time of writing, `libboost-process1.88-dev` is only available with `debian:forky` or later.
+    ```console
+    $ apt-get install g++ cmake \
+        libboost-context1.88-dev \
+        libboost-log1.88-dev \
+        libboost-process1.88-dev \
+        libssl-dev
+    ```
 
-#### gcovr, gtest, netcat (gcovr-8.3-1, gtest-1.17.0-1, gnu-netcat-0.7.1-10 used)
-```console
-$ sudo pacman -S gcovr
-$ sudo pacman -S gtest
-$ sudo pacman -S netcat
-```
-
-## How to Build
-1. Install required dependencies from previous section.
 2. Clone this repository.
-```console
-$ git clone https://github.com/md842/webserver
-```
-3. Navigate to the project directory and run the build script.
-```console
-$ cd webserver
-webserver$ ./build.sh
-```
-The build script invokes the following commands to perform an out-of-source build using cmake.
-```console
-webserver$ mkdir build
-webserver$ cd build
-webserver/build$ cmake ..
-webserver/build$ make
-```
+    ```console
+    $ git clone git@github.com:md842/webserver.git
+    ```
 
-Note: `build.sh` only builds the web server back end; it does not build the front end or Docker container. See the README.md in the `frontend/` and `docker/` directories for instructions on how to build their respective components.
+3. A build script `build.sh` is provided which takes the CMake build type as an optional argument. For an optimized production binary without additional dependencies, specify build type "Release".
+    ```console
+    $ cd webserver
+    webserver$ ./build.sh Release
+    ```
 
-## How to Test
-Navigate to the project directory and run the test script.
-```console
-$ cd webserver
-webserver$ ./ctest.sh
-```
+    **Note:** If no argument is specified, `build.sh` defaults to Debug build type, which will fail without additional testing dependencies installed (See section "Running Unit and Integration Tests").
 
-The test script builds the project, then invokes the following command to run all unit and integration tests.
-```console
-webserver/build$ ctest
-```
 
-To run the integration tests only, use the following commands:
-```console
-webserver$ cd tests/integration
-webserver/tests/integration$ ./integration_tests.sh
-```
-The detailed results of the integration tests are written to `webserver/tests/integration/results.txt`.
+## Running the Web Server
 
-Note: Some tests will fail if the front end has not been built. The Docker container, however, is not required.
+1. Follow the steps in the previous section to build the web server binary.
 
-## How to Run
-After building the server, start it using the run script, which uses the default config.
-```console
-webserver$ ./run.sh
-```
+2. A run script `run.sh` is provided which runs the web server binary with the config file `configs/local_config.conf`.
+    ```console
+    webserver$ ./run.sh
+    ```
+    ---
+    Optionally, start the web server with a different config file using the following command:
+    ```console
+    webserver$ ./build/bin/server <path/to/config.conf>
+    ```
+---
+The web server will now serve requests from a local browser. For example, if the config's `listen` directive specifies `8080 ssl`, `https://localhost:8080/` will display the home page.
 
-The server can be started manually with the following command. Any config file may be used, this is just an example:
-```console
-webserver$ ./build/bin/server configs/local_config.conf
-```
+**Note:** The web server serves files from the path(s) specified by the config's `root` directive(s). For `configs/local_config.conf`, the root path is `../personal-website/build`. The home page will display Internal Server Error (Error 500) if no front end is present at the location specified by the config. This is expected behavior; `configs/local_config.conf` is configured to serve a React Router page, which serves the index page as the 404 fallback instead of having a "real" 404 fallback. Thus, if the index page is not present, the server returns Error 500 instead of Error 404.
 
-The server will now serve requests from a local browser. For example, if the config specifies port 8080, `http://localhost:8080/` will display the home page.
 
-Note: The home page will display Internal Server Error (Error 500) if the front end has not been built. The Docker container, however, is not required.
+## Running Unit and Integration Tests (optional)
 
-## Coverage Reporting Dependencies (optional, required for Docker)
+1. Install required testing dependencies.
+    - curl, netcat (used during integration testing)
+    - GoogleTest (version >= 1.17.0, unit testing framework)
 
-#### Python (python-3.12.4-1 used)
-```console
-$ sudo pacman -S python
-```
+    ### Arch Linux
+    ```console
+    $ pacman -S curl gtest netcat
+    ```
 
-#### pygments (Optional, used for syntax highlighting. python-pygments-2.17.2-3 used)
-```console
-$ sudo pacman -S python-pygments
-```
+    ### Debian
+    **Note:** At the time of writing, `libgtest-dev` version 1.17 is only available with `debian:forky` or later.
+    ```console
+    $ apt-get install curl libgtest-dev netcat-openbsd
+    ```
 
-## How to Generate a Coverage Report
-Navigate to the project directory and run the coverage build script.
-```console
-$ cd webserver
-webserver$ ./coverage.sh
-```
-The coverage build script invokes the following commands to perform an out-of-source coverage build and generate a coverage report using cmake.
-```console
-webserver$ mkdir build_coverage
-webserver$ cd build_coverage
-webserver/build_coverage$ cmake -DCMAKE_BUILD_TYPE=Coverage ..
-webserver/build_coverage$ make coverage
-```
-The detailed coverage report is written to `webserver/build_coverage/report/index.html`.
+2. A test script `ctest.sh` is provided which builds the project with Debug build type, then invokes `ctest` to run all unit and integration tests.
+    ```console
+    $ cd webserver
+    webserver$ ./ctest.sh
+    ```
+    ---
+    Optionally, to run integration tests only, navigate to `webserver/tests/integration` and run the integration test script `integration_tests.sh`.
+    ```console
+    $ cd webserver/tests/integration
+    webserver/tests/integration$ ./integration_tests.sh
+    ```
+
+    The detailed results of the integration tests are written to `webserver/tests/integration/last_test_result.txt`.
+
+
+## Generating a Coverage Report (optional)
+
+1. Install required dependency `gcovr`.
+    ### Arch Linux
+    ```console
+    $ pacman -S gcovr
+    ```
+
+    ### Debian/Ubuntu
+    ```console
+    $ apt-get install gcovr
+    ```
+
+2. A coverage report script `coverage.sh` is provided which builds the project with Coverage build type, then invokes `make coverage` to run all unit and integration tests and generate a coverage report.
+    ```console
+    $ cd webserver
+    webserver$ ./coverage.sh
+    ```
+
+    The detailed coverage report is written to `webserver/build_coverage/report/index.html`.
