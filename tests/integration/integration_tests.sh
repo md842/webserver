@@ -10,7 +10,7 @@ STATIC_TEST_FILE=octet_stream
 
 # Set file paths for integration test output and result files (relative to webserver root)
 OUTPUT_FILE=tests/integration/last_test_output.txt
-RESULT_FILE=tests/integration/last_test_result.txt
+RESULT_FILE=tests/integration/last_integration_test_result.log
 
 # Resolve server binary path to be used for integration testing
 if [ $# = 0 ] # No arguments supplied

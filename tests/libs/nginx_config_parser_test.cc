@@ -51,17 +51,16 @@ TEST_F(NginxConfigParserTest, BasicFileNonexistent){ // Uses test fixture
 }
 
 
-/* Commented out for now due to difficulties with Docker and chmod.
 TEST_F(NginxConfigParserTest, BasicFileInaccessible){ // Uses test fixture
-  // Make the file inaccessible by changing its permissions
-  std::string file_path = configs_folder + "test_config.conf";
-  chmod(file_path.c_str(), 0000);
-  
+  std::string file_path = configs_folder + "basic_inaccessible.conf";
+  chmod(file_path.c_str(), 0000); // Make inaccessible by changing permissions
+  /* Note: This chmod only works locally, must "RUN chmod" in Dockerfile for
+     this test to pass during Docker build. */
+
   EXPECT_FALSE(ConfigParser::inst().parse(file_path));
 
   chmod(file_path.c_str(), 0644); // Make the file accessible again
 }
-*/
 
 
 TEST_F(NginxConfigParserTest, BasicDefaults){ // Uses test fixture

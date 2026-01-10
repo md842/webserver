@@ -66,15 +66,12 @@ The web server will now serve requests from a local browser. For example, if the
 
 The `IPv4Address` of the Docker container, e.g., `172.17.0.2`, can be found by running `docker network inspect bridge` from a local terminal outside of the Docker container.
 
-## How to Debug Tests Failing in Docker Container
-`test_coverage.Dockerfile` is intended for use with the remote hosting platform to catch potential issues before pushing to the live server. Normally, there is no reason to run it locally when `./coverage.sh` can be used. In the case where a test fails on the coverage Docker container but not on the local `./coverage.sh`, output files can be extracted with the following commands:
-```console
-webserver$ docker build -f docker/test_coverage.Dockerfile -t webserver:coverage .
-webserver$ docker run -p 8080:80 --name coverage webserver:coverage
-webserver$ docker cp coverage:/webserver/build_coverage/Testing/Temporary/LastTest.log <destination on host>
-webserver$ docker cp coverage:/webserver/tests/integration/last_test_result.txt <destination on host>
-```
-Remember to remove the container afterwards!
-```console
-webserver$ docker rm coverage
-```
+## How to Debug Tests Failing During Docker Build
+`test_coverage.Dockerfile` is intended for use with the remote hosting platform's cloud build pipeline to catch potential issues before live deployment. Normally, there is no reason to run it locally when `../coverage.sh` can be used. In the case where a test fails in `test_coverage.Dockerfile` but not in the local environment (using `../coverage.sh`), follow the steps below to extract test logs:
+
+1. Modify the last line of `test_coverage.Dockerfile` from `RUN make coverage` to `RUN make coverage; exit 0`. By default, the build fails if any unit or integration test fails; this modification allows the image to be built even if testing fails.
+
+2. An extraction script `test_coverage_extract.sh` is provided which builds `test_coverage.Dockerfile`, then extracts the Google Test logs to `~/LastTest.log` and the integration test logs to `~/last_integration_test_result.log` on the host machine.
+    ```console
+    webserver/docker$ ./test_coverage_extract.sh
+    ```

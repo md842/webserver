@@ -127,12 +127,15 @@ TEST_F(FileRequestHandlerTest, ServeDir){ // Uses test fixture
 }
 
 
-/* Commented out for now due to difficulties with Docker and chmod.
 /// Serves 500 correctly when a file exists but fails to open.
 TEST_F(FileRequestHandlerTest, ServeInaccessible){ // Uses test fixture
+  req.target("/inaccessible");
+
   Config* config = ConfigParser::inst().configs().at(0);
-  std::string file_path = config->root + config->index;
+  std::string file_path = config->root + "inaccessible";
   chmod(file_path.c_str(), 0000); // Make inaccessible by changing permissions
+  /* Note: This chmod only works locally, must "RUN chmod" in Dockerfile for
+     this test to pass during Docker build. */
   
   Response* res = file_request_handler->handle_request(req);
 
@@ -148,7 +151,6 @@ TEST_F(FileRequestHandlerTest, ServeInaccessible){ // Uses test fixture
   chmod(file_path.c_str(), 0644); // Make file accessible again
   free(res); // Free memory used by created response
 }
-*/
 
 
 /// Serves very large static files correctly.
@@ -232,7 +234,32 @@ TEST_F(FileRequestHandlerTest, ValidateCache){ // Uses test fixture
 }
 
 
-// Location block modifier testing
+// Location block testing
+
+
+/** Tests location block with exact match modifier. Additionally tests the case
+  * where the try_files directive is not present (attempts to serve static file
+  * using root/index).
+  */
+TEST_F(FileRequestHandlerTest, ExactMatchNoTryFiles){ // Uses test fixture
+  /* Will match "location = /exactmatch" which returns status 200 and serves
+     the index page small.html. */
+  req.target("/exactmatch");
+
+  Response* res = file_request_handler->handle_request(req);
+
+  EXPECT_EQ(res->result_int(), 200); // 200 OK
+  EXPECT_EQ(res->version(), 11); // HTTP/1.1
+  EXPECT_TRUE(res->keep_alive()); // Connection: Keep-Alive
+
+  // For target /exactmatch, body should contain index (small.html)
+  EXPECT_EQ(res->body(), index_contents);
+  EXPECT_EQ(get_content_length(*res),
+    std::to_string(index_contents.length()));
+  EXPECT_EQ(get_content_type(*res), "text/html");
+
+  free(res); // Free memory used by created response
+}
 
 
 /** Tests the case where the longest prefix match location block has a stop
@@ -268,7 +295,7 @@ TEST_F(FileRequestHandlerTest, LongestMatchNoModifier){ // Uses test fixture
   /* Will match "location ^~ /stopmod" which returns status 500, and also match
      "location /stopmodnone" which has no stop modifier and returns status aaa.
      Status aaa throws exception at lexical cast and sets status 0. */
-  req.target("/stopmodnone"); // Set target to desired file
+  req.target("/stopmodnone");
 
   Response* res = file_request_handler->handle_request(req);
 
@@ -281,6 +308,30 @@ TEST_F(FileRequestHandlerTest, LongestMatchNoModifier){ // Uses test fixture
   EXPECT_EQ(get_content_length(*res), "");
   // Content-Type should not be set when body is empty
   EXPECT_EQ(get_content_type(*res), "");
+
+  free(res); // Free memory used by created response
+}
+
+
+/** Tests the case where a non-fallback, non-variable (no $uri) try_files
+  * argument matches.
+  */
+TEST_F(FileRequestHandlerTest, TryFilesNonVariableMatch){ // Uses test fixture
+  /* Will match "location = /try_files_no_uri" which returns status 200 and
+     serves the index page small.html. */
+  req.target("/try_files_no_uri");
+
+  Response* res = file_request_handler->handle_request(req);
+
+  EXPECT_EQ(res->result_int(), 200); // 200 OK
+  EXPECT_EQ(res->version(), 11); // HTTP/1.1
+  EXPECT_TRUE(res->keep_alive()); // Connection: Keep-Alive
+
+  // For target /try_files_no_uri, body should contain index (small.html)
+  EXPECT_EQ(res->body(), index_contents);
+  EXPECT_EQ(get_content_length(*res),
+    std::to_string(index_contents.length()));
+  EXPECT_EQ(get_content_type(*res), "text/html");
 
   free(res); // Free memory used by created response
 }

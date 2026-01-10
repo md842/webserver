@@ -1,6 +1,7 @@
 # Max's Personal Web Server
 This repository contains the source code and documentation for my personal web server, which I am using to host my personal website.
 
+![Coverage](https://img.shields.io/badge/Test_Coverage-98.94%25-brightgreen)
 
 ## Building From Source
 

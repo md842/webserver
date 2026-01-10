@@ -1,4 +1,4 @@
 build
 build_coverage
-tests/integration/last_test_output.txt
-tests/integration/last_test_result.txt
+tests/integration/*.txt
+tests/integration/*.log

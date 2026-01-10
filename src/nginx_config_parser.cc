@@ -43,12 +43,12 @@ bool ConfigParser::parse(const std::string& file_path){
       return parse(fstream);
     }
     else{ // File exists, but failed to open it for some reason.
-      Log::fatal(LOG_PRE, file_path + " not found, aborting.");
+      Log::fatal(LOG_PRE, "Found file \"" + file_path + "\" but failed to open it, aborting.");
       return false;
     }
   }
   else{ // Nonexistent or directory
-    Log::fatal(LOG_PRE, file_path + " not found, aborting.");
+    Log::fatal(LOG_PRE, "\"" + file_path + "\" not found, aborting.");
     return false;
   }
 }
