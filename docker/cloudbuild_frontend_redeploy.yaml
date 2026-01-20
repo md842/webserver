@@ -30,7 +30,7 @@ steps:
 
   # 5. Re-tag latest production image for use in frontend_redeploy.Dockerfile (relies on step 1)
   - name: 'gcr.io/cloud-builders/docker'
-    args: [tag', 'gcr.io/$PROJECT_ID/webserver:latest', 'webserver:latest']
+    args: ['tag', 'gcr.io/$PROJECT_ID/webserver:latest', 'webserver:latest']
     waitFor: ['Pull latest production image']
     id: 'Re-tag latest production image'
 
